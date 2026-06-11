@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0A1628">
+<title>Admin Dashboard — DigiSeva Center</title>
+<script>(function(){var t=localStorage.getItem('digiseva_theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.setAttribute('data-theme','dark')})();</script>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Hind:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --saffron: #FF6B00;
+    --deep-saffron: #E55A00;
+    --green: #00843D;
+    --navy: #0A1628;
+    --midnight: #060E1A;
+    --gold: #F5A623;
+    --cream: #FFF8F0;
+    --white: #FFFFFF;
+    --light-gray: #F4F6FA;
+    --text-dark: #1A1A2E;
+    --text-muted: #6B7280;
+    --card-bg: #FFFFFF;
+    --border: #E8ECF0;
+  }
+  [data-theme="dark"] {
+    --cream: #0f1729; --white: #111827; --light-gray: #1e293b;
+    --text-dark: #e2e8f0; --text-muted: #94a3b8;
+    --card-bg: #1e293b; --border: #334155;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Hind', sans-serif;
+    background: var(--midnight);
+    color: white;
+    overflow-x: hidden;
+  }
+  .status-badge {
+    padding: 4px 10px;
+    border-radius: 50px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: inline-block;
+  }
+  .status-Pending    { background: rgba(245,166,35,0.15); color: #F5A623; }
+  .status-Confirmed  { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .status-Completed  { background: rgba(0,132,61,0.15);   color: #4ade80; }
+  .status-Cancelled  { background: rgba(220,38,38,0.15);  color: #f87171; }
+  .admin-row { border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.15s; }
+  .admin-row:hover { background: rgba(255,255,255,0.03); }
+  .admin-row td { padding: 13px 16px; font-size: 0.83rem; color: rgba(255,255,255,0.75); vertical-align: middle; }
+  .action-btn {
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'Hind', sans-serif;
+    transition: opacity 0.2s;
+  }
+  .action-btn:hover { opacity: 0.8; }
+  #adminSearch::placeholder { color: rgba(255,255,255,0.3); }
+  #adminSearch:focus { border-color: rgba(255,107,0,0.5) !important; }
+  #adminLoginModal.show { display: flex !important; }
+
+  /* ── Tablet & Mobile Responsive ── */
+  @media(max-width: 900px) {
+    .admin-header { flex-direction: column; gap: 12px; }
+    .admin-header .header-actions { width: 100%; justify-content: center; }
+    #adminSearch { min-width: 0; width: 100%; }
+    .filters-row { flex-direction: column; }
+    .filters-row select, .filters-row input { min-width: 0; width: 100%; }
+  }
+  @media(max-width: 768px) {
+    #adminStats { grid-template-columns: repeat(2, 1fr); }
+    .admin-content { padding: 16px 12px; }
+    #adminOverlay { padding: 20px 12px; }
+    .admin-login-box { padding: 28px 20px; }
+  }
+  @media(max-width: 480px) {
+    #adminStats { grid-template-columns: 1fr; }
+    .admin-content { padding: 12px 8px; }
+    .admin-login-box { padding: 20px 16px; }
+    .admin-login-box h2 { font-size: 1.2rem; }
+    .admin-header h2 { font-size: 1.1rem; }
+    .admin-header .header-actions { flex-wrap: wrap; gap: 6px; }
+    .admin-header .header-actions button { padding: 7px 12px; font-size: 0.75rem; }
+    .table-wrap { overflow-x: auto; }
+    #adminTable { min-width: 650px; }
+    .admin-row td { padding: 8px 6px; font-size: 0.75rem; }
+    .admin-row td:first-child { padding-left: 8px; }
+    .admin-row td:last-child { padding-right: 8px; }
+    .status-badge { font-size: 0.65rem; padding: 2px 8px; }
+    select.status-select { font-size: 0.7rem; padding: 3px 4px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Admin Dashboard -->
+<div id="adminOverlay" style="max-width:1100px;margin:0 auto;padding:30px 20px;">
+
+  <!-- Admin Header -->
+  <div class="admin-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:14px;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div style="width:44px;height:44px;background:linear-gradient(135deg,#FF6B00,#F5A623);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;">🛡️</div>
+      <div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.4rem;font-weight:800;color:white;">Admin Dashboard</div>
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);letter-spacing:1px;">DigiSeva Digital Center</div>
+      </div>
+    </div>
+    <div class="header-actions" style="display:flex;gap:10px;align-items:center;">
+      <button class="theme-btn" id="themeToggle" onclick="toggleTheme()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;padding:0;color:rgba(255,255,255,0.6);transition:all 0.3s;" title="Toggle dark mode">🌙</button>
+      <button onclick="exportCSV()" style="background:rgba(0,132,61,0.2);border:1px solid rgba(0,132,61,0.4);color:#4ade80;padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.83rem;font-family:'Hind',sans-serif;">⬇ Export CSV</button>
+      <button onclick="clearAllBookings()" style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);color:#f87171;padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.83rem;font-family:'Hind',sans-serif;">🗑 Clear All</button>
+      <button onclick="location.href='index.html'" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.83rem;font-family:'Hind',sans-serif;">← Back to Site</button>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div id="adminStats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:28px;"></div>
+
+  <!-- Filters -->
+  <div class="filters-row" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:18px 20px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+    <input id="adminSearch" oninput="renderAdmin()" placeholder="🔍  Search by name, phone, ID..." style="flex:1;min-width:200px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:white;padding:10px 14px;border-radius:8px;font-size:0.88rem;font-family:'Hind',sans-serif;outline:none;" />
+    <select id="adminFilterService" onchange="renderAdmin()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:white;padding:10px 14px;border-radius:8px;font-size:0.85rem;font-family:'Hind',sans-serif;outline:none;">
+      <option value="">All Services</option>
+      <option>🖨️ Printing</option><option>📋 Govt Forms</option><option>✈️ Ticket Book</option>
+      <option>💳 Recharge</option><option>🔖 Other</option>
+    </select>
+    <select id="adminFilterStatus" onchange="renderAdmin()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:white;padding:10px 14px;border-radius:8px;font-size:0.85rem;font-family:'Hind',sans-serif;outline:none;">
+      <option value="">All Status</option>
+      <option>Pending</option><option>Confirmed</option><option>Completed</option><option>Cancelled</option>
+    </select>
+    <input id="adminFilterDate" type="date" onchange="renderAdmin()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:white;padding:10px 14px;border-radius:8px;font-size:0.85rem;font-family:'Hind',sans-serif;outline:none;" />
+  </div>
+
+  <!-- Table -->
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;overflow:hidden;">
+    <div class="table-wrap" style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;" id="adminTable">
+        <thead>
+          <tr style="background:rgba(255,107,0,0.12);border-bottom:1px solid rgba(255,107,0,0.2);">
+            <th style="padding:14px 16px;text-align:left;font-size:0.75rem;color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Booking ID</th>
+            <th style="padding:14px 16px;text-align:left;font-size:0.75rem;color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:1px;text-transform:uppercase;">Name</th>
+            <th style="padding:14px 16px;text-align:left;font-size:0.75rem;color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:1px;text-transform:uppercase;">Mobile</th>
+            <th style="padding:14px 16px;text-align:left;font-size:0.75rem;color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:1px;text-transform:uppercase;">Service</th>
+            <th style="padding:14px 16px;text-align:left;font-size:0.75rem;color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Date & Time</th>
+            <th style="padding:14px 16px;text-align:left;font-size:0.75rem;color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:1px;text-transform:uppercase;">Status</th>
+            <th style="padding:14px 16px;text-align:left;font-size:0.75rem;color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:1px;text-transform:uppercase;">Note</th>
+            <th style="padding:14px 16px;text-align:center;font-size:0.75rem;color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:1px;text-transform:uppercase;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="adminTbody"></tbody>
+      </table>
+    </div>
+    <div id="adminEmpty" style="display:none;text-align:center;padding:60px 20px;">
+      <div style="font-size:48px;margin-bottom:12px;">📭</div>
+      <div style="color:rgba(255,255,255,0.4);font-size:0.95rem;">No bookings found.</div>
+    </div>
+  </div>
+
+  <div id="adminCount" style="margin-top:14px;font-size:0.8rem;color:rgba(255,255,255,0.3);text-align:right;"></div>
+</div>
+
+<!-- Login Modal -->
+<div id="adminLoginModal" style="display:flex;position:fixed;inset:0;background:rgba(6,14,26,0.98);z-index:10000;align-items:center;justify-content:center;">
+  <div class="admin-login-box" style="background:#0F1E35;border:1px solid rgba(255,107,0,0.3);border-radius:20px;padding:40px;width:100%;max-width:380px;margin:20px;">
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:48px;margin-bottom:10px;">🔐</div>
+      <div style="font-family:'Baloo 2',cursive;font-size:1.5rem;font-weight:800;color:white;">Admin Login</div>
+      <div style="font-size:0.82rem;color:rgba(255,255,255,0.4);margin-top:4px;">DigiSeva Dashboard</div>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:0.8rem;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:7px;">Username</label>
+      <input id="adminUser" type="text" placeholder="admin" style="width:100%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);color:white;padding:12px 14px;border-radius:10px;font-size:0.9rem;font-family:'Hind',sans-serif;outline:none;" onkeydown="if(event.key==='Enter')adminLogin()" />
+    </div>
+    <div style="margin-bottom:22px;">
+      <label style="display:block;font-size:0.8rem;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:7px;">Password</label>
+      <input id="adminPass" type="password" placeholder="••••••••" style="width:100%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);color:white;padding:12px 14px;border-radius:10px;font-size:0.9rem;font-family:'Hind',sans-serif;outline:none;" onkeydown="if(event.key==='Enter')adminLogin()" />
+    </div>
+    <div id="loginError" style="display:none;background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);color:#f87171;padding:10px 14px;border-radius:8px;font-size:0.83rem;margin-bottom:14px;">Incorrect username or password.</div>
+    <button onclick="adminLogin()" style="width:100%;padding:14px;background:linear-gradient(135deg,#FF6B00,#E55A00);color:white;border:none;border-radius:12px;font-size:1rem;font-weight:700;font-family:'Hind',sans-serif;cursor:pointer;">Login to Dashboard</button>
+    <button onclick="location.href='index.html'" style="width:100%;margin-top:10px;padding:12px;background:transparent;color:rgba(255,255,255,0.4);border:1px solid rgba(255,255,255,0.1);border-radius:12px;font-size:0.88rem;font-family:'Hind',sans-serif;cursor:pointer;">← Back to Site</button>
+    <p style="text-align:center;font-size:0.75rem;color:rgba(255,255,255,0.25);margin-top:16px;">Default: admin / digiseva123</p>
+  </div>
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+
+let allBookings = [];
+
+async function loadBookings() {
+  try {
+    const resp = await fetch(API_BASE + '/api/bookings');
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.success && Array.isArray(data.bookings)) {
+        allBookings = data.bookings;
+        return;
+      }
+    }
+  } catch { }
+}
+
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'digiseva123';
+
+function adminLogin() {
+  const u = document.getElementById('adminUser').value.trim();
+  const p = document.getElementById('adminPass').value;
+  const err = document.getElementById('loginError');
+  if (u === ADMIN_USER && p === ADMIN_PASS) {
+    err.style.display = 'none';
+    document.getElementById('adminLoginModal').style.display = 'none';
+    loadBookings().then(() => renderAdmin());
+  } else {
+    err.style.display = 'block';
+    document.getElementById('adminPass').value = '';
+  }
+}
+
+function renderAdmin() {
+  const search    = (document.getElementById('adminSearch')?.value || '').toLowerCase();
+  const svcFilter = document.getElementById('adminFilterService')?.value || '';
+  const stFilter  = document.getElementById('adminFilterStatus')?.value || '';
+  const dtFilter  = document.getElementById('adminFilterDate')?.value || '';
+  let bookings = [...allBookings];
+
+  if (search)    bookings = bookings.filter(b =>
+    b.name.toLowerCase().includes(search) ||
+    b.phone.includes(search) ||
+    b.id.toLowerCase().includes(search));
+  if (svcFilter) bookings = bookings.filter(b => b.service === svcFilter);
+  if (stFilter)  bookings = bookings.filter(b => b.status === stFilter);
+  if (dtFilter)  bookings = bookings.filter(b => b.date === dtFilter);
+
+  renderStats(allBookings);
+
+  const tbody = document.getElementById('adminTbody');
+  const empty = document.getElementById('adminEmpty');
+  const count = document.getElementById('adminCount');
+
+  if (!bookings.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    count.textContent = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  count.textContent = `Showing ${bookings.length} booking${bookings.length !== 1 ? 's' : ''}`;
+
+  tbody.innerHTML = bookings.map(b => `
+    <tr class="admin-row" id="row-${b.id}">
+      <td><code style="color:#F5A623;font-size:0.78rem;">${b.id}</code></td>
+      <td style="font-weight:600;color:white;">${escHtml(b.name)}</td>
+      <td>+91 ${escHtml(b.phone)}</td>
+      <td>${escHtml(b.service)}</td>
+      <td style="white-space:nowrap;">${formatDate(b.date)}<br><span style="font-size:0.75rem;color:rgba(255,255,255,0.4);">${escHtml(b.time)}</span></td>
+      <td>
+        <select onchange="changeStatus('${b.id}', this.value)"
+          style="background:transparent;border:none;color:inherit;font-family:'Hind',sans-serif;font-size:0.78rem;cursor:pointer;outline:none;">
+          ${['Pending','Confirmed','Completed','Cancelled'].map(s =>
+            `<option value="${s}" ${b.status===s?'selected':''}>${s}</option>`
+          ).join('')}
+        </select>
+        <span class="status-badge status-${b.status}">${b.status}</span>
+      </td>
+      <td style="max-width:160px;font-size:0.78rem;color:rgba(255,255,255,0.5);">${escHtml(b.note || '—')}</td>
+      <td style="text-align:center;white-space:nowrap;">
+        <button class="action-btn" onclick="deleteRow('${b.id}')"
+          style="background:rgba(220,38,38,0.15);color:#f87171;">🗑</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderStats(all) {
+  const total     = all.length;
+  const pending   = all.filter(b => b.status === 'Pending').length;
+  const completed = all.filter(b => b.status === 'Completed').length;
+  const today2    = new Date().toISOString().split('T')[0];
+  const todayC    = all.filter(b => b.date === today2).length;
+
+  const stats = [
+    { icon:'📋', label:'Total Bookings', val: total, color:'#FF6B00' },
+    { icon:'⏳', label:'Pending',        val: pending,   color:'#F5A623' },
+    { icon:'✅', label:'Completed',      val: completed, color:'#4ade80' },
+    { icon:'📅', label:"Today's Slots",  val: todayC,    color:'#60a5fa' },
+  ];
+
+  document.getElementById('adminStats').innerHTML = stats.map(s => `
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:18px 20px;">
+      <div style="font-size:22px;margin-bottom:8px;">${s.icon}</div>
+      <div style="font-family:'Baloo 2',cursive;font-size:1.8rem;font-weight:800;color:${s.color};line-height:1;">${s.val}</div>
+      <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:4px;text-transform:uppercase;letter-spacing:1px;">${s.label}</div>
+    </div>
+  `).join('');
+}
+
+function changeStatus(id, status) {
+  const idx = allBookings.findIndex(b => b.id === id);
+  if (idx > -1) {
+    allBookings[idx].status = status;
+    fetch(API_BASE + '/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'updateStatus', id, status })
+    }).catch(() => {});
+    renderAdmin();
+  }
+}
+
+function deleteRow(id) {
+  if (!confirm('Delete this booking?')) return;
+  allBookings = allBookings.filter(b => b.id !== id);
+  fetch(API_BASE + '/api/bookings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'delete', id })
+  }).catch(() => {});
+  renderAdmin();
+  showToast('🗑️ Booking deleted.', 'warn');
+}
+
+function clearAllBookings() {
+  if (!confirm('Delete ALL bookings? This cannot be undone.')) return;
+  allBookings = [];
+  fetch(API_BASE + '/api/bookings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'clear' })
+  }).catch(() => {});
+  renderAdmin();
+  showToast('🗑️ All bookings cleared.', 'warn');
+}
+
+function exportCSV() {
+  const bookings = allBookings;
+  if (!bookings.length) { showToast('No bookings to export.', 'warn'); return; }
+  const today = new Date().toISOString().split('T')[0];
+  const headers = ['Booking ID','Name','Mobile','Service','Date','Time','Status','Note','Created At'];
+  const rows = bookings.map(b => [
+    b.id, b.name, '+91 ' + b.phone, b.service, b.date, b.time, b.status,
+    (b.note || '').replace(/,/g, ';'),
+    new Date(b.createdAt).toLocaleString('en-IN')
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `DigiSeva_Bookings_${today}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📥 CSV exported!', 'success');
+}
+
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+    padding:12px 22px;border-radius:50px;font-weight:600;font-size:0.88rem;
+    z-index:99999;font-family:'Hind',sans-serif;box-shadow:0 6px 24px rgba(0,0,0,0.3);
+    background:${type==='success'?'#00843D':type==='warn'?'#d97706':'#dc2626'};color:white;
+    animation:toastIn 0.3s ease;`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+function toggleTheme(){var h=document.documentElement,b=document.getElementById('themeToggle');if(h.getAttribute('data-theme')==='dark'){h.removeAttribute('data-theme');localStorage.setItem('digiseva_theme','light');if(b)b.textContent='🌙';}else{h.setAttribute('data-theme','dark');localStorage.setItem('digiseva_theme','dark');if(b)b.textContent='☀️';}}
+(function(){var b=document.getElementById('themeToggle');if(b)b.textContent=document.documentElement.getAttribute('data-theme')==='dark'?'☀️':'🌙';})();
+const toastStyle = document.createElement('style');
+toastStyle.textContent = '@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+document.head.appendChild(toastStyle);
+</script>
+</body>
+</html>

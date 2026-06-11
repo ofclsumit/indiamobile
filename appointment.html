@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book Appointment — DigiSeva Digital Center</title>
+<script>(function(){var t=localStorage.getItem('digiseva_theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.setAttribute('data-theme','dark')})();</script>
+<style>
+:root {
+  --saffron: #FF6B00; --deep-saffron: #e05e00; --gold: #F5A623;
+  --midnight: #060E1A; --dark-blue: #0A1628; --white: #ffffff;
+  --cream: #FFF8F0; --light-gray: #F5F5F5; --border: #E8E0D8;
+  --text-dark: #1A1A2E; --text-muted: #8A8A9A; --green: #00843D;
+  --radius: 16px; --radius-xl: 20px;
+  --shadow-sm: 0 2px 12px rgba(0,0,0,0.06);
+  --shadow-md: 0 8px 32px rgba(0,0,0,0.1);
+  --shadow-glow: 0 4px 20px rgba(255,107,0,0.35);
+  --transition: 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+[data-theme="dark"] {
+  --cream: #0f1729; --white: #111827; --light-gray: #1e293b;
+  --text-dark: #e2e8f0; --text-muted: #94a3b8;
+  --border: #334155;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-md: 0 8px 32px rgba(0,0,0,0.4);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--cream);
+  color: var(--text-dark);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ============ NAVBAR ============ */
+nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 1000;
+  background: rgba(6,14,26,0.95);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,107,0,0.15);
+  padding: 0 5%;
+  display: flex; align-items: center;
+  justify-content: space-between;
+  height: 68px;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none;
+}
+.nav-logo img, .nav-logo .logo-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--saffron); display: flex;
+  align-items: center; justify-content: center;
+  font-size: 18px; color: white; font-weight: 800;
+}
+.logo-text { font-family: 'Baloo 2', cursive; font-size: 1.25rem; color: white; font-weight: 700; }
+.logo-sub { font-size: 0.7rem; color: rgba(255,255,255,0.4); letter-spacing: 1px; }
+.logo-text span { color: var(--saffron); }
+.nav-links { display: flex; align-items: center; gap: 24px; list-style: none; }
+.nav-links a {
+  color: rgba(255,255,255,0.7); text-decoration: none;
+  font-size: 0.85rem; font-weight: 500;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: white; }
+.nav-cta {
+  background: var(--saffron); color: white !important;
+  padding: 8px 20px; border-radius: 50px; font-weight: 600 !important;
+}
+.nav-cta:hover { background: var(--deep-saffron) !important; }
+.lang-toggle { display: flex; gap: 2px; background: rgba(255,255,255,0.06); border-radius: 8px; padding: 3px; }
+.theme-btn { background:none; border:1px solid rgba(255,255,255,0.15); border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; line-height:1; color:rgba(255,255,255,0.6); transition:all 0.3s; padding:0; }
+.theme-btn:hover { border-color:var(--saffron); color:var(--saffron); background:rgba(255,107,0,0.1); }
+.lang-label {
+  padding: 4px 10px; border-radius: 6px; font-size: 0.75rem;
+  font-weight: 700; cursor: pointer; color: rgba(255,255,255,0.3);
+  transition: all 0.2s;
+}
+.lang-label.active { background: var(--saffron); color: white; }
+.nav-overlay { position: fixed; inset: 0; z-index: 998; background: rgba(6,14,26,0.6); backdrop-filter: blur(3px); display: none; }
+.nav-overlay.show { display: block; }
+.hamburger { display: none; flex-direction: column; gap: 4px; cursor: pointer; padding: 4px; }
+.hamburger span { width: 22px; height: 2px; background: white; border-radius: 2px; transition: 0.3s; }
+.user-profile { position: relative; cursor: pointer; display: none; }
+.user-profile .avatar-wrap { display: flex; align-items: center; gap: 8px; }
+.user-profile .avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--saffron); display: none; }
+.user-profile .avatar-placeholder { width: 36px; height: 36px; border-radius: 50%; background: var(--saffron); color: white; display: none; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; border: 2px solid var(--saffron); }
+.user-profile .user-name { color: white; font-size: 0.8rem; font-weight: 600; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+.user-profile .dropdown {
+  position: absolute; top: calc(100% + 10px); right: 0;
+  min-width: 190px; padding: 16px;
+  border-radius: 16px;
+  background: rgba(15, 30, 53, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  z-index: 1000;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition-delay: 1.4s;
+  }
+  .user-profile .dropdown::before {
+    content: ''; position: absolute; top: -6px; right: 16px;
+    width: 12px; height: 12px;
+    background: rgba(15, 30, 53, 0.85);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255,255,255,0.15);
+    border-left: 1px solid rgba(255,255,255,0.15);
+    transform: rotate(45deg);
+  }
+  .user-profile .dropdown .dropdown-name { color: #fff; font-size: 0.9rem; font-weight: 700; margin-bottom: 2px; }
+  .user-profile .dropdown .dropdown-email { color: rgba(255,255,255,0.55); font-size: 0.73rem; margin-bottom: 14px; word-break: break-all; }
+  .user-profile .dropdown .logout-btn {
+    width: 100%; padding: 9px 12px; border-radius: 10px; border: none;
+    background: rgba(239, 68, 68, 0.15); color: #fca5a5;
+    cursor: pointer; font-weight: 600; font-size: 0.8rem;
+    font-family: 'Inter', sans-serif;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .user-profile .dropdown .logout-btn:hover { background: rgba(239,68,68,0.3); box-shadow: 0 0 24px rgba(239,68,68,0.45); }
+  .user-profile:hover .dropdown, .user-profile .dropdown:hover { opacity: 1; visibility: visible; transition-delay: 0s; }
+
+/* ============ LOGIN OVERLAY ============ */
+.login-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: linear-gradient(135deg, var(--midnight), var(--dark-blue));
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 24px;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+.login-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.login-overlay .login-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,107,0,0.25);
+  border-radius: 24px; padding: 56px 48px;
+  text-align: center; max-width: 420px; width: 90%;
+  backdrop-filter: blur(12px);
+}
+.login-overlay .login-icon { font-size: 64px; margin-bottom: 8px; }
+.login-overlay .login-title {
+  font-family: 'Baloo 2', cursive;
+  font-size: 1.8rem; color: white; font-weight: 800;
+}
+.login-overlay .login-title span { color: var(--saffron); }
+.login-overlay .login-desc {
+  color: rgba(255,255,255,0.5);
+  font-size: 0.9rem; margin: 10px 0 28px; line-height: 1.5;
+}
+.login-overlay #loginGoogleBtn {
+  display: flex; justify-content: center;
+  min-height: 48px;
+}
+.login-overlay .login-skip {
+  margin-top: 20px;
+  color: rgba(255,255,255,0.25);
+  font-size: 0.78rem;
+}
+.login-overlay .login-skip a {
+  color: var(--saffron); text-decoration: none;
+  font-weight: 600;
+}
+.login-overlay .login-footer {
+  color: rgba(255,255,255,0.2);
+  font-size: 0.75rem; margin-top: 10px;
+}
+
+/* Modal overlay for popups */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(6,14,26,0.7);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+  background: white; border-radius: 20px;
+  padding: 36px 32px; max-width: 420px; width: 100%;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+  animation: modalIn 0.3s ease;
+  text-align: center;
+}
+@keyframes modalIn { from { opacity: 0; transform: scale(0.92) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.modal-box .modal-icon { font-size: 48px; margin-bottom: 12px; }
+.modal-box h3 { font-family: 'Baloo 2', cursive; font-size: 1.3rem; color: var(--text-dark); margin-bottom: 6px; }
+.modal-box p { color: var(--text-muted); font-size: 0.88rem; line-height: 1.5; margin-bottom: 16px; }
+.modal-box .modal-token { font-size: 1.6rem; font-weight: 900; color: var(--saffron); padding: 10px; background: rgba(255,107,0,0.08); border-radius: 10px; margin: 10px 0; border: 2px dashed rgba(255,107,0,0.3); font-family: 'Courier New', monospace; }
+.modal-box input[type="tel"] { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 0.9rem; font-family: 'Inter', sans-serif; outline: none; margin-bottom: 12px; box-sizing: border-box; }
+.modal-box input[type="tel"]:focus { border-color: var(--saffron); box-shadow: 0 0 0 3px rgba(255,107,0,0.12); }
+.modal-box .modal-btn {
+  width: 100%; padding: 12px; border-radius: 10px; border: none;
+  font-size: 0.9rem; font-weight: 700; font-family: 'Inter', sans-serif;
+  cursor: pointer; transition: 0.2s;
+}
+.modal-box .modal-btn-primary { background: var(--saffron); color: white; }
+.modal-box .modal-btn-primary:hover { background: var(--deep-saffron); }
+.modal-box .modal-btn-secondary { background: var(--light-gray); color: var(--text-dark); margin-top: 8px; }
+.modal-box .modal-btn-secondary:hover { background: var(--border); }
+.modal-box .modal-result { margin-top: 12px; text-align: left; }
+.modal-box .modal-result-item { background: rgba(255,107,0,0.06); border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid rgba(255,107,0,0.12); }
+.modal-box .modal-result-item .token { font-weight: 900; color: var(--saffron); font-size: 1.1rem; }
+.modal-box .modal-result-item .detail { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; }
+.modal-box .modal-close { position: absolute; top: 12px; right: 16px; cursor: pointer; font-size: 1.3rem; color: var(--text-muted); background: none; border: none; }
+.modal-box { position: relative; }
+.forgot-token-link { display: block; text-align: center; margin-top: 12px; font-size: 0.82rem; color: var(--text-muted); cursor: pointer; text-decoration: underline; }
+.forgot-token-link:hover { color: var(--saffron); }
+
+/* ============ HERO ============ */
+.page-hero {
+  padding: 120px 5% 60px;
+  background: linear-gradient(135deg, var(--midnight), var(--dark-blue));
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.page-hero::before {
+  content: ''; position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,107,0,0.08), transparent 70%);
+}
+.page-hero h1 {
+  font-family: 'Baloo 2', cursive;
+  font-size: 2.4rem; color: white;
+  position: relative;
+}
+.page-hero h1 span { color: var(--saffron); }
+.page-hero p {
+  color: rgba(255,255,255,0.5);
+  margin-top: 12px; font-size: 0.95rem;
+  position: relative;
+}
+.hero-badge {
+  display: inline-block;
+  background: rgba(255,107,0,0.12);
+  color: var(--gold); font-size: 0.78rem;
+  font-weight: 600; padding: 6px 16px;
+  border-radius: 50px; margin-bottom: 16px;
+  position: relative;
+}
+
+/* ============ FORM SECTION ============ */
+.form-section {
+  max-width: 780px; margin: -40px auto 60px;
+  padding: 0 5%;
+  position: relative; z-index: 2;
+}
+.form-card {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  padding: 48px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}
+.form-card .form-title {
+  font-family: 'Baloo 2', cursive;
+  font-size: 1.5rem; font-weight: 700;
+  margin-bottom: 8px; color: var(--text-dark);
+}
+.form-card .form-subtitle {
+  font-size: 0.88rem; color: var(--text-muted);
+  margin-bottom: 32px;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media(max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+.form-group { margin-bottom: 18px; }
+.form-group label {
+  display: block; font-size: 0.82rem; font-weight: 600;
+  color: var(--text-dark); margin-bottom: 7px; letter-spacing: 0.3px;
+}
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  font-size: 0.9rem; font-family: 'Inter', sans-serif;
+  background: var(--white); color: var(--text-dark);
+  transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+}
+.phone-wrap { display: flex; align-items: center; border: 1.5px solid var(--border); border-radius: 10px; background: var(--white); transition: border-color 0.2s, box-shadow 0.2s; }
+.phone-wrap:focus-within { border-color: var(--saffron); box-shadow: 0 0 0 3px rgba(255,107,0,0.12); }
+.phone-wrap .phone-prefix { padding: 12px 0 12px 14px; font-size: 0.9rem; font-weight: 600; color: var(--text-dark); background: transparent; white-space: nowrap; user-select: none; }
+.phone-wrap .phone-prefix + input { border: none !important; padding-left: 6px; background: transparent; }
+.phone-wrap .phone-prefix + input:focus { box-shadow: none !important; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color: var(--saffron); box-shadow: 0 0 0 3px rgba(255,107,0,0.12);
+}
+.form-group textarea { resize: vertical; min-height: 80px; }
+
+/* Chips */
+.service-chips {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px;
+}
+.chip {
+  padding: 8px 14px; border: 1.5px solid var(--border);
+  border-radius: 50px; font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+  background: white; color: var(--text-muted);
+}
+.chip.active, .chip:hover { border-color: var(--saffron); background: rgba(255,107,0,0.08); color: var(--saffron); }
+.form-label-main { font-size: 0.82rem; font-weight: 600; color: var(--text-dark); margin-bottom: 10px; display: block; letter-spacing: 0.3px; }
+
+
+
+/* Submit */
+.submit-btn {
+  width: 100%; padding: 16px;
+  background: linear-gradient(135deg, var(--saffron), var(--deep-saffron));
+  color: white; border: none; border-radius: 12px;
+  font-size: 1rem; font-weight: 700; font-family: 'Inter', sans-serif;
+  cursor: pointer; transition: all var(--transition);
+  box-shadow: var(--shadow-glow); margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+.submit-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(255,107,0,0.45); }
+.submit-btn:active { transform: scale(0.98); }
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+
+/* ============ MODALS ============ */
+/* Spinner */
+.spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+  border-radius: 50%; animation: spin 0.6s linear infinite;
+  vertical-align: middle; margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Loading overlay */
+.loading-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(6,14,26,0.85);
+  z-index: 99999; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+}
+.loading-overlay.show { display: flex; }
+.loading-overlay .spinner-lg {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(255,107,0,0.2); border-top-color: var(--saffron);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+.loading-overlay p { color: rgba(255,255,255,0.7); font-size: 0.95rem; }
+
+/* ============ FOOTER ============ */
+footer {
+  background: var(--midnight); color: rgba(255,255,255,0.5);
+  text-align: center; padding: 40px 5%;
+  font-size: 0.85rem;
+}
+footer a { color: var(--saffron); text-decoration: none; }
+
+/* ============ RESPONSIVE ============ */
+@media(max-width: 768px) {
+  .nav-links { display: none; z-index: 999; }
+  .hamburger { display: flex; }
+  .page-hero h1 { font-size: 1.8rem; }
+  .form-card { padding: 28px 20px; }
+}
+@media(max-width: 768px) {
+  .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 68px; left: 0; right: 0; background: rgba(6,14,26,0.98); padding: 20px 5%; gap: 18px; border-top: 1px solid rgba(255,107,0,0.2); z-index: 999; }
+}
+@media(max-width: 480px) {
+  .page-hero { padding: 100px 5% 40px; }
+  .page-hero h1 { font-size: 1.4rem; }
+  .form-card { padding: 24px 16px; border-radius: 14px; }
+  .login-overlay .login-card { padding: 32px 20px; }
+  .modal-box { padding: 24px 18px; }
+  .service-chips { gap: 6px; }
+  .chip { padding: 6px 10px; font-size: 0.72rem; }
+  .form-group input, .form-group select, .form-group textarea { font-size: 16px; }
+  .phone-wrap .phone-prefix { padding: 10px 0 10px 12px; font-size: 0.85rem; }
+  .phone-wrap input { padding: 10px 12px !important; }
+  .submit-btn { padding: 14px; font-size: 0.9rem; }
+  .dropdown { min-width: 160px; padding: 12px; }
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav>
+  <div id="navOverlay" class="nav-overlay" onclick="toggleNav()"></div>
+  <a href="/" class="nav-logo">
+    <div class="logo-icon">DS</div>
+    <div>
+      <div class="logo-text">Digi<span>Seva</span></div>
+      <div class="logo-sub" data-i18n="nav.subtitle">Digital Center</div>
+    </div>
+  </a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="/" data-i18n="nav.home" onclick="toggleNav()">Home</a></li>
+    <li><a href="/#services" data-i18n="nav.services" onclick="toggleNav()">Services</a></li>
+    <li><a href="/#pricing" data-i18n="nav.pricing" onclick="toggleNav()">Pricing</a></li>
+    <li><a href="/#contact" data-i18n="nav.contact" onclick="toggleNav()">Contact</a></li>
+    <li><a href="appointment.html" class="nav-cta" data-i18n="nav.bookCta" onclick="toggleNav()">Book Appointment</a></li>
+    <li>
+      <div class="lang-toggle" id="langSwitch">
+        <span class="lang-label active" data-lang="en" onclick="switchLang('en')">EN</span>
+        <span class="lang-label" data-lang="hi" onclick="switchLang('hi')">हि</span>
+      </div>
+    </li>
+  </ul>
+  <button class="theme-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+  <div class="user-profile" id="userProfile" style="display:none">
+    <div class="avatar-wrap">
+      <img class="avatar" id="userAvatar" src="" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" />
+      <div class="avatar-placeholder" id="avatarPlaceholder"></div>
+      <span class="user-name" id="userName"></span>
+    </div>
+    <div class="dropdown" id="userDropdown">
+      <div class="dropdown-name" id="dropdownName"></div>
+      <div class="dropdown-email" id="dropdownEmail"></div>
+      <button class="logout-btn" onclick="logout()">🚪 Sign Out</button>
+    </div>
+  </div>
+  <div class="hamburger" onclick="toggleNav()">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="loginOverlay" style="display:none;">
+  <div class="login-card">
+    <div class="login-icon">🔐</div>
+    <div class="login-title">Sign in with <span>Google</span></div>
+    <div class="login-desc">Please sign in with your Google account to book an appointment at DigiSeva Digital Center.</div>
+    <div id="loginGoogleBtn"></div>
+    <div class="login-footer">Your info is safe and never shared.</div>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="page-hero">
+  <h1 data-i18n="appoint.title">Book Your <span>Appointment</span></h1>
+  <p data-i18n="appoint.desc">Reserve your slot at DigiSeva Digital Center.</p>
+</section>
+
+<!-- FORM -->
+<section class="form-section">
+  <div class="form-card" id="bookingForm">
+    <div class="form-title" data-i18n="appoint.formTitle">📅 Book Your Slot</div>
+    <div class="form-subtitle" data-i18n="appoint.formSubtitle">Fill in your details to reserve your slot.</div>
+
+    <span class="form-label-main" data-i18n="appoint.serviceType">Select Service Type *</span>
+    <div class="service-chips">
+      <span class="chip active" onclick="selectChip(this)">🖨️ <span data-i18n="appoint.chip1">Printing</span></span>
+      <span class="chip" onclick="selectChip(this)">📋 <span data-i18n="appoint.chip2">Govt Forms</span></span>
+      <span class="chip" onclick="selectChip(this)">✈️ <span data-i18n="appoint.chip3">Ticket Book</span></span>
+      <span class="chip" onclick="selectChip(this)">💳 <span data-i18n="appoint.chip4">Recharge</span></span>
+      <span class="chip" onclick="selectChip(this)">🔖 <span data-i18n="appoint.chip5">Other</span></span>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label data-i18n="appoint.labelName">Full Name *</label>
+        <input type="text" id="fname" placeholder="Ravi Kumar" />
+      </div>
+      <div class="form-group">
+        <label data-i18n="appoint.labelPhone">Mobile Number *</label>
+        <div class="phone-wrap"><span class="phone-prefix">+91</span><input type="tel" id="fphone" placeholder="9876543210" maxlength="10" oninput="validatePhoneInput(this)" /></div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label data-i18n="appoint.labelDate">Preferred Date *</label>
+        <input type="date" id="fdate" />
+      </div>
+      <div class="form-group">
+        <label data-i18n="appoint.labelTime">Preferred Time *</label>
+        <select id="ftime">
+          <option value="" data-i18n="appoint.selectTime">Select Time Slot</option>
+          <option>8:00 AM – 9:00 AM</option>
+          <option>9:00 AM – 10:00 AM</option>
+          <option>10:00 AM – 11:00 AM</option>
+          <option>11:00 AM – 12:00 PM</option>
+          <option>12:00 PM – 1:00 PM</option>
+          <option>2:00 PM – 3:00 PM</option>
+          <option>3:00 PM – 4:00 PM</option>
+          <option>4:00 PM – 5:00 PM</option>
+          <option>5:00 PM – 6:00 PM</option>
+          <option>6:00 PM – 7:00 PM</option>
+          <option>7:00 PM – 8:00 PM</option>
+          <option>8:00 PM – 9:00 PM</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label data-i18n="appoint.labelDesc">Describe Your Requirement</label>
+      <textarea id="fdesc" placeholder="E.g. Need aadhaar update assistance..."></textarea>
+    </div>
+
+    <a class="forgot-token-link" onclick="showModal('forgotModal')">🔍 Forgot Token?</a>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitBooking()" data-i18n="appoint.submitBtn">Confirm Booking</button>
+
+  </div>
+</section>
+
+<!-- DUPLICATE ALERT MODAL -->
+<div class="modal-overlay" id="duplicateModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('duplicateModal')">✕</button>
+    <div class="modal-icon">⚠️</div>
+    <h3>Already Booked!</h3>
+    <p>Your appointment for this service is already confirmed.</p>
+    <div class="modal-token" id="dupToken">—</div>
+    <p id="dupDetails" style="font-size:0.82rem;color:var(--text-muted);"></p>
+    <button class="modal-btn modal-btn-secondary" onclick="closeModal('duplicateModal')">OK</button>
+  </div>
+</div>
+
+<!-- FORGOT TOKEN MODAL -->
+<div class="modal-overlay" id="forgotModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('forgotModal')">✕</button>
+    <div class="modal-icon">🔍</div>
+    <h3>Retrieve Your Token</h3>
+    <p>Enter the mobile number you booked with.</p>
+    <div class="phone-wrap" style="margin-bottom:12px;"><span class="phone-prefix" style="padding:12px 0 12px 14px;font-size:0.9rem;font-weight:600;color:var(--text-dark);user-select:none;">+91</span><input type="tel" id="forgotPhone" placeholder="9876543210" maxlength="10" oninput="validatePhoneInput(this)" style="border:none!important;padding:12px 14px;font-size:0.9rem;outline:none;width:100%;background:transparent;font-family:'Inter',sans-serif;" /></div>
+    <button class="modal-btn modal-btn-primary" onclick="lookupToken()">🔍 Find My Token</button>
+    <div id="forgotResult" class="modal-result"></div>
+    <button class="modal-btn modal-btn-secondary" onclick="closeModal('forgotModal')">Close</button>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner-lg"></div>
+  <p id="loadingText" data-i18n="appoint.loading">Processing...</p>
+</div>
+
+<footer>
+  <p data-i18n="appoint.footer">© DigiSeva Digital Center — Online Booking System</p>
+</footer>
+
+<script>
+/* ============================================================
+   GLOBALS
+   ============================================================ */
+const API_BASE = window.location.origin;
+let selectedService = '🖨️ Printing';
+const GOOGLE_CLIENT_ID = '1038149618074-ita1e96k5qa69fot2qmdua4mtp3gjitf.apps.googleusercontent.com';
+const AUTH_KEY = 'digiseva_user';
+
+function getStoredUser() {
+  try { return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch { return null; }
+}
+
+function saveUser(user) { localStorage.setItem(AUTH_KEY, JSON.stringify(user)); }
+
+function clearUser() { localStorage.removeItem(AUTH_KEY); }
+
+function handleGoogleCredential(response) {
+  const credential = response.credential;
+  if (!credential) { showToast('⚠️ No credential received from Google.', 'warn'); return; }
+  fetch(API_BASE + '/api/auth/google', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential })
+  }).then(async r => {
+    const text = await r.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = null; }
+    if (data && data.success) {
+      saveUser(data.user); applyUserUI(data.user);
+      hideLoginOverlay();
+      showToast('✅ Signed in as ' + data.user.name, 'success');
+    } else {
+      showToast('⚠️ ' + (data ? (data.message || 'Google sign-in failed.') : 'Server returned: ' + text.substring(0,100)), 'warn');
+    }
+  }).catch(err => { showToast('⚠️ Network error: ' + err.message, 'warn'); });
+}
+
+function applyUserUI(user) {
+  const profile = document.getElementById('userProfile');
+  const avatar = document.getElementById('userAvatar');
+  const placeholder = document.getElementById('avatarPlaceholder');
+  const nameEl = document.getElementById('userName');
+  if (user) {
+    profile.style.display = 'block';
+    nameEl.textContent = user.name;
+    document.getElementById('dropdownName').textContent = user.name;
+    document.getElementById('dropdownEmail').textContent = user.email || '';
+    if (user.picture) {
+      avatar.src = user.picture; avatar.style.display = 'block'; placeholder.style.display = 'none';
+    } else {
+      avatar.style.display = 'none'; placeholder.style.display = 'flex'; placeholder.textContent = user.name.charAt(0).toUpperCase();
+    }
+  } else {
+    profile.style.display = 'none';
+    avatar.style.display = 'none'; placeholder.style.display = 'none';
+  }
+}
+
+function logout() {
+  try { if (typeof google !== 'undefined' && google.accounts) google.accounts.id.disableAutoSelect(); } catch(e) {}
+  clearUser(); applyUserUI(null);
+  showToast('✅ Signed out.', 'success');
+  showLoginOverlay();
+}
+
+function toggleTheme() {
+  var h=document.documentElement,b=document.getElementById('themeToggle');
+  if(h.getAttribute('data-theme')==='dark'){h.removeAttribute('data-theme');localStorage.setItem('digiseva_theme','light');if(b)b.textContent='🌙';}
+  else{h.setAttribute('data-theme','dark');localStorage.setItem('digiseva_theme','dark');if(b)b.textContent='☀️';}
+}
+(function(){var b=document.getElementById('themeToggle');if(b)b.textContent=document.documentElement.getAttribute('data-theme')==='dark'?'☀️':'🌙';})();
+
+function showLoginOverlay() {
+  const overlay = document.getElementById('loginOverlay');
+  overlay.style.display = 'flex';
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function hideLoginOverlay() {
+  const overlay = document.getElementById('loginOverlay');
+  overlay.classList.add('hidden');
+  document.body.style.overflow = '';
+  setTimeout(() => { overlay.style.display = 'none'; }, 500);
+}
+
+function initGoogleAuth() {
+  const target = document.getElementById('loginGoogleBtn');
+  if (!GOOGLE_CLIENT_ID) {
+    console.warn('Google Sign-In: GOOGLE_CLIENT_ID not set.');
+    target.innerHTML = '<span style="color:rgba(255,255,255,0.4);font-size:0.85rem;text-align:center;">⚠️ Google Client ID not configured.<br>Set GOOGLE_CLIENT_ID in server.js</span>';
+    return;
+  }
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+  google.accounts.id.renderButton(target, {
+    type: 'standard', shape: 'pill', theme: 'outline', size: 'large', text: 'signin_with', logo_alignment: 'left'
+  });
+}
+
+/* ============================================================
+   MOBILE NAV
+   ============================================================ */
+function toggleNav() {
+  const links = document.getElementById('navLinks');
+  const overlay = document.getElementById('navOverlay');
+  links.classList.toggle('open');
+  if (overlay) overlay.classList.toggle('show');
+}
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) {
+    document.getElementById('navLinks').classList.remove('open');
+    const overlay = document.getElementById('navOverlay');
+    if (overlay) overlay.classList.remove('show');
+  }
+});
+
+/* ============================================================
+   DATE DEFAULTS
+   ============================================================ */
+(function() {
+  const dateInput = document.getElementById('fdate');
+  const today = new Date().toISOString().split('T')[0];
+  dateInput.min = today;
+  dateInput.value = today;
+})();
+
+/* ============================================================
+   SERVICE CHIPS
+   ============================================================ */
+function selectChip(el) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedService = el.textContent.trim();
+}
+
+/* ============================================================
+   SUBMIT BOOKING
+   ============================================================ */
+async function submitBooking() {
+  if (!getStoredUser()) { showToast('⚠️ Please sign in with Google first.', 'warn'); showLoginOverlay(); return; }
+  const name  = document.getElementById('fname').value.trim();
+  const phone = document.getElementById('fphone').value.trim();
+  const date  = document.getElementById('fdate').value;
+  const time  = document.getElementById('ftime').value;
+  const desc  = document.getElementById('fdesc').value.trim();
+
+  if (!name)  { showToast(getText('toast.enterName', '⚠️ Please enter your name.'), 'warn'); return; }
+  if (!/^[6-9]\d{9}$/.test(phone)) { showToast(getText('toast.invalidPhone', '⚠️ Enter a valid 10-digit Indian mobile number.'), 'warn'); return; }
+  if (!date)  { showToast(getText('toast.selectDate', '⚠️ Please select a date.'), 'warn'); return; }
+  if (!time)  { showToast(getText('toast.selectTime', '⚠️ Please select a time slot.'), 'warn'); return; }
+
+  document.getElementById('loadingOverlay').classList.add('show');
+  document.getElementById('loadingText').textContent = getText('appoint.submitting', 'Submitting your booking...');
+
+  try {
+    const resp = await fetch(API_BASE + '/api/book-appointment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, service: selectedService, date, time, note: desc })
+    });
+    const data = await resp.json();
+
+    document.getElementById('loadingOverlay').classList.remove('show');
+
+    if (!data.success) {
+      if (data.message === 'DUPLICATE_BOOKING') {
+        document.getElementById('loadingOverlay').classList.remove('show');
+        const dup = data.existingBooking;
+        document.getElementById('dupToken').textContent = dup.id;
+        document.getElementById('dupDetails').textContent = dup.service + ' · ' + dup.date + ' · ' + dup.time;
+        showModal('duplicateModal');
+        return;
+      }
+      showToast(data.message || '❌ Booking failed.', 'warn');
+      return;
+    }
+
+    // Redirect to confirmation page
+    const b = data.booking;
+    window.location.href = 'confirmation.html?id=' + b.id;
+
+    showToast(getText('toast.booked', '✅ Booking confirmed!'), 'success');
+  } catch (err) {
+    document.getElementById('loadingOverlay').classList.remove('show');
+    showToast(getText('toast.serverError', '⚠️ Server error. Please try again.'), 'warn');
+  }
+}
+
+function printInvoice() { window.print(); }
+
+function validatePhoneInput(el) {
+  el.value = el.value.replace(/\D/g, '').slice(0, 10);
+  if (el.value.length === 0) { el.style.borderColor = ''; return; }
+  el.style.borderColor = /^[6-9]\d{9}$/.test(el.value) ? 'var(--green, #22c55e)' : '#ef4444';
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+    padding:12px 22px;border-radius:50px;font-weight:600;font-size:0.88rem;
+    z-index:99999;font-family:'Hind',sans-serif;box-shadow:0 6px 24px rgba(0,0,0,0.3);
+    background:${type==='success'?'#00843D':type==='warn'?'#d97706':'#dc2626'};color:white;
+    animation:toastIn 0.3s ease;`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+(function() {
+  const s = document.createElement('style');
+  s.textContent = '@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+  document.head.appendChild(s);
+})();
+
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('show');
+});
+
+async function lookupToken() {
+  const phone = document.getElementById('forgotPhone').value.trim();
+  if (!/^[6-9]\d{9}$/.test(phone)) { showToast('⚠️ Enter a valid 10-digit mobile number.', 'warn'); return; }
+  const result = document.getElementById('forgotResult');
+  result.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:12px;">Searching...</div>';
+  try {
+    const resp = await fetch(API_BASE + '/api/lookup-booking?phone=' + phone);
+    const data = await resp.json();
+    if (data.success && data.bookings.length) {
+      result.innerHTML = data.bookings.map(b => `
+        <div class="modal-result-item">
+          <div class="token">${b.id}</div>
+          <div class="detail">${b.service} · ${b.date} · ${b.time} · ${b.status}</div>
+        </div>
+      `).join('');
+    } else {
+      result.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:12px;">No bookings found for this number.</div>';
+    }
+  } catch {
+    result.innerHTML = '<div style="text-align:center;color:#ef4444;padding:12px;">Server error. Try again.</div>';
+  }
+}
+
+/* ============================================================
+   I18N
+   ============================================================ */
+const langData = {
+  'nav.subtitle': { en: 'Digital Center', hi: 'डिजिटल सेंटर' },
+  'nav.home': { en: 'Home', hi: 'होम' },
+  'nav.services': { en: 'Services', hi: 'सेवाएँ' },
+  'nav.pricing': { en: 'Pricing', hi: 'मूल्य सूची' },
+  'nav.contact': { en: 'Contact', hi: 'संपर्क' },
+  'nav.bookCta': { en: 'Book Appointment', hi: 'अपॉइंटमेंट बुक करें' },
+  'appoint.title': { en: 'Book Your <span>Appointment</span>', hi: 'अपना <span>अपॉइंटमेंट</span> बुक करें' },
+  'appoint.desc': { en: 'Reserve your slot at DigiSeva Digital Center.', hi: 'DigiSeva डिजिटल सेंटर पर अपना स्लॉट आरक्षित करें।' },
+  'appoint.formTitle': { en: '📅 Book Your Slot', hi: '📅 अपना स्लॉट बुक करें' },
+  'appoint.formSubtitle': { en: 'Fill in your details to reserve your slot.', hi: 'अपना स्लॉट आरक्षित करने के लिए विवरण भरें।' },
+  'appoint.serviceType': { en: 'Select Service Type *', hi: 'सेवा का प्रकार चुनें *' },
+  'appoint.chip1': { en: 'Printing', hi: 'प्रिंटिंग' },
+  'appoint.chip2': { en: 'Govt Forms', hi: 'सरकारी फॉर्म' },
+  'appoint.chip3': { en: 'Ticket Book', hi: 'टिकट बुकिंग' },
+  'appoint.chip4': { en: 'Recharge', hi: 'रिचार्ज' },
+  'appoint.chip5': { en: 'Other', hi: 'अन्य' },
+  'appoint.labelName': { en: 'Full Name *', hi: 'पूरा नाम *' },
+  'appoint.labelPhone': { en: 'Mobile Number *', hi: 'मोबाइल नंबर *' },
+  'appoint.labelDate': { en: 'Preferred Date *', hi: 'पसंदीदा तिथि *' },
+  'appoint.labelTime': { en: 'Preferred Time *', hi: 'पसंदीदा समय *' },
+  'appoint.selectTime': { en: 'Select Time Slot', hi: 'समय स्लॉट चुनें' },
+  'appoint.labelDesc': { en: 'Describe Your Requirement', hi: 'अपनी आवश्यकता बताएं' },
+  'appoint.submitBtn': { en: 'Confirm Booking', hi: 'बुकिंग पुष्टि करें' },
+  'appoint.successTitle': { en: 'Booking Confirmed!', hi: 'बुकिंग पुष्टि हुई!' },
+  'appoint.successDesc': { en: 'Your appointment has been booked! Visit us at your chosen time.', hi: 'आपका अपॉइंटमेंट बुक हो गया है! अपने चुने हुए समय पर हमसे मिलें।' },
+  'appoint.tokenLabel': { en: 'Token Number', hi: 'टोकन नंबर' },
+  'appoint.invName': { en: 'Name', hi: 'नाम' },
+  'appoint.invPhone': { en: 'Phone', hi: 'फ़ोन' },
+  'appoint.invService': { en: 'Service', hi: 'सेवा' },
+  'appoint.invDate': { en: 'Date', hi: 'तिथि' },
+  'appoint.invTime': { en: 'Time', hi: 'समय' },
+  'appoint.invFooter': { en: 'Thank you! Visit us at your chosen time. — DigiSeva', hi: 'धन्यवाद! अपने चुने हुए समय पर हमसे मिलें। — DigiSeva' },
+  'appoint.printBtn': { en: '🖨️ Print Invoice', hi: '🖨️ इनवॉइस प्रिंट करें' },
+  'appoint.loading': { en: 'Processing...', hi: 'प्रक्रिया जारी...' },
+  'appoint.submitting': { en: 'Submitting your booking...', hi: 'आपकी बुकिंग सबमिट हो रही है...' },
+  'appoint.footer': { en: '© DigiSeva Digital Center — Online Booking System', hi: '© DigiSeva डिजिटल सेंटर — ऑनलाइन बुकिंग सिस्टम' },
+  'toast.invalidPhone': { en: '⚠️ Enter a valid 10-digit mobile number.', hi: '⚠️ कृपया एक वैध 10 अंकों का मोबाइल नंबर दर्ज करें।' },
+  'toast.enterName': { en: '⚠️ Please enter your name.', hi: '⚠️ कृपया अपना नाम दर्ज करें।' },
+  'toast.selectDate': { en: '⚠️ Please select a date.', hi: '⚠️ कृपया एक तिथि चुनें।' },
+  'toast.selectTime': { en: '⚠️ Please select a time slot.', hi: '⚠️ कृपया एक समय स्लॉट चुनें।' },
+  'toast.serverError': { en: '⚠️ Server error. Please try again.', hi: '⚠️ सर्वर त्रुटि। कृपया पुनः प्रयास करें।' },
+  'toast.booked': { en: '✅ Booking confirmed!', hi: '✅ बुकिंग पुष्टि हुई!' },
+};
+
+function getText(key, fallback) {
+  const lang = localStorage.getItem('digiseva_lang') || 'en';
+  return (langData[key] && langData[key][lang]) || fallback;
+}
+
+function switchLang(lang) {
+  localStorage.setItem('digiseva_lang', lang);
+  document.documentElement.lang = lang === 'hi' ? 'hi' : 'en';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (langData[key] && langData[key][lang]) {
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+        el.setAttribute('placeholder', langData[key][lang]);
+      } else if (el.tagName === 'OPTION') {
+        el.textContent = langData[key][lang];
+      } else {
+        el.innerHTML = langData[key][lang];
+      }
+    }
+  });
+  document.querySelectorAll('.lang-toggle .lang-label').forEach(l => {
+    l.classList.toggle('active', l.getAttribute('data-lang') === lang);
+  });
+}
+
+// Init language and auth
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('digiseva_lang') || 'en';
+  switchLang(saved);
+  document.body.style.overflow = 'hidden';
+  const user = getStoredUser();
+  if (user) {
+    applyUserUI(user);
+    hideLoginOverlay();
+  } else {
+    document.getElementById('loginOverlay').style.display = 'flex';
+  }
+  function tryInit() { if (typeof google !== 'undefined' && google.accounts) initGoogleAuth(); else setTimeout(tryInit, 300); }
+  tryInit();
+});
+</script>
+</body>
+</html>

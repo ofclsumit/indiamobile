@@ -1,0 +1,14 @@
+{
+  "name": "digiseva",
+  "version": "1.0.0",
+  "description": "DigiSeva Digital Center — WhatsApp OTP Booking System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "jsonwebtoken": "^9.0.3",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

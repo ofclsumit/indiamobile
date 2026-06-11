@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Booking Confirmed — DigiSeva</title>
+<script>(function(){var t=localStorage.getItem('digiseva_theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.setAttribute('data-theme','dark')})();</script>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --saffron: #FF6B00; --deep-saffron: #e05e00; --gold: #F5A623;
+  --midnight: #060E1A; --dark-blue: #0A1628; --white: #ffffff;
+  --cream: #FFF8F0; --light-gray: #F5F5F5; --border: #E8E0D8;
+  --text-dark: #1A1A2E; --text-muted: #8A8A9A; --green: #00843D;
+  --radius: 16px; --radius-xl: 20px;
+  --shadow-md: 0 8px 32px rgba(0,0,0,0.1);
+  --shadow-glow: 0 4px 20px rgba(255,107,0,0.35);
+  --transition: 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+[data-theme="dark"] {
+  --cream: #0f1729; --white: #111827; --light-gray: #1e293b;
+  --text-dark: #e2e8f0; --text-muted: #94a3b8;
+  --border: #334155;
+  --shadow-md: 0 8px 32px rgba(0,0,0,0.4);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--midnight);
+  color: white;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+}
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 5%; height: 68px;
+  background: rgba(6,14,26,0.95);
+  border-bottom: 1px solid rgba(255,107,0,0.15);
+}
+.nav-left { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.nav-left .logo-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--saffron); display: flex; align-items: center; justify-content: center; font-size: 18px; color: white; font-weight: 800; }
+.nav-left .logo-text { font-family: 'Baloo 2', cursive; font-size: 1.2rem; color: white; font-weight: 700; }
+.nav-left .logo-text span { color: var(--saffron); }
+.nav-right { display: flex; align-items: center; gap: 10px; }
+.nav-right a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; }
+.nav-right a:hover { color: white; }
+.theme-btn { background:none; border:1px solid rgba(255,255,255,0.15); border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; line-height:1; color:rgba(255,255,255,0.6); transition:all 0.3s; padding:0; }
+.theme-btn:hover { border-color:var(--saffron); color:var(--saffron); background:rgba(255,107,0,0.1); }
+main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 5%; }
+.invoice {
+  background: white; border-radius: var(--radius-xl);
+  padding: 40px 36px; max-width: 440px; width: 100%;
+  box-shadow: var(--shadow-md);
+  animation: fadeIn 0.5s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.inv-check { text-align: center; margin-bottom: 8px; }
+.inv-check .check-icon { display: inline-flex; width: 56px; height: 56px; border-radius: 50%; background: rgba(0,132,61,0.12); align-items: center; justify-content: center; font-size: 28px; }
+.inv-check h2 { font-family: 'Baloo 2', cursive; font-size: 1.4rem; color: var(--green); margin-top: 6px; }
+.inv-shop { font-family: 'Baloo 2', cursive; font-size: 1.2rem; font-weight: 800; color: var(--saffron); text-align: center; }
+.inv-sub { font-size: 0.72rem; color: var(--text-muted); text-align: center; margin-bottom: 14px; }
+.inv-divider { height: 1px; background: var(--border); margin: 14px 0; }
+.inv-token-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+.inv-token {
+  font-size: 2rem; font-weight: 900; font-family: 'Courier New', monospace;
+  text-align: center; color: var(--saffron); background: rgba(255,107,0,0.1);
+  border-radius: 12px; padding: 10px; margin-top: 4px; letter-spacing: 2px;
+  border: 2px dashed rgba(255,107,0,0.3);
+}
+.inv-detail { display: flex; justify-content: space-between; padding: 5px 0; font-size: 0.85rem; }
+.inv-detail .label { color: var(--text-muted); }
+.inv-detail .value { font-weight: 600; color: var(--text-dark); }
+.inv-footer { text-align: center; font-size: 0.72rem; color: var(--text-muted); margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); }
+.inv-footer strong { color: var(--saffron); }
+.actions { display: flex; gap: 10px; margin-top: 18px; }
+.actions button, .actions a {
+  flex: 1; padding: 12px; border-radius: 10px; border: none;
+  font-size: 0.85rem; font-weight: 700; font-family: 'Inter', sans-serif;
+  cursor: pointer; text-decoration: none; text-align: center;
+  transition: 0.2s;
+}
+.btn-print { background: var(--text-dark); color: white; }
+.btn-print:hover { background: var(--midnight); }
+.btn-home { background: var(--light-gray); color: var(--text-dark); }
+.btn-home:hover { background: var(--border); }
+.loading { text-align: center; color: rgba(255,255,255,0.4); font-size: 0.9rem; }
+.loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--saffron); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-box { text-align: center; color: rgba(255,255,255,0.6); }
+.error-box .err-icon { font-size: 48px; margin-bottom: 10px; }
+.error-box h3 { font-family: 'Baloo 2', cursive; font-size: 1.3rem; color: white; margin-bottom: 6px; }
+.error-box a { color: var(--saffron); text-decoration: none; font-weight: 600; }
+@media print {
+  body { background: white; }
+  nav, .actions { display: none !important; }
+  .invoice { box-shadow: none; border: 1px solid #ddd; padding: 20px; }
+  .inv-check .check-icon { display: none; }
+}
+@media(max-width:500px) {
+  .invoice { padding: 24px 20px; }
+  .inv-token { font-size: 1.5rem; }
+  .actions { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-left">
+    <div class="logo-icon">DS</div>
+    <div class="logo-text">DigiSeva <span>Digital Center</span></div>
+  </a>
+  <div class="nav-right">
+    <button class="theme-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+    <a href="/">← Home</a>
+  </div>
+</nav>
+
+<main>
+  <div id="content">
+    <div class="loading" id="loadingMsg">
+      <div class="spinner"></div>
+      <p>Loading your booking...</p>
+    </div>
+  </div>
+</main>
+
+<script>
+const API_BASE = window.location.origin;
+
+async function loadBooking() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  if (!id) { showError('No booking ID found. <a href="/">Go to Home</a>'); return; }
+
+  try {
+    const resp = await fetch(API_BASE + '/api/booking?id=' + encodeURIComponent(id));
+    const data = await resp.json();
+    if (!data.success || !data.booking) { showError('Booking not found. <a href="/">Go to Home</a>'); return; }
+
+    const b = data.booking;
+    document.getElementById('content').innerHTML = `
+      <div class="invoice">
+        <div class="inv-check">
+          <div class="check-icon">🎉</div>
+          <h2>Booking Confirmed!</h2>
+        </div>
+        <div class="inv-shop">🖨️ DigiSeva Digital Center</div>
+        <div class="inv-sub">Nonadih, Piro, Bhojpur — Cyber Cafe &amp; Digital Services</div>
+        <div class="inv-divider"></div>
+        <div class="inv-token-label">Token Number</div>
+        <div class="inv-token">${escHtml(b.id)}</div>
+        <div class="inv-divider"></div>
+        <div class="inv-detail"><span class="label">Name</span><span class="value">${escHtml(b.name)}</span></div>
+        <div class="inv-detail"><span class="label">Phone</span><span class="value">+91 ${escHtml(b.phone)}</span></div>
+        <div class="inv-detail"><span class="label">Service</span><span class="value">${escHtml(b.service)}</span></div>
+        <div class="inv-detail"><span class="label">Date</span><span class="value">${formatDate(b.date)}</span></div>
+        <div class="inv-detail"><span class="label">Time</span><span class="value">${escHtml(b.time)}</span></div>
+        <div class="inv-divider"></div>
+        <div class="inv-footer">Thank you! Visit us at your chosen time. — <strong>DigiSeva</strong></div>
+        <div class="actions">
+          <button class="btn-print" onclick="window.print()">🖨️ Print</button>
+          <a href="/" class="btn-home">← Home</a>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    showError('Server error. Please try again. <a href="/">Go to Home</a>');
+  }
+}
+
+function showError(msg) {
+  document.getElementById('content').innerHTML = '<div class="error-box"><div class="err-icon">⚠️</div><h3>Oops!</h3><p style="color:rgba(255,255,255,0.5);margin-top:6px;">' + msg + '</p></div>';
+}
+
+function toggleTheme() {
+  var h=document.documentElement,b=document.getElementById('themeToggle');
+  if(h.getAttribute('data-theme')==='dark'){h.removeAttribute('data-theme');localStorage.setItem('digiseva_theme','light');if(b)b.textContent='🌙';}
+  else{h.setAttribute('data-theme','dark');localStorage.setItem('digiseva_theme','dark');if(b)b.textContent='☀️';}
+}
+(function(){var b=document.getElementById('themeToggle');if(b)b.textContent=document.documentElement.getAttribute('data-theme')==='dark'?'☀️':'🌙';})();
+
+function escHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = s || '';
+  return div.innerHTML;
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+loadBooking();
+</script>
+</body>
+</html>

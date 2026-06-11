@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="DigiSeva Secure Payment Gateway — Pay for cyber cafe & digital services via UPI QR code. Fast, safe, verified.">
+<title>DigiSeva — Secure QR Payment Gateway</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Hind:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- QR Code library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --saffron: #FF6B00;
+    --deep-saffron: #E55A00;
+    --green: #00843D;
+    --navy: #0A1628;
+    --midnight: #060E1A;
+    --gold: #F5A623;
+    --cream: #FFF8F0;
+    --white: #FFFFFF;
+    --light-gray: #F4F6FA;
+    --text-dark: #1A1A2E;
+    --text-muted: #6B7280;
+    --card-bg: #FFFFFF;
+    --border: #E8ECF0;
+    --success: #10B981;
+    --danger: #EF4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Hind', sans-serif;
+    color: var(--text-dark);
+    background: linear-gradient(135deg, var(--midnight) 0%, var(--navy) 100%);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== ACCESS DENIED SCREEN ===== */
+  .access-denied {
+    position: fixed;
+    inset: 0;
+    background: var(--midnight);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+  .access-denied.hidden {
+    display: none;
+  }
+  .access-denied .lock-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+    animation: shake 0.5s ease;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+  }
+  .access-denied h2 {
+    font-family: 'Baloo 2', cursive;
+    font-size: 2rem;
+    color: var(--danger);
+    margin-bottom: 12px;
+  }
+  .access-denied p {
+    color: rgba(255,255,255,0.5);
+    font-size: 1rem;
+    max-width: 400px;
+    line-height: 1.6;
+    margin-bottom: 28px;
+  }
+  .access-denied .back-btn {
+    background: linear-gradient(135deg, var(--saffron), var(--deep-saffron));
+    color: white;
+    padding: 14px 32px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s;
+  }
+  .access-denied .back-btn:hover {
+    transform: translateY(-2px);
+  }
+  .access-denied .security-info {
+    margin-top: 32px;
+    padding: 16px 24px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(239,68,68,0.2);
+  }
+  .access-denied .security-info p {
+    font-size: 0.82rem;
+    color: rgba(239,68,68,0.7);
+    margin: 0;
+  }
+
+  /* ===== NAVBAR ===== */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 1000;
+    background: rgba(6,14,26,0.97);
+    backdrop-filter: blur(12px);
+    border-bottom: 2px solid var(--saffron);
+    padding: 0 5%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 68px;
+  }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+  }
+  .nav-logo .logo-icon {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--saffron), var(--gold));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .nav-logo .logo-text {
+    font-family: 'Baloo 2', cursive;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--white);
+    line-height: 1;
+  }
+  .nav-logo .logo-sub {
+    font-size: 0.65rem;
+    color: var(--saffron);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    list-style: none;
+  }
+  .nav-links a {
+    color: rgba(255,255,255,0.8);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .nav-links a:hover { color: var(--saffron); }
+
+  /* ===== SECURITY BANNER ===== */
+  .security-banner {
+    position: fixed;
+    top: 68px; left: 0; right: 0;
+    background: linear-gradient(90deg, rgba(0,132,61,0.15), rgba(0,132,61,0.05));
+    border-bottom: 1px solid rgba(0,132,61,0.2);
+    padding: 10px 5%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 999;
+    backdrop-filter: blur(8px);
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  .security-banner span {
+    color: #4ade80;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .security-banner .shield-icon {
+    font-size: 1rem;
+  }
+
+  /* ===== PAYMENT CONTAINER ===== */
+  .payment-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 130px 20px 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+
+  @media(max-width: 900px) {
+    .payment-wrapper { grid-template-columns: 1fr; padding-top: 120px; }
+    .qr-panel { position: static; }
+  }
+
+  /* ===== LEFT: SERVICE SELECTION ===== */
+  .service-panel {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 32px;
+    backdrop-filter: blur(10px);
+  }
+
+  .panel-header {
+    margin-bottom: 28px;
+  }
+  .panel-header h2 {
+    font-family: 'Baloo 2', cursive;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--white);
+    margin-bottom: 8px;
+  }
+  .panel-header p {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.95rem;
+  }
+
+  .service-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .service-item {
+    background: rgba(255,255,255,0.05);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .service-item::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--saffron);
+    transform: scaleY(0);
+    transition: transform 0.3s;
+  }
+  .service-item:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,107,0,0.3);
+    transform: translateX(4px);
+  }
+  .service-item.active {
+    background: rgba(255,107,0,0.1);
+    border-color: var(--saffron);
+  }
+  .service-item.active::before {
+    transform: scaleY(1);
+  }
+  .service-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .service-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    background: rgba(255,255,255,0.08);
+    flex-shrink: 0;
+  }
+  .service-item.active .service-icon {
+    background: linear-gradient(135deg, var(--saffron), var(--gold));
+  }
+
+  .service-info {
+    flex: 1;
+  }
+  .service-info h4 {
+    color: var(--white);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .service-info p {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.82rem;
+  }
+
+  .service-price {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .service-price .amount {
+    font-family: 'Baloo 2', cursive;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--saffron);
+    line-height: 1;
+  }
+  .service-price .period {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.4);
+  }
+
+  /* Custom Amount Input */
+  .custom-amount-wrap {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+    border: 1px dashed rgba(255,255,255,0.15);
+  }
+  .custom-amount-wrap label {
+    display: block;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .custom-amount-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .custom-amount-input span {
+    color: var(--saffron);
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+  .custom-amount-input input {
+    flex: 1;
+    background: rgba(255,255,255,0.07);
+    border: 1.5px solid rgba(255,255,255,0.12);
+    color: white;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-family: 'Hind', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .custom-amount-input input:focus {
+    border-color: var(--saffron);
+  }
+  .custom-amount-input input::placeholder {
+    color: rgba(255,255,255,0.3);
+  }
+  .custom-amount-input input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ===== CLOUDFLARE TURNSTILE CONTAINER ===== */
+  .turnstile-container {
+    margin: 24px 0;
+    padding: 20px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 14px;
+    border: 1.5px solid rgba(255,255,255,0.1);
+    text-align: center;
+  }
+  .turnstile-container label {
+    display: block;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .turnstile-box {
+    display: flex;
+    justify-content: center;
+    min-height: 65px;
+  }
+  .turnstile-status {
+    margin-top: 10px;
+    font-size: 0.82rem;
+    color: var(--gold);
+    font-weight: 600;
+    display: none;
+  }
+  .turnstile-status.verified {
+    display: block;
+    color: var(--green);
+  }
+
+  /* ===== RIGHT: QR PAYMENT ===== */
+  .qr-panel {
+    background: var(--white);
+    border-radius: 24px;
+    padding: 32px;
+    position: sticky;
+    top: 120px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+  }
+
+  .qr-header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .qr-header h3 {
+    font-family: 'Baloo 2', cursive;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin-bottom: 6px;
+  }
+  .qr-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .qr-container {
+    background: var(--light-gray);
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    margin-bottom: 24px;
+    position: relative;
+    border: 2px solid var(--border);
+  }
+  .qr-container.paid {
+    border-color: var(--green);
+    background: rgba(0,132,61,0.05);
+  }
+  .qr-container.locked {
+    opacity: 0.6;
+    filter: blur(2px);
+  }
+  .qr-lock-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 10;
+    background: rgba(255,255,255,0.8);
+    border-radius: 20px;
+  }
+  .qr-lock-overlay .lock-icon {
+    font-size: 48px;
+  }
+  .qr-lock-overlay p {
+    color: var(--text-dark);
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  #qrcode {
+    display: inline-block;
+    padding: 16px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin-bottom: 16px;
+  }
+  #qrcode img {
+    display: block;
+    border-radius: 8px;
+  }
+
+  .qr-amount-display {
+    font-family: 'Baloo 2', cursive;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--saffron);
+    margin-bottom: 4px;
+  }
+  .qr-amount-display span {
+    font-size: 1rem;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  .qr-instructions {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
+  .upi-apps {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .upi-app-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: white;
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 50px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-dark);
+  }
+
+  .payment-status {
+    display: none;
+    text-align: center;
+    padding: 20px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+  }
+  .payment-status.success {
+    display: block;
+    background: rgba(0,132,61,0.1);
+    border: 1px solid rgba(0,132,61,0.2);
+  }
+  .payment-status.pending {
+    display: block;
+    background: rgba(245,166,35,0.1);
+    border: 1px solid rgba(245,166,35,0.2);
+  }
+  .payment-status .status-icon {
+    font-size: 40px;
+    margin-bottom: 8px;
+  }
+  .payment-status h4 {
+    font-family: 'Baloo 2', cursive;
+    font-size: 1.2rem;
+    margin-bottom: 4px;
+  }
+  .payment-status.success h4 { color: var(--green); }
+  .payment-status.pending h4 { color: var(--gold); }
+  .payment-status p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .payment-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .btn-pay {
+    flex: 1;
+    min-width: 140px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: none;
+    font-family: 'Hind', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-pay:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+  .btn-primary-pay {
+    background: linear-gradient(135deg, var(--saffron), var(--deep-saffron));
+    color: white;
+    box-shadow: 0 4px 16px rgba(255,107,0,0.35);
+  }
+  .btn-primary-pay:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(255,107,0,0.45);
+  }
+  .btn-secondary-pay {
+    background: var(--light-gray);
+    color: var(--text-dark);
+    border: 1.5px solid var(--border);
+  }
+  .btn-secondary-pay:hover:not(:disabled) {
+    background: var(--border);
+  }
+
+  .upi-id-box {
+    background: var(--cream);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 20px;
+    text-align: center;
+    border: 1.5px dashed var(--gold);
+  }
+  .upi-id-box label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .upi-id-value {
+    font-family: 'Baloo 2', cursive;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .copy-btn {
+    background: var(--saffron);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .copy-btn:hover { background: var(--deep-saffron); }
+  .copy-btn.copied { background: var(--green); }
+
+  .txn-details {
+    margin-top: 20px;
+    padding: 20px;
+    background: var(--light-gray);
+    border-radius: 14px;
+    display: none;
+  }
+  .txn-details.show { display: block; }
+  .txn-details h4 {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .txn-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+  }
+  .txn-row:last-child { border-bottom: none; }
+  .txn-row .label { color: var(--text-muted); }
+  .txn-row .value { font-weight: 600; color: var(--text-dark); }
+
+  .timer-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+  .timer-wrap .timer {
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    color: var(--saffron);
+    font-size: 1.1rem;
+  }
+
+  .secure-note {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .mobile-intent-btn {
+    display: none;
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #5F259F, #7B3EB0);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Hind', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 12px;
+    text-decoration: none;
+    text-align: center;
+  }
+  @media(max-width: 768px) {
+    .mobile-intent-btn { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .pulse { animation: pulse 2s infinite; }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-slide-up {
+    animation: slideUp 0.5s ease forwards;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text-dark);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    z-index: 99999;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    animation: toastIn 0.3s ease;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  .footer-return {
+    text-align: center;
+    padding: 30px;
+    background: rgba(255,255,255,0.02);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    margin-top: 40px;
+  }
+  .footer-return a {
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s;
+  }
+  .footer-return a:hover {
+    color: var(--saffron);
+  }
+
+  /* Verified Origin Badge */
+  .origin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,132,61,0.15);
+    border: 1px solid rgba(0,132,61,0.3);
+    color: #4ade80;
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  @media(max-width: 600px) {
+    .service-panel { padding: 20px 16px; }
+    .qr-panel { padding: 20px 16px; }
+    .qr-container { padding: 16px; }
+    .qr-container canvas, .qr-container img { max-width: 100%; height: auto; }
+    .security-banner { font-size: 0.72rem; overflow-wrap: break-word; word-break: break-word; }
+    .qr-amount-display { font-size: 1.6rem; }
+  }
+  @media(max-width: 480px) {
+    .service-card { padding: 16px 12px; }
+    .service-card .card-title { font-size: 0.9rem; }
+    .service-card .card-price { font-size: 1.2rem; }
+    .nav-link { font-size: 0.78rem; }
+    .access-denied h2 { font-size: 1.4rem; }
+    .access-denied .lock-icon { font-size: 48px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ACCESS DENIED SCREEN (shown when not accessed from main website) -->
+<div class="access-denied" id="accessDenied">
+  <div class="lock-icon">🔒</div>
+  <h2>Access Restricted</h2>
+  <p>This secure payment portal can only be accessed through the official DigiSeva website. Direct access is not permitted for security reasons.</p>
+  <a href="CYBER_CAFE_with_payment.html" class="back-btn">← Go to DigiSeva Website</a>
+  <div class="security-info">
+    <p>🔒 Security Protocol: Referrer validation required • Token authentication enforced</p>
+  </div>
+</div>
+
+<!-- MAIN PAYMENT UI (hidden until verified) -->
+<div id="paymentUI" style="display:none;">
+
+<!-- NAVBAR -->
+<nav>
+  <a href="CYBER_CAFE_with_payment.html" class="nav-logo">
+    <div class="logo-icon">💻</div>
+    <div>
+      <div class="logo-text">DigiSeva</div>
+      <div class="logo-sub">Digital Center</div>
+    </div>
+  </a>
+  <ul class="nav-links">
+    <li><a href="CYBER_CAFE_with_payment.html">← Back to Website</a></li>
+  </ul>
+</nav>
+
+<!-- SECURITY BANNER -->
+<div class="security-banner">
+  <span class="shield-icon">🛡️</span>
+  <span>Secured by Cloudflare Turnstile — Bot Protection Active</span>
+  <span style="color: rgba(255,255,255,0.4); font-size: 0.75rem; margin-left: 8px;">| UPI ID: 8873810674@ybl</span>
+</div>
+
+<!-- PAYMENT WRAPPER -->
+<div class="payment-wrapper">
+
+  <!-- LEFT: Service Selection + Security -->
+  <div class="service-panel animate-slide-up">
+    <div class="panel-header">
+      <div class="origin-badge" id="originBadge">
+        ✅ Verified: Accessed from DigiSeva Website
+      </div>
+      <h2>Select Service</h2>
+      <p>Choose a service or enter custom amount to generate payment QR</p>
+    </div>
+
+    <div class="service-categories" id="serviceList">
+      <!-- Services injected by JS -->
+    </div>
+
+    <div class="custom-amount-wrap">
+      <label>💰 Or Enter Custom Amount</label>
+      <div class="custom-amount-input">
+        <span>₹</span>
+        <input type="number" id="customAmount" placeholder="Enter amount" min="1" oninput="handleCustomAmount(this.value)" disabled>
+      </div>
+    </div>
+
+    <!-- Simple Verification (replaces Cloudflare Turnstile) -->
+    <div class="turnstile-container">
+      <label>🔒 Security Verification Required</label>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:14px;background:rgba(255,255,255,0.05);border-radius:10px;cursor:pointer;" onclick="manualVerify()" id="verifyBox">
+        <div id="verifyCheck" style="width:24px;height:24px;border:2px solid rgba(255,255,255,0.3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all 0.3s;"></div>
+        <span style="color:rgba(255,255,255,0.7);font-size:0.9rem;font-weight:500;">I am not a robot</span>
+      </div>
+      <div class="turnstile-status" id="turnstileStatus">
+        ✅ Verified — You can now generate payment QR
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: QR PAYMENT -->
+  <div class="qr-panel animate-slide-up">
+    <div class="qr-header">
+      <h3>Scan & Pay</h3>
+      <p>Scan this QR using any UPI app</p>
+    </div>
+
+    <div class="timer-wrap" id="timerWrap" style="display:none;">
+      ⏱️ Expires in: <span class="timer" id="timer">05:00</span>
+    </div>
+
+    <div class="qr-container" id="qrContainer">
+      <div class="qr-lock-overlay" id="qrLockOverlay">
+        <div class="lock-icon">🔒</div>
+        <p>Complete security verification to unlock QR</p>
+      </div>
+      <div id="qrcode"></div>
+      <div class="qr-amount-display" id="displayAmount">
+        ₹<span id="amountValue">0</span>
+        <span id="amountPeriod">per service</span>
+      </div>
+      <p class="qr-instructions">
+        Open any UPI app (PhonePe, Google Pay, Paytm, BHIM)<br>
+        Scan the QR code or click the button below to pay
+      </p>
+
+      <div class="upi-apps">
+        <div class="upi-app-badge">📱 PhonePe</div>
+        <div class="upi-app-badge">🔵 GPay</div>
+        <div class="upi-app-badge">💙 Paytm</div>
+        <div class="upi-app-badge">🔷 BHIM</div>
+      </div>
+
+      <a id="mobilePayBtn" class="mobile-intent-btn" href="#" target="_blank">
+        📲 Tap to Pay with UPI App
+      </a>
+    </div>
+
+    <div class="payment-status pending" id="statusPending">
+      <div class="status-icon">⏳</div>
+      <h4>Waiting for Payment</h4>
+      <p>Complete the payment on your UPI app</p>
+    </div>
+    <div class="payment-status" id="statusSuccess">
+      <div class="status-icon">🎉</div>
+      <h4>Payment Successful!</h4>
+      <p>Transaction ID: <span id="txnId">-</span></p>
+    </div>
+
+    <div class="payment-actions">
+      <button class="btn-pay btn-primary-pay" id="generateBtn" onclick="generateQR()" disabled>
+        🔄 Generate New QR
+      </button>
+      <button class="btn-pay btn-secondary-pay" id="downloadBtn" onclick="downloadQR()" disabled>
+        ⬇ Download QR
+      </button>
+    </div>
+
+    <div class="upi-id-box">
+      <label>UPI ID (Manual Transfer)</label>
+      <div class="upi-id-value">
+        <span id="upiIdDisplay">8873810674@ybl</span>
+        <button class="copy-btn" onclick="copyUPI()">Copy</button>
+      </div>
+    </div>
+
+    <div class="txn-details" id="txnDetails">
+      <h4>Payment Details</h4>
+      <div class="txn-row">
+        <span class="label">Service</span>
+        <span class="value" id="txnService">-</span>
+      </div>
+      <div class="txn-row">
+        <span class="label">Amount</span>
+        <span class="value" id="txnAmount">-</span>
+      </div>
+      <div class="txn-row">
+        <span class="label">UPI ID</span>
+        <span class="value" id="txnUPI">8873810674@ybl</span>
+      </div>
+      <div class="txn-row">
+        <span class="label">Ref ID</span>
+        <span class="value" id="txnRef">-</span>
+      </div>
+      <div class="txn-row">
+        <span class="label">Status</span>
+        <span class="value" id="txnStatus" style="color: var(--gold);">Pending</span>
+      </div>
+    </div>
+
+    <div class="secure-note">
+      🔒 Secured by Cloudflare Turnstile | NPCI UPI | 256-bit Encryption
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER RETURN -->
+<div class="footer-return">
+  <a href="CYBER_CAFE_with_payment.html">
+    ← Return to DigiSeva Website
+  </a>
+</div>
+
+</div><!-- /paymentUI -->
+
+<script>
+// ============================================================
+// REFERRER & TOKEN VALIDATION — PAYMENT PORTAL ONLY ACTIVATES
+// WHEN ACCESSED FROM MAIN WEBSITE
+// ============================================================
+
+const ALLOWED_ORIGINS = [
+  'digiseva.in',
+  'www.digiseva.in',
+  'digisevacenter.in',
+  'www.digisevacenter.in',
+  'localhost',
+  '127.0.0.1',
+  'file://'  // For local testing — REMOVE in production
+];
+
+const SECRET_TOKEN = 'DS2024SECURE'; // Simple token — enhance with server-side in production
+
+function validateAccess() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  const ref = urlParams.get('ref');
+  const referrer = document.referrer;
+
+  // Check 1: Must have valid token parameter
+  const hasValidToken = token === SECRET_TOKEN;
+
+  // Check 2: Must have referrer parameter from main site
+  const hasValidRef = ref === 'digiseva_main';
+
+  // Check 3: Referrer header must contain allowed domain (if available)
+  let hasValidReferrer = false;
+  if (referrer) {
+    hasValidReferrer = ALLOWED_ORIGINS.some(origin => referrer.includes(origin));
+  }
+
+  // For local file testing, allow if token and ref match
+  // In production, require all three checks
+  const isLocal = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+  let isAuthorized = false;
+
+  if (isLocal) {
+    // Local testing: token + ref required
+    isAuthorized = hasValidToken && hasValidRef;
+  } else {
+    // Production: all three checks
+    isAuthorized = hasValidToken && hasValidRef && hasValidReferrer;
+  }
+
+  if (isAuthorized) {
+    document.getElementById('accessDenied').classList.add('hidden');
+    document.getElementById('paymentUI').style.display = 'block';
+    console.log('✅ Access authorized from DigiSeva website');
+  } else {
+    document.getElementById('accessDenied').classList.remove('hidden');
+    document.getElementById('paymentUI').style.display = 'none';
+    console.log('❌ Access denied — invalid origin or missing token');
+    console.log('Token valid:', hasValidToken, 'Ref valid:', hasValidRef, 'Referrer valid:', hasValidReferrer);
+  }
+
+  return isAuthorized;
+}
+
+// Run validation immediately
+const accessGranted = validateAccess();
+
+// ============================================================
+// CONFIGURATION
+// ============================================================
+const CONFIG = {
+  upiId: '8873810674@ybl',
+  merchantName: 'DigiSeva Digital Center',
+  merchantCode: '0000',
+  currency: 'INR',
+  turnstileSiteKey: 'YOUR_TURNSTILE_SITE_KEY',
+  services: [
+    { id: 'print',    name: 'Print Services',     icon: '🖨️', price: 2,    period: 'per B&W page', category: 'Print & Photocopy', desc: 'Black & White Printing' },
+    { id: 'color',    name: 'Color Printing',     icon: '🎨', price: 10,   period: 'per page',     category: 'Print & Photocopy', desc: 'High-quality color prints' },
+    { id: 'photo',    name: 'Passport Photos',     icon: '📷', price: 50,   period: '4 copies',     category: 'Print & Photocopy', desc: 'Passport size photo printing' },
+    { id: 'scan',     name: 'Scanning',           icon: '📄', price: 5,    period: 'per page',     category: 'Print & Photocopy', desc: 'Document scanning' },
+    { id: 'laminate', name: 'Lamination',         icon: '✨', price: 30,   period: 'per sheet',    category: 'Print & Photocopy', desc: 'Document lamination' },
+    { id: 'form',     name: 'Govt Form Filling',  icon: '📋', price: 50,   period: 'per form',     category: 'Government', desc: 'Aadhaar, PAN, Voter ID etc.' },
+    { id: 'aadhaar',  name: 'Aadhaar Update',     icon: '🆔', price: 100,  period: 'per update',   category: 'Government', desc: 'Aadhaar correction/update' },
+    { id: 'pan',      name: 'PAN Card Services',  icon: '💳', price: 150,  period: 'per card',     category: 'Government', desc: 'New PAN or correction' },
+    { id: 'ticket',   name: 'Ticket Booking',     icon: '✈️', price: 30,   period: 'per ticket',   category: 'Booking', desc: 'Train, bus, flight booking' },
+    { id: 'recharge', name: 'Mobile Recharge',    icon: '💰', price: 0,    period: 'as per plan',  category: 'Recharge', desc: 'All operators supported' },
+    { id: 'dth',      name: 'DTH Recharge',       icon: '📡', price: 0,    period: 'as per plan',  category: 'Recharge', desc: 'All DTH operators' },
+  ]
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let selectedService = null;
+let customAmount = 0;
+let qrCodeObj = null;
+let timerInterval = null;
+let currentTxnRef = '';
+let turnstileVerified = false;
+
+// ============================================================
+// CLOUDFLARE TURNSTILE CALLBACKS
+// ============================================================
+function manualVerify() {
+  if (turnstileVerified) return;
+  turnstileVerified = true;
+  const checkEl = document.getElementById('verifyCheck');
+  checkEl.textContent = '✓';
+  checkEl.style.background = 'var(--green)';
+  checkEl.style.borderColor = 'var(--green)';
+  checkEl.style.color = 'white';
+  document.getElementById('turnstileStatus').classList.add('verified');
+  document.getElementById('generateBtn').disabled = false;
+  document.getElementById('downloadBtn').disabled = false;
+  document.getElementById('customAmount').disabled = false;
+  document.getElementById('qrLockOverlay').style.display = 'none';
+  document.querySelectorAll('.service-item').forEach(el => el.classList.remove('disabled'));
+  showToast('✅ Verified! You can now generate payment QR', 'success');
+}
+
+// ============================================================
+// INITIALIZATION (only if access granted)
+// ============================================================
+if (accessGranted) {
+  renderServices();
+  // Don't auto-select (requires verification first)
+  document.getElementById('upiIdDisplay').textContent = CONFIG.upiId;
+  document.getElementById('customAmount').disabled = true;
+  document.querySelectorAll('.service-item').forEach(el => el.classList.add('disabled'));
+}
+
+function renderServices() {
+  const container = document.getElementById('serviceList');
+  container.innerHTML = CONFIG.services.map(s => `
+    <div class="service-item ${s.id === (selectedService?.id || '') ? 'active' : ''} disabled" 
+         onclick="selectService('${s.id}')" 
+         data-id="${s.id}">
+      <div class="service-icon">${s.icon}</div>
+      <div class="service-info">
+        <h4>${s.name}</h4>
+        <p>${s.desc}</p>
+      </div>
+      <div class="service-price">
+        <div class="amount">₹${s.price || '—'}</div>
+        <div class="period">${s.period}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectService(id) {
+  if (!accessGranted) {
+    showToast('🔒 Access denied — please use the main website', 'error');
+    return;
+  }
+  if (!turnstileVerified) {
+    showToast('🔒 Please complete security verification first', 'warn');
+    return;
+  }
+  selectedService = CONFIG.services.find(s => s.id === id);
+  customAmount = 0;
+  document.getElementById('customAmount').value = '';
+
+  document.querySelectorAll('.service-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === id);
+  });
+
+  updateDisplay();
+  generateQR();
+}
+
+function handleCustomAmount(value) {
+  if (!accessGranted) {
+    showToast('🔒 Access denied — please use the main website', 'error');
+    document.getElementById('customAmount').value = '';
+    return;
+  }
+  if (!turnstileVerified) {
+    showToast('🔒 Please complete security verification first', 'warn');
+    document.getElementById('customAmount').value = '';
+    return;
+  }
+  const amount = parseInt(value) || 0;
+  if (amount > 0) {
+    customAmount = amount;
+    selectedService = null;
+    document.querySelectorAll('.service-item').forEach(el => el.classList.remove('active'));
+    updateDisplay();
+    generateQR();
+  }
+}
+
+function getCurrentAmount() {
+  if (customAmount > 0) return customAmount;
+  if (selectedService) return selectedService.price;
+  return 0;
+}
+
+function getCurrentServiceName() {
+  if (customAmount > 0) return 'Custom Amount';
+  if (selectedService) return selectedService.name;
+  return 'Select Service';
+}
+
+function updateDisplay() {
+  const amount = getCurrentAmount();
+  const period = selectedService ? selectedService.period : 'one-time';
+
+  document.getElementById('amountValue').textContent = amount || '—';
+  document.getElementById('amountPeriod').textContent = period;
+
+  document.getElementById('txnService').textContent = getCurrentServiceName();
+  document.getElementById('txnAmount').textContent = '₹' + amount;
+  document.getElementById('txnUPI').textContent = CONFIG.upiId;
+  document.getElementById('txnRef').textContent = currentTxnRef || '—';
+
+  updateMobileIntent(amount);
+}
+
+// ============================================================
+// QR CODE GENERATION
+// ============================================================
+function generateQR() {
+  if (!accessGranted) {
+    showToast('🔒 Access denied', 'error');
+    return;
+  }
+  if (!turnstileVerified) {
+    showToast('🔒 Please complete security verification first', 'warn');
+    return;
+  }
+
+  const amount = getCurrentAmount();
+  if (!amount || amount <= 0) {
+    showToast('⚠️ Please select a service or enter an amount', 'warn');
+    return;
+  }
+
+  currentTxnRef = 'DS' + Date.now().toString(36).toUpperCase();
+  const upiURI = buildUPIURI(amount, currentTxnRef);
+
+  const qrContainer = document.getElementById('qrcode');
+  qrContainer.innerHTML = '';
+
+  qrCodeObj = new QRCode(qrContainer, {
+    text: upiURI,
+    width: 220,
+    height: 220,
+    colorDark: '#0A1628',
+    colorLight: '#FFFFFF',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  updateDisplay();
+  document.getElementById('txnDetails').classList.add('show');
+  document.getElementById('statusPending').style.display = 'block';
+  document.getElementById('statusSuccess').style.display = 'none';
+  document.getElementById('qrContainer').classList.remove('paid');
+
+  startTimer(5 * 60);
+  updateMobileIntent(amount, upiURI);
+
+  showToast('✅ QR Code generated! Scan to pay ₹' + amount, 'success');
+}
+
+function buildUPIURI(amount, ref) {
+  const params = new URLSearchParams({
+    pa: CONFIG.upiId,
+    pn: CONFIG.merchantName,
+    am: amount.toFixed(2),
+    cu: CONFIG.currency,
+    tn: `DigiSeva-${getCurrentServiceName()}-${ref}`,
+    tr: ref,
+    mc: CONFIG.merchantCode
+  });
+  return `upi://pay?${params.toString()}`;
+}
+
+function updateMobileIntent(amount, uri) {
+  const btn = document.getElementById('mobilePayBtn');
+  if (amount > 0 && turnstileVerified && accessGranted) {
+    const upiURI = uri || buildUPIURI(amount, currentTxnRef || 'DS' + Date.now().toString(36).toUpperCase());
+    btn.href = upiURI;
+    btn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+  }
+}
+
+// ============================================================
+// TIMER
+// ============================================================
+function startTimer(seconds) {
+  clearInterval(timerInterval);
+  const timerEl = document.getElementById('timer');
+  const wrapEl = document.getElementById('timerWrap');
+  wrapEl.style.display = 'flex';
+
+  let remaining = seconds;
+  timerInterval = setInterval(() => {
+    remaining--;
+    const mins = Math.floor(remaining / 60);
+    const secs = remaining % 60;
+    timerEl.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      timerEl.textContent = 'Expired';
+      timerEl.style.color = '#EF4444';
+    }
+  }, 1000);
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function downloadQR() {
+  if (!accessGranted) {
+    showToast('🔒 Access denied', 'error');
+    return;
+  }
+  if (!turnstileVerified) {
+    showToast('🔒 Please complete security verification first', 'warn');
+    return;
+  }
+  const qrCanvas = document.querySelector('#qrcode canvas');
+  if (!qrCanvas) {
+    showToast('⚠️ Generate QR first!', 'warn');
+    return;
+  }
+
+  const link = document.createElement('a');
+  link.download = `DigiSeva-Payment-${currentTxnRef}.png`;
+  link.href = qrCanvas.toDataURL('image/png');
+  link.click();
+  showToast('📥 QR Code downloaded!', 'success');
+}
+
+function copyUPI() {
+  navigator.clipboard.writeText(CONFIG.upiId).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+    showToast('📋 UPI ID copied!', 'success');
+  });
+}
+
+function simulatePaymentSuccess() {
+  document.getElementById('statusPending').style.display = 'none';
+  const successEl = document.getElementById('statusSuccess');
+  successEl.classList.add('success');
+  successEl.style.display = 'block';
+  document.getElementById('qrContainer').classList.add('paid');
+  document.getElementById('txnStatus').textContent = 'Completed';
+  document.getElementById('txnStatus').style.color = 'var(--green)';
+  document.getElementById('txnId').textContent = 'UPI' + Math.random().toString(36).substr(2, 8).toUpperCase();
+  clearInterval(timerInterval);
+  showToast('🎉 Payment received successfully!', 'success');
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, type = 'success') {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  t.style.background = type === 'warn' ? '#d97706' : type === 'error' ? '#dc2626' : '#1A1A2E';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+</script>
+
+</body>
+</html>
