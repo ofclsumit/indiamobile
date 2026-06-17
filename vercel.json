@@ -2,12 +2,12 @@
   "functions": {
     "api/*.js": {}
   },
-  "rewrites": [
-    { "source": "/api/otp", "destination": "/api/otp.js" },
-    { "source": "/api/sync", "destination": "/api/sync.js" },
-    { "source": "/aadhaar-portal.php", "destination": "/public/aadhaar-portal.html" },
-    { "source": "/aadhaar-portal", "destination": "/public/aadhaar-portal.html" },
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)", "destination": "/public/$1" }
+  "routes": [
+    { "src": "/api/otp", "dest": "/api/otp.js" },
+    { "src": "/api/sync", "dest": "/api/sync.js" },
+    { "src": "/api/otp\\?.*", "dest": "/api/otp.js" },
+    { "src": "/aadhaar-portal\\.php", "dest": "/public/aadhaar-portal.html" },
+    { "src": "/aadhaar-portal", "dest": "/public/aadhaar-portal.html" },
+    { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }
