@@ -6,7 +6,7 @@
   "rewrites": [
     { "source": "/aadhaar-portal.php", "destination": "/public/aadhaar-portal.html" },
     { "source": "/aadhaar-portal", "destination": "/public/aadhaar-portal.html" },
-    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/api/(.*)", "destination": "/api/$1.js" },
     { "source": "/:path*", "destination": "/public/:path*" }
   ]
 }
