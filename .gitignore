@@ -1,0 +1,15 @@
+# Sensitive config (contains API keys)
+data/sms-config.json
+# Auto-generated OTP & SMS data
+data/otps.json
+data/sms-counter.json
+data/sms-outbox.json
+data/sms-log.txt
+# PHP runtime (large binary, download separately)
+php/
+# Test files
+test_php.php
+test_api.php
+# OS files
+Thumbs.db
+.DS_Store

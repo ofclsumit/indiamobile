@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>India Mobile Center — Trusted Digital Services</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav id="mainNav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo" style="display:flex;align-items:center;text-decoration:none;color:inherit;">
+      <img src="21585.png" alt="India Mobile" style="height:52px;width:auto;border-radius:6px;">
+    </a>
+    <ul class="nav-links">
+      <li><a href="#services">Services</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#queue">Queue</a></li>
+      <li><a href="#location">Location</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <div class="nav-cta">
+      <button class="btn-secondary" onclick="openCheckToken()">Check My Token</button>
+    </div>
+    <div class="hamburger" onclick="toggleMobileMenu()" id="hamburger">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#services" onclick="closeMobileMenu()">Services</a>
+  <a href="#about" onclick="closeMobileMenu()">About</a>
+  <a href="#queue" onclick="closeMobileMenu()">Queue</a>
+  <a href="#location" onclick="closeMobileMenu()">Location</a>
+  <a href="#contact" onclick="closeMobileMenu()">Contact</a>
+  <button class="btn-secondary" onclick="openCheckToken(); closeMobileMenu();" style="width:100%; margin-top:8px;">Check My Token</button>
+</div>
+
+<!-- SERVICES SECTION — FIRST Section -->
+<section class="services-section" id="services" style="padding-top:120px;">
+  <div class="section-inner">
+    <div class="text-center reveal">
+      <div class="section-tag">Services</div>
+      <h2 class="section-title">What Can We Help You With?</h2>
+      <p class="section-subtitle">We provide a range of government and digital services. Select a service below to get started with your booking.</p>
+      <div class="services-dropdown-wrap">
+        <p class="services-select-label">Select a Service to Book</p>
+        <select class="services-select" id="serviceDropdown" onchange="handleServiceSelect(this.value)">
+          <option value="">-- Choose a Service --</option>
+          <option value="aadhaar">Aadhaar Update</option>
+          <option value="pan" disabled>PAN Services (Coming Soon)</option>
+          <option value="passport" disabled>Passport Services (Coming Soon)</option>
+          <option value="online" disabled>Online Applications (Coming Soon)</option>
+          <option value="ticket" disabled>Ticket Booking (Coming Soon)</option>
+        </select>
+        <div class="service-coming-soon" id="comingSoonNote">
+          This service is coming soon. Please check back later or contact us for assistance.
+        </div>
+      </div>
+      <div id="inlineBookingFields" style="display:none;"></div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ABOUT SECTION -->
+<section id="about">
+  <div class="section-inner">
+    <div class="about-inner">
+      <div class="about-image reveal">
+        <img src="https://t4.ftcdn.net/jpg/10/77/40/35/360_F_1077403598_HLkTA0SOLunXAVGA1Viwp4eeBsSxZQQD.jpg" alt="India Mobile Center" style="width:100%;height:100%;object-fit:cover;border-radius:16px;">
+      </div>
+      <div class="reveal">
+        <div class="about-badge">Established 2018</div>
+        <h2 class="section-title">Your Trusted Digital Service Partner</h2>
+        <p class="section-subtitle">India Mobile Center was built to make government services simple and accessible for everyone. Whether you need to update your Aadhaar, apply for documents, or get help with digital forms, we are here to assist you with care and professionalism.</p>
+        <p style="margin-top:16px; font-size:15px; color:var(--text2); line-height:1.7;">We understand that government processes can feel overwhelming. Our trained staff guides you through every step, ensuring a smooth and successful experience every time.</p>
+        <div class="about-highlights">
+          <div class="about-highlight-item">
+            <div class="about-highlight-num">6+</div>
+            <div class="about-highlight-lbl">Years of Service</div>
+          </div>
+          <div class="about-highlight-item">
+            <div class="about-highlight-num">5000+</div>
+            <div class="about-highlight-lbl">Happy Customers</div>
+          </div>
+          <div class="about-highlight-item">
+            <div class="about-highlight-num">98%</div>
+            <div class="about-highlight-lbl">Success Rate</div>
+          </div>
+          <div class="about-highlight-item">
+            <div class="about-highlight-num">1-Day</div>
+            <div class="about-highlight-lbl">Fast Processing</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- FEATURES SECTION -->
+<section style="background: var(--bg2);" id="features">
+  <div class="section-inner">
+    <div class="text-center reveal">
+      <div class="section-tag">Why Choose Us</div>
+      <h2 class="section-title">Built for Your Convenience</h2>
+      <p class="section-subtitle">Everything we do is designed to make your visit easy, fast, and stress-free.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card glass-card reveal">
+        <div class="feature-icon">⚡</div>
+        <h3>Fast Service</h3>
+        <p>We keep wait times short with our token-based queue system. Book online and arrive on time — no unnecessary waiting.</p>
+      </div>
+      <div class="feature-card glass-card reveal">
+        <div class="feature-icon"><i class="fas fa-shield-halved"></i></div>
+        <h3>Secure Process</h3>
+        <p>Your personal information is handled with strict confidentiality. We follow all government security guidelines.</p>
+      </div>
+      <div class="feature-card glass-card reveal">
+        <div class="feature-icon">📱</div>
+        <h3>Digital Booking</h3>
+        <p>Book your appointment from your phone, anytime. OTP verification ensures your booking is protected.</p>
+      </div>
+      <div class="feature-card glass-card reveal">
+        <div class="feature-icon">📊</div>
+        <h3>Queue Tracking</h3>
+        <p>Check your token status and live queue position in real time. You will always know when your turn is coming.</p>
+      </div>
+      <div class="feature-card glass-card reveal">
+        <div class="feature-icon">🤝</div>
+        <h3>Trusted Support</h3>
+        <p>Our experienced staff is ready to assist you at every step. We speak your language and understand your needs.</p>
+      </div>
+      <div class="feature-card glass-card reveal">
+        <div class="feature-icon"><i class="fas fa-circle-check"></i></div>
+        <h3>Professional Assistance</h3>
+        <p>From form filling to document verification, we ensure your application is complete and accurate the first time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- STATISTICS SECTION -->
+<section class="stats-section" id="stats">
+  <div class="section-inner">
+    <div class="text-center reveal">
+      <div class="section-tag">By the Numbers</div>
+      <h2 class="section-title">Our Track Record</h2>
+    </div>
+    <div class="stats-grid reveal">
+      <div class="stat-card">
+        <div class="stat-number" data-target="5000">0</div>
+        <div class="stat-label">Customers Served</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" data-target="3800">0</div>
+        <div class="stat-label">Aadhaar Updates Completed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" data-target="6">0</div>
+        <div class="stat-label">Years of Experience</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" data-target="98">0</div>
+        <div class="stat-label">Customer Satisfaction %</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- QUEUE TRACKER SECTION -->
+<section class="queue-section" id="queue">
+  <div class="section-inner">
+    <div class="text-center reveal">
+      <div class="section-tag">Live Queue</div>
+      <h2 class="section-title">Real-Time Token Status</h2>
+      <p class="section-subtitle">See the current queue and track your position live.</p>
+    </div>
+    <div class="queue-tracker-card glass-card reveal">
+      <div class="queue-live-badge">
+        <span class="queue-live-dot"></span> Live Queue
+      </div>
+      <div class="current-token-display">
+        <div class="current-token-box">
+          <div class="current-token-label">Current Token</div>
+          <div class="current-token-number" id="liveCurrentToken">07</div>
+        </div>
+        <div class="queue-divider"></div>
+        <div class="queue-your-box">
+          <div class="queue-your-label">Your Token</div>
+          <div class="queue-your-number" id="liveYourToken">—</div>
+          <div id="liveLoginPrompt" style="margin-top:12px;">
+            <button class="btn-secondary" onclick="openCheckToken()" style="font-size:13px; padding:8px 16px;">Check My Token</button>
+          </div>
+        </div>
+      </div>
+      <div class="queue-stats-row">
+        <div class="queue-stat-item">
+          <div class="queue-stat-num" id="livePeopleAhead">—</div>
+          <div class="queue-stat-desc">People Ahead of You</div>
+        </div>
+        <div class="queue-stat-item">
+          <div class="queue-stat-num" id="liveWaitTime">—</div>
+          <div class="queue-stat-desc">Estimated Wait</div>
+        </div>
+      </div>
+      <div class="refresh-info" id="refreshInfo">Auto-refreshes every 30 seconds</div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- REVIEWS SECTION -->
+<section class="reviews-section" id="reviews">
+  <div class="section-inner">
+    <div class="text-center reveal">
+      <div class="section-tag">Customer Reviews</div>
+      <h2 class="section-title">What Our Customers Say</h2>
+    </div>
+    <div class="reviews-track" id="reviewsTrack">
+      <div class="review-card glass-card">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">"I booked my Aadhaar address update online and got a token in minutes. The process was smooth and the staff was very helpful. My update was done in one visit."</p>
+        <div class="reviewer">
+          <div class="reviewer-avatar">R</div>
+          <div>
+            <div class="reviewer-name">Ramesh Kumar</div>
+            <div class="reviewer-loc">Patna, Bihar</div>
+          </div>
+        </div>
+      </div>
+      <div class="review-card glass-card">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">"The online token system saved me so much time. I knew exactly when to arrive and my biometric update was completed quickly. Very professional service."</p>
+        <div class="reviewer">
+          <div class="reviewer-avatar">P</div>
+          <div>
+            <div class="reviewer-name">Priya Singh</div>
+            <div class="reviewer-loc">Patna, Bihar</div>
+          </div>
+        </div>
+      </div>
+      <div class="review-card glass-card">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">"My father is elderly and was worried about the process. The staff here was patient and guided him through everything. Excellent service and very clean office."</p>
+        <div class="reviewer">
+          <div class="reviewer-avatar">A</div>
+          <div>
+            <div class="reviewer-name">Amit Sharma</div>
+            <div class="reviewer-loc">Patna, Bihar</div>
+          </div>
+        </div>
+      </div>
+      <div class="review-card glass-card">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">"I had my mobile number linked to Aadhaar in under an hour. The queue tracking on the website is very useful. I will recommend this center to everyone I know."</p>
+        <div class="reviewer">
+          <div class="reviewer-avatar">S</div>
+          <div>
+            <div class="reviewer-name">Sunita Devi</div>
+            <div class="reviewer-loc">Hajipur, Bihar</div>
+          </div>
+        </div>
+      </div>
+      <div class="review-card glass-card">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">"Booked the token late in the evening and came the next morning. The process was fast and professional. The digital booking system is a great idea."</p>
+        <div class="reviewer">
+          <div class="reviewer-avatar">M</div>
+          <div>
+            <div class="reviewer-name">Mohammad Raza</div>
+            <div class="reviewer-loc">Patna, Bihar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="review-controls">
+      <button class="review-ctrl-btn" onclick="scrollReviews(-1)"><i class="fas fa-chevron-left"></i></button>
+      <button class="review-ctrl-btn" onclick="scrollReviews(1)"><i class="fas fa-chevron-right"></i></button>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- TEAM SECTION -->
+<section id="team">
+  <div class="section-inner">
+    <div class="text-center reveal">
+      <div class="section-tag">Our Team</div>
+      <h2 class="section-title">Meet Our Trusted Staff</h2>
+      <p class="section-subtitle">Experienced professionals dedicated to serving you with care and efficiency.</p>
+    </div>
+    <div class="team-grid reveal">
+      <div class="team-card">
+        <div class="team-avatar" style="background:linear-gradient(135deg,#3b82f6,#6366f1);"><i class="fas fa-code" style="font-size:28px;color:#fff;"></i></div>
+        <div class="team-name">Sumit Kumar</div>
+        <div class="team-role">Web Developer</div>
+        <div class="team-exp"><i class="fas fa-calendar-check" style="font-size:11px;"></i> 5+ years experience</div>
+        <div class="team-desc">Built and maintains the India Mobile digital platform. Passionate about creating seamless user experiences through clean code and modern design.</div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444);"><i class="fas fa-user-tie" style="font-size:28px;color:#fff;"></i></div>
+        <div class="team-name">Gudoo Choudhary<br><span style="font-size:13px;font-weight:500;color:var(--text3);">(UP Mukhiya)</span></div>
+        <div class="team-role">Owner & Founder</div>
+        <div class="team-exp"><i class="fas fa-calendar-check" style="font-size:11px;"></i> 12+ years experience</div>
+        <div class="team-desc">Founded India Mobile Center with a vision to make government services accessible. Over a decade of experience in digital service delivery and community support.</div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar" style="background:linear-gradient(135deg,#22c55e,#06b6d4);"><i class="fas fa-headset" style="font-size:28px;color:#fff;"></i></div>
+        <div class="team-name">Priya Verma</div>
+        <div class="team-role">Customer Support Lead</div>
+        <div class="team-exp"><i class="fas fa-calendar-check" style="font-size:11px;"></i> 6+ years experience</div>
+        <div class="team-desc">Leads the customer support team ensuring every visitor gets prompt assistance and a smooth experience from booking to service completion.</div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar" style="background:linear-gradient(135deg,#f97316,#eab308);"><i class="fas fa-fingerprint" style="font-size:28px;color:#fff;"></i></div>
+        <div class="team-name">Sunita Devi</div>
+        <div class="team-role">Biometric Operator</div>
+        <div class="team-exp"><i class="fas fa-calendar-check" style="font-size:11px;"></i> 4+ years experience</div>
+        <div class="team-desc">Certified biometric operator handling Aadhaar enrollments and updates. Known for patient and thorough service with every customer.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- LOCATION SECTION -->
+<section class="location-section" id="location">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-tag">Find Us</div>
+      <h2 class="section-title">Our Location</h2>
+    </div>
+    <div class="location-inner reveal">
+      <div class="map-embed">
+        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3603.031783735239!2d84.4876627!3d25.2763108!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x398d6c2794e04ef7%3A0xfd1052620d8b66c8!2sD.S.%20PUBLIC%20CENTRAL%20SCHOOL!5e0!3m2!1sen!2sin!4v1" width="100%" height="100%" style="border:0;border-radius:12px;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+      <div class="contact-info-grid">
+        <div class="contact-info-item glass-card">
+          <div class="contact-icon">📍</div>
+          <div>
+            <div class="contact-info-label">Address</div>
+            <div class="contact-info-value">Shop No. 12, Main Market Road</div>
+            <div class="contact-info-sub">Patna, Bihar — 800001</div>
+          </div>
+        </div>
+        <div class="contact-info-item glass-card">
+          <div class="contact-icon"><i class="fas fa-phone"></i></div>
+          <div>
+            <div class="contact-info-label">Phone</div>
+            <div class="contact-info-value"><a href="tel:+919876543210" style="color:var(--text); text-decoration:none;">+91 98765 43210</a></div>
+            <div class="contact-info-sub">Call us during working hours</div>
+          </div>
+        </div>
+        <div class="contact-info-item glass-card">
+          <div class="contact-icon">💬</div>
+          <div>
+            <div class="contact-info-label">WhatsApp</div>
+            <div class="contact-info-value"><a href="https://wa.me/919876543210" target="_blank" style="color:var(--text); text-decoration:none;">+91 98765 43210</a></div>
+            <div class="contact-info-sub">Message us anytime</div>
+          </div>
+        </div>
+        <div class="contact-info-item glass-card">
+          <div class="contact-icon">🕐</div>
+          <div>
+            <div class="contact-info-label">Working Hours</div>
+            <div class="contact-info-value">Monday – Saturday</div>
+            <div class="contact-info-sub">9:00 AM – 5:00 PM</div>
+          </div>
+        </div>
+        <div class="contact-info-item glass-card" style="grid-column: 1 / -1;">
+          <div class="contact-icon">📧</div>
+          <div>
+            <div class="contact-info-label">Email</div>
+            <div class="contact-info-value"><a href="mailto:info@digiseva.in" style="color:var(--text); text-decoration:none;">info@digiseva.in</a></div>
+            <div class="contact-info-sub">We reply within 24 hours</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- CONTACT SECTION -->
+<section class="contact-section" id="contact">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-tag">Contact Us</div>
+      <h2 class="section-title">Get in Touch</h2>
+    </div>
+    <div class="contact-inner">
+      <div class="reveal">
+        <p style="font-size:17px; color:var(--text2); line-height:1.8; margin-bottom:32px;">Have a question about our services? Need help with your booking? We are here to assist you. Reach out and we will respond quickly.</p>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+              How long does Aadhaar update take?
+              <span class="accordion-arrow">▼</span>
+            </div>
+            <div class="accordion-body">After successful biometric verification at our center, Aadhaar updates are typically reflected within 30 to 90 days by UIDAI. We will guide you through the process and give you the acknowledgement slip.</div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+              What documents do I need to bring?
+              <span class="accordion-arrow">▼</span>
+            </div>
+            <div class="accordion-body">Requirements vary by the type of update. For address update, bring proof of address (electricity bill, rent agreement, etc.). For name correction, bring a legal document with the correct name. Contact us for a complete list specific to your service.</div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+              Can I book for someone else?
+              <span class="accordion-arrow">▼</span>
+            </div>
+            <div class="accordion-body">Yes. You can book a token for a family member. Just use their Aadhaar last 4 digits during booking. Please ensure the person physically attends the appointment as biometrics are required.</div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+              What is the service fee?
+              <span class="accordion-arrow">▼</span>
+            </div>
+            <div class="accordion-body">Government-prescribed fees apply as set by UIDAI. Our service assistance charge is nominal. Please contact us directly for the current fee structure for your specific service type.</div>
+          </div>
+        </div>
+      </div>
+      <div class="contact-form-card glass-card reveal">
+        <h3 style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; margin-bottom:24px;">Send Us a Message</h3>
+        <div class="form-group">
+          <label class="form-label">Your Name</label>
+          <input type="text" class="form-input" placeholder="Enter your full name" id="contactName">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mobile Number</label>
+          <input type="tel" class="form-input" placeholder="+91 XXXXX XXXXX" id="contactPhone">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email (Optional)</label>
+          <input type="email" class="form-input" placeholder="your@email.com" id="contactEmail">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message</label>
+          <textarea class="form-input" placeholder="Describe your query or requirement..." id="contactMessage"></textarea>
+        </div>
+        <button class="btn-primary btn-full" onclick="submitContactForm()">Send Message</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="footer-brand">
+      <a href="index.html" class="nav-logo" style="display:flex;align-items:center;gap:10px;margin-bottom:0;text-decoration:none;color:inherit;">
+        <img src="21585.png" alt="India Mobile" style="height:32px;width:auto;border-radius:6px;">
+        <span class="logo-text">India <span>Mobile</span></span>
+      </a>
+        <p>Your trusted partner for Aadhaar and digital government services. Fast, secure, and professional assistance for everyone.</p>
+        <div class="footer-social" style="margin-top:20px;">
+          <a href="#" class="social-btn" title="Facebook">f</a>
+          <a href="#" class="social-btn" title="WhatsApp">W</a>
+          <a href="#" class="social-btn" title="Instagram">In</a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="#home">Home</a></li>
+          <li><a href="#services">Services</a></li>
+          <li><a href="#about">About Us</a></li>
+          <li><a href="#queue">Live Queue</a></li>
+          <li><a href="#location">Location</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Services</h4>
+        <ul>
+          <li><a href="#">Aadhaar Update</a></li>
+          <li><a href="#">Mobile Link</a></li>
+          <li><a href="#">Address Update</a></li>
+          <li><a href="#">Biometric Update</a></li>
+          <li><a href="#">Name Correction</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="tel:+919876543210">+91 98765 43210</a></li>
+          <li><a href="https://wa.me/919876543210">WhatsApp Us</a></li>
+          <li><a href="mailto:info@digiseva.in">info@digiseva.in</a></li>
+          <li><a href="#">Mon–Sat, 9AM–5PM</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 India Mobile Center. All rights reserved.</span>
+      <span style="color:var(--text3); font-size:12px;">Authorized Aadhaar Service Provider</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ============================= -->
+<!-- BOOKING MODAL -->
+<!-- ============================= -->
+<div class="modal-overlay" id="bookingModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="bookingModalTitle">Book Aadhaar Token</h2>
+      <button class="modal-close" onclick="closeBooking()">✕</button>
+    </div>
+    <div class="modal-body" id="bookingModalBody">
+      <!-- Step content injected by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- CHECK TOKEN MODAL -->
+<div class="modal-overlay" id="checkTokenModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Check My Token</h2>
+      <button class="modal-close" onclick="closeCheckToken()">✕</button>
+    </div>
+    <div class="modal-body" id="checkTokenBody">
+      <!-- injected by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="modal-overlay" id="adminLoginModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Admin Login</h2>
+      <button class="modal-close" onclick="closeAdminLogin()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" class="form-input" id="adminUser" placeholder="admin">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="adminPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()">
+      </div>
+      <button class="btn-primary btn-full" onclick="adminLogin()" style="margin-top:8px;">Login to Dashboard</button>
+      <p class="text-muted" style="text-align:center; margin-top:16px;">Default: admin / admin123</p>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin-panel" id="adminPanel">
+  <div class="admin-nav">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <img src="21585.png" alt="India Mobile" style="height:28px;width:auto;border-radius:6px;">
+      <span class="admin-nav-title">India Mobile Admin</span>
+      <span style="font-size:12px;color:var(--text3); padding:4px 10px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); border-radius:100px; color:#34d399;">Dashboard</span>
+    </div>
+    <button class="btn-secondary" onclick="closeAdmin()" style="font-size:13px; padding:8px 16px;">Exit Dashboard</button>
+  </div>
+  <div class="admin-body">
+    <div class="admin-stats-row">
+      <div class="admin-stat">
+        <div class="admin-stat-num" id="adminTotalBookings">0</div>
+        <div class="admin-stat-lbl">Total Bookings</div>
+      </div>
+      <div class="admin-stat">
+        <div class="admin-stat-num" id="adminPending">0</div>
+        <div class="admin-stat-lbl"><span class="admin-stat-dot" style="background:#fbbf24;"></span>Pending</div>
+      </div>
+      <div class="admin-stat">
+        <div class="admin-stat-num" id="adminApproved">0</div>
+        <div class="admin-stat-lbl"><span class="admin-stat-dot" style="background:var(--accent);"></span>Approved</div>
+      </div>
+      <div class="admin-stat">
+        <div class="admin-stat-num" id="adminCompleted">0</div>
+        <div class="admin-stat-lbl"><span class="admin-stat-dot" style="background:#34d399;"></span>Completed</div>
+      </div>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" onclick="switchAdminTab('bookings', this)">Bookings</button>
+      <button class="admin-tab" onclick="switchAdminTab('queue', this)">Queue Control</button>
+      <button class="admin-tab" onclick="switchAdminTab('dates', this)">Manage Dates</button>
+    </div>
+
+    <!-- Bookings Tab -->
+    <div class="admin-section active" id="adminTabBookings">
+      <div class="search-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon"><i class="fas fa-search"></i></span>
+          <input type="text" class="search-input" placeholder="Search by name, phone, booking ID, Aadhaar..." id="adminSearch" oninput="filterBookings()">
+        </div>
+        <select class="form-select" style="width:160px;" id="adminStatusFilter" onchange="filterBookings()">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto; background:var(--bg3); border:1px solid var(--glass-border); border-radius:14px;">
+        <table class="bookings-table" id="bookingsTable">
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Booking ID</th>
+              <th>Name</th>
+              <th>Mobile</th>
+              <th>Service</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bookingsTableBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Queue Control -->
+    <div class="admin-section" id="adminTabQueue">
+      <div class="token-control">
+        <div>
+          <div class="token-control-label">Currently Serving Token</div>
+          <div style="font-size:13px; color:var(--text3); margin-top:4px;">Change to update the live queue display</div>
+        </div>
+        <div class="token-num-control">
+          <button class="token-ctrl-btn" onclick="changeToken(-1)">−</button>
+          <div class="token-ctrl-num" id="adminTokenDisplay">07</div>
+          <button class="token-ctrl-btn" onclick="changeToken(1)">+</button>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div style="padding:20px; background:var(--bg3); border:1px solid var(--glass-border); border-radius:14px;">
+          <div style="font-size:13px; color:var(--text3); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:600;">Today's Summary</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; justify-content:space-between; font-size:14px;">
+              <span style="color:var(--text2);">Tokens Issued</span>
+              <span id="adminTokensIssued" style="font-weight:600;">0</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:14px;">
+              <span style="color:var(--text2);">In Queue</span>
+              <span id="adminInQueue" style="font-weight:600;">0</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:14px;">
+              <span style="color:var(--text2);">Completed Today</span>
+              <span id="adminCompletedToday" style="font-weight:600;">0</span>
+            </div>
+          </div>
+        </div>
+        <div style="padding:20px; background:var(--bg3); border:1px solid var(--glass-border); border-radius:14px;">
+          <div style="font-size:13px; color:var(--text3); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:600;">Quick Actions</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <button class="btn-secondary w-full" style="justify-content:center; font-size:13px;" onclick="markNextComplete()">Mark Current Token Complete</button>
+            <button class="btn-secondary w-full" style="justify-content:center; font-size:13px;" onclick="advanceToken()">Advance to Next Token</button>
+            <button class="btn-secondary w-full" style="justify-content:center; font-size:13px; color:var(--danger);" onclick="skipToken()">Skip Current Token</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Dates -->
+    <div class="admin-section" id="adminTabDates">
+      <div style="margin-bottom:20px;">
+        <h3 style="font-size:16px; font-weight:600; margin-bottom:8px;">Enable Booking Dates</h3>
+        <p style="font-size:14px; color:var(--text2);">Click on a date to enable or disable it for customer bookings. Only enabled dates will appear in the booking form.</p>
+      </div>
+      <div class="date-manage-grid" id="adminDateGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div id="notif" style="display:none;" class="notification"></div>
+
+<script src="db-sync.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

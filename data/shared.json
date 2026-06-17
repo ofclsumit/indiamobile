@@ -1,0 +1,16 @@
+{
+    "bookings": [],
+    "token": 7,
+    "dates": [
+        {
+            "date": "2026-06-18",
+            "enabled": true
+        },
+        {
+            "date": "2026-06-22",
+            "enabled": true
+        }
+    ],
+    "activity": [],
+    "settings": []
+}
