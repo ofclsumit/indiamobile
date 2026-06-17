@@ -35,8 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await DBSync.forceFetch();
   fullRefresh();
 
-  // Start polling after initial fetch to avoid race condition
-  DBSync.startPolling();
+  // Polling/Firestore listener is started by the inline script in index.html
 
   // Responsive menu button
   if (window.innerWidth <= 768) document.getElementById('menuBtn').style.display = 'flex';
