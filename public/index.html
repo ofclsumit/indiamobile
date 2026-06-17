@@ -35,7 +35,6 @@
 </script>
 <script type="module">
 import { initializeApp } from "firebase/app";
-import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDgbUt2SMxd4glTjn4Z1S8oAq4bCmSobDQ",
@@ -48,54 +47,36 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 
-window.__verifiedEmail = null;
-
-(function() {
-  if (isSignInWithEmailLink(auth, window.location.href)) {
-    const email = window.localStorage.getItem('emailForSignIn');
-    if (email) {
-      signInWithEmailLink(auth, email, window.location.href)
-        .then(() => {
-          window.localStorage.removeItem('emailForSignIn');
-          window.__verifiedEmail = email;
-          window.history.replaceState({}, document.title, window.location.pathname);
-          window.dispatchEvent(new CustomEvent('emailverified', { detail: { email } }));
-        })
-        .catch((error) => {
-          window.localStorage.removeItem('emailForSignIn');
-          window.history.replaceState({}, document.title, window.location.pathname);
-          window.dispatchEvent(new CustomEvent('emailverifyerror', { detail: { message: error.message } }));
-        });
-    } else {
-      window.history.replaceState({}, document.title, window.location.pathname);
-      window.dispatchEvent(new CustomEvent('emailverifyerror', { detail: { message: 'Email verification link detected but email not found. Please request a new link.' } }));
-    }
-  }
-})();
+window.sessionEmail = null;
 
 window.sendOTP = async (email) => {
+  window.sessionEmail = email;
   try {
-    const actionCodeSettings = {
-      url: window.location.origin,
-      handleCodeInApp: true
-    };
-    await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-    window.localStorage.setItem('emailForSignIn', email);
-    return { success: true };
+    const res = await fetch('/api/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    return data;
   } catch (e) {
-    return { success: false, message: e.message };
+    return { success: false, message: 'Network error. Please try again.' };
   }
 };
 
-window.verifyOTP = async () => {
-  if (window.__verifiedEmail) {
-    const email = window.__verifiedEmail;
-    window.__verifiedEmail = null;
-    return { success: true, email };
+window.verifyOTP = async (code) => {
+  try {
+    const res = await fetch('/api/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: window.sessionEmail, code })
+    });
+    const data = await res.json();
+    return data;
+  } catch (e) {
+    return { success: false, message: 'Network error. Please try again.' };
   }
-  return { success: false, message: 'Email not yet verified. Click the link sent to your email.' };
 };
 </script>
 </head>
@@ -108,14 +89,17 @@ window.verifyOTP = async () => {
       <img src="21585.jpg" alt="India Mobile" style="width:auto;height:46px;border-radius:6px;">
     </a>
     <ul class="nav-links">
-      <li><a href="#services">Services</a></li>
-      <li><a href="#about">About</a></li>
-      <li><a href="#queue">Queue</a></li>
-      <li><a href="#location">Location</a></li>
-      <li><a href="#contact">Contact</a></li>
+      <li><a href="#services" data-translate="nav_services">Services</a></li>
+      <li><a href="#about" data-translate="nav_about">About</a></li>
+      <li><a href="#queue" data-translate="nav_queue">Queue</a></li>
+      <li><a href="#location" data-translate="nav_location">Location</a></li>
+      <li><a href="#contact" data-translate="nav_contact">Contact</a></li>
     </ul>
-    <div class="nav-cta">
-      <button class="btn-secondary" onclick="openCheckToken()">Check My Token</button>
+    <div class="nav-cta" style="display:flex; gap:10px; align-items:center;">
+      <button class="lang-toggle-btn" onclick="toggleLanguage()" id="langToggleBtn" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); color:var(--text); padding:8px 12px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px; transition:background 0.2s;">
+        🌐 English
+      </button>
+      <button class="btn-secondary" onclick="openCheckToken()" data-translate="btn_check_token">Check My Token</button>
     </div>
     <div class="hamburger" onclick="toggleMobileMenu()" id="hamburger">
       <span></span><span></span><span></span>
@@ -125,32 +109,38 @@ window.verifyOTP = async () => {
 
 <!-- MOBILE MENU -->
 <div class="mobile-menu" id="mobileMenu">
-  <a href="#services" onclick="closeMobileMenu()">Services</a>
-  <a href="#about" onclick="closeMobileMenu()">About</a>
-  <a href="#queue" onclick="closeMobileMenu()">Queue</a>
-  <a href="#location" onclick="closeMobileMenu()">Location</a>
-  <a href="#contact" onclick="closeMobileMenu()">Contact</a>
-  <button class="btn-secondary" onclick="openCheckToken(); closeMobileMenu();" style="width:100%; margin-top:8px;">Check My Token</button>
+  <div style="padding: 10px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--glass-border); margin-bottom:10px;">
+    <span style="font-size:14px; font-weight:500;">Language / भाषा</span>
+    <button class="lang-toggle-btn" onclick="toggleLanguage(); closeMobileMenu();" id="langToggleBtnMobile" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); color:var(--text); padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:600;">
+      🌐 English
+    </button>
+  </div>
+  <a href="#services" onclick="closeMobileMenu()" data-translate="nav_services">Services</a>
+  <a href="#about" onclick="closeMobileMenu()" data-translate="nav_about">About</a>
+  <a href="#queue" onclick="closeMobileMenu()" data-translate="nav_queue">Queue</a>
+  <a href="#location" onclick="closeMobileMenu()" data-translate="nav_location">Location</a>
+  <a href="#contact" onclick="closeMobileMenu()" data-translate="nav_contact">Contact</a>
+  <button class="btn-secondary" onclick="openCheckToken(); closeMobileMenu();" style="width:100%; margin-top:8px;" data-translate="btn_check_token">Check My Token</button>
 </div>
 
 <!-- SERVICES SECTION — FIRST Section -->
 <section class="services-section" id="services" style="padding-top:120px;">
   <div class="section-inner">
     <div class="text-center reveal">
-      <div class="section-tag">Services</div>
-      <h2 class="section-title">What Can We Help You With?</h2>
-      <p class="section-subtitle">We provide a range of government and digital services. Select a service below to get started with your booking.</p>
+      <div class="section-tag" data-translate="services_tag">Services</div>
+      <h2 class="section-title" data-translate="services_title">What Can We Help You With?</h2>
+      <p class="section-subtitle" data-translate="services_subtitle">We provide a range of government and digital services. Select a service below to get started with your booking.</p>
       <div class="services-dropdown-wrap">
-        <p class="services-select-label">Select a Service to Book</p>
-        <select class="services-select" id="serviceDropdown" onchange="handleServiceSelect(this.value)">
-          <option value="">-- Choose a Service --</option>
-          <option value="aadhaar">Aadhaar Update</option>
-          <option value="pan" disabled>PAN Services (Coming Soon)</option>
-          <option value="passport" disabled>Passport Services (Coming Soon)</option>
-          <option value="online" disabled>Online Applications (Coming Soon)</option>
-          <option value="ticket" disabled>Ticket Booking (Coming Soon)</option>
+        <p class="services-select-label" data-translate="services_select_lbl">Select a Service to Book</p>
+        <select class="services-select" id="serviceDropdown" onchange="handleServiceSelect(this.value)" data-translate-options>
+          <option value="" data-translate-opt="service_choose">-- Choose a Service --</option>
+          <option value="aadhaar" data-translate-opt="service_aadhaar">Aadhaar Update</option>
+          <option value="pan" disabled data-translate-opt="service_pan">PAN Services (Coming Soon)</option>
+          <option value="passport" disabled data-translate-opt="service_passport">Passport Services (Coming Soon)</option>
+          <option value="online" disabled data-translate-opt="service_online">Online Applications (Coming Soon)</option>
+          <option value="ticket" disabled data-translate-opt="service_ticket">Ticket Booking (Coming Soon)</option>
         </select>
-        <div class="service-coming-soon" id="comingSoonNote">
+        <div class="service-coming-soon" id="comingSoonNote" data-translate="coming_soon_note">
           This service is coming soon. Please check back later or contact us for assistance.
         </div>
       </div>
@@ -169,26 +159,26 @@ window.verifyOTP = async () => {
         <img src="https://t4.ftcdn.net/jpg/10/77/40/35/360_F_1077403598_HLkTA0SOLunXAVGA1Viwp4eeBsSxZQQD.jpg" alt="India Mobile Center" style="width:100%;height:100%;object-fit:cover;border-radius:16px;">
       </div>
       <div class="reveal">
-        <div class="about-badge">Established 2018</div>
-        <h2 class="section-title">Your Trusted Digital Service Partner</h2>
-        <p class="section-subtitle">India Mobile Center was built to make government services simple and accessible for everyone. Whether you need to update your Aadhaar, apply for documents, or get help with digital forms, we are here to assist you with care and professionalism.</p>
-        <p style="margin-top:16px; font-size:15px; color:var(--text2); line-height:1.7;">We understand that government processes can feel overwhelming. Our trained staff guides you through every step, ensuring a smooth and successful experience every time.</p>
+        <div class="about-badge" data-translate="about_tag">Established 2018</div>
+        <h2 class="section-title" data-translate="about_title">Your Trusted Digital Service Partner</h2>
+        <p class="section-subtitle" data-translate="about_subtitle">India Mobile Center was built to make government services simple and accessible for everyone. Whether you need to update your Aadhaar, apply for documents, or get help with digital forms, we are here to assist you with care and professionalism.</p>
+        <p style="margin-top:16px; font-size:15px; color:var(--text2); line-height:1.7;" data-translate="about_desc">We understand that government processes can feel overwhelming. Our trained staff guides you through every step, ensuring a smooth and successful experience every time.</p>
         <div class="about-highlights">
           <div class="about-highlight-item">
             <div class="about-highlight-num">6+</div>
-            <div class="about-highlight-lbl">Years of Service</div>
+            <div class="about-highlight-lbl" data-translate="highlight_years">Years of Service</div>
           </div>
           <div class="about-highlight-item">
             <div class="about-highlight-num">5000+</div>
-            <div class="about-highlight-lbl">Happy Customers</div>
+            <div class="about-highlight-lbl" data-translate="highlight_customers">Happy Customers</div>
           </div>
           <div class="about-highlight-item">
             <div class="about-highlight-num">98%</div>
-            <div class="about-highlight-lbl">Success Rate</div>
+            <div class="about-highlight-lbl" data-translate="highlight_success">Success Rate</div>
           </div>
           <div class="about-highlight-item">
             <div class="about-highlight-num">1-Day</div>
-            <div class="about-highlight-lbl">Fast Processing</div>
+            <div class="about-highlight-lbl" data-translate="highlight_fast">Fast Processing</div>
           </div>
         </div>
       </div>
@@ -202,40 +192,40 @@ window.verifyOTP = async () => {
 <section style="background: var(--bg2);" id="features">
   <div class="section-inner">
     <div class="text-center reveal">
-      <div class="section-tag">Why Choose Us</div>
-      <h2 class="section-title">Built for Your Convenience</h2>
-      <p class="section-subtitle">Everything we do is designed to make your visit easy, fast, and stress-free.</p>
+      <div class="section-tag" data-translate="why_tag">Why Choose Us</div>
+      <h2 class="section-title" data-translate="why_title">Built for Your Convenience</h2>
+      <p class="section-subtitle" data-translate="why_subtitle">Everything we do is designed to make your visit easy, fast, and stress-free.</p>
     </div>
     <div class="features-grid">
       <div class="feature-card glass-card reveal">
         <div class="feature-icon">⚡</div>
-        <h3>Fast Service</h3>
-        <p>We keep wait times short with our token-based queue system. Book online and arrive on time — no unnecessary waiting.</p>
+        <h3 data-translate="feat1_title">Fast Service</h3>
+        <p data-translate="feat1_desc">We keep wait times short with our token-based queue system. Book online and arrive on time — no unnecessary waiting.</p>
       </div>
       <div class="feature-card glass-card reveal">
         <div class="feature-icon"><i class="fas fa-shield-halved"></i></div>
-        <h3>Secure Process</h3>
-        <p>Your personal information is handled with strict confidentiality. We follow all government security guidelines.</p>
+        <h3 data-translate="feat2_title">Secure Process</h3>
+        <p data-translate="feat2_desc">Your personal information is handled with strict confidentiality. We follow all government security guidelines.</p>
       </div>
       <div class="feature-card glass-card reveal">
         <div class="feature-icon">📱</div>
-        <h3>Digital Booking</h3>
-        <p>Book your appointment from your phone, anytime. OTP verification ensures your booking is protected.</p>
+        <h3 data-translate="feat3_title">Digital Booking</h3>
+        <p data-translate="feat3_desc">Book your appointment from your phone, anytime. OTP verification ensures your booking is protected.</p>
       </div>
       <div class="feature-card glass-card reveal">
         <div class="feature-icon">📊</div>
-        <h3>Queue Tracking</h3>
-        <p>Check your token status and live queue position in real time. You will always know when your turn is coming.</p>
+        <h3 data-translate="feat4_title">Queue Tracking</h3>
+        <p data-translate="feat4_desc">Check your token status and live queue position in real time. You will always know when your turn is coming.</p>
       </div>
       <div class="feature-card glass-card reveal">
         <div class="feature-icon">🤝</div>
-        <h3>Trusted Support</h3>
-        <p>Our experienced staff is ready to assist you at every step. We speak your language and understand your needs.</p>
+        <h3 data-translate="feat5_title">Trusted Support</h3>
+        <p data-translate="feat5_desc">Our experienced staff is ready to assist you at every step. We speak your language and understand your needs.</p>
       </div>
       <div class="feature-card glass-card reveal">
         <div class="feature-icon"><i class="fas fa-circle-check"></i></div>
-        <h3>Professional Assistance</h3>
-        <p>From form filling to document verification, we ensure your application is complete and accurate the first time.</p>
+        <h3 data-translate="feat6_title">Professional Assistance</h3>
+        <p data-translate="feat6_desc">From form filling to document verification, we ensure your application is complete and accurate the first time.</p>
       </div>
     </div>
   </div>
@@ -247,25 +237,25 @@ window.verifyOTP = async () => {
 <section class="stats-section" id="stats">
   <div class="section-inner">
     <div class="text-center reveal">
-      <div class="section-tag">By the Numbers</div>
-      <h2 class="section-title">Our Track Record</h2>
+      <div class="section-tag" data-translate="stats_tag">By the Numbers</div>
+      <h2 class="section-title" data-translate="stats_title">Our Track Record</h2>
     </div>
     <div class="stats-grid reveal">
       <div class="stat-card">
         <div class="stat-number" data-target="5000">0</div>
-        <div class="stat-label">Customers Served</div>
+        <div class="stat-label" data-translate="stat_served">Customers Served</div>
       </div>
       <div class="stat-card">
         <div class="stat-number" data-target="3800">0</div>
-        <div class="stat-label">Aadhaar Updates Completed</div>
+        <div class="stat-label" data-translate="stat_completed">Aadhaar Updates Completed</div>
       </div>
       <div class="stat-card">
         <div class="stat-number" data-target="6">0</div>
-        <div class="stat-label">Years of Experience</div>
+        <div class="stat-label" data-translate="stat_years">Years of Experience</div>
       </div>
       <div class="stat-card">
         <div class="stat-number" data-target="98">0</div>
-        <div class="stat-label">Customer Satisfaction %</div>
+        <div class="stat-label" data-translate="stat_satisfaction">Customer Satisfaction %</div>
       </div>
     </div>
   </div>
@@ -277,39 +267,39 @@ window.verifyOTP = async () => {
 <section class="queue-section" id="queue">
   <div class="section-inner">
     <div class="text-center reveal">
-      <div class="section-tag">Live Queue</div>
-      <h2 class="section-title">Real-Time Token Status</h2>
-      <p class="section-subtitle">See the current queue and track your position live.</p>
+      <div class="section-tag" data-translate="queue_tag">Live Queue</div>
+      <h2 class="section-title" data-translate="queue_title">Real-Time Token Status</h2>
+      <p class="section-subtitle" data-translate="queue_subtitle">See the current queue and track your position live.</p>
     </div>
     <div class="queue-tracker-card glass-card reveal">
       <div class="queue-live-badge">
-        <span class="queue-live-dot"></span> Live Queue
+        <span class="queue-live-dot"></span> <span data-translate="queue_live">Live Queue</span>
       </div>
       <div class="current-token-display">
         <div class="current-token-box">
-          <div class="current-token-label">Current Token</div>
+          <div class="current-token-label" data-translate="current_token_lbl">Current Token</div>
           <div class="current-token-number" id="liveCurrentToken">07</div>
         </div>
         <div class="queue-divider"></div>
         <div class="queue-your-box">
-          <div class="queue-your-label">Your Token</div>
+          <div class="queue-your-label" data-translate="your_token_lbl">Your Token</div>
           <div class="queue-your-number" id="liveYourToken">—</div>
           <div id="liveLoginPrompt" style="margin-top:12px;">
-            <button class="btn-secondary" onclick="openCheckToken()" style="font-size:13px; padding:8px 16px;">Check My Token</button>
+            <button class="btn-secondary" onclick="openCheckToken()" data-translate="btn_check_token" style="font-size:13px; padding:8px 16px;">Check My Token</button>
           </div>
         </div>
       </div>
       <div class="queue-stats-row">
         <div class="queue-stat-item">
           <div class="queue-stat-num" id="livePeopleAhead">—</div>
-          <div class="queue-stat-desc">People Ahead of You</div>
+          <div class="queue-stat-desc" data-translate="people_ahead_lbl">People Ahead of You</div>
         </div>
         <div class="queue-stat-item">
           <div class="queue-stat-num" id="liveWaitTime">—</div>
-          <div class="queue-stat-desc">Estimated Wait</div>
+          <div class="queue-stat-desc" data-translate="est_wait_lbl">Estimated Wait</div>
         </div>
       </div>
-      <div class="refresh-info" id="refreshInfo">Auto-refreshes every 30 seconds</div>
+      <div class="refresh-info" id="refreshInfo" data-translate="refresh_info">Auto-refreshes every 30 seconds</div>
     </div>
   </div>
 </section>
@@ -320,8 +310,8 @@ window.verifyOTP = async () => {
 <section class="reviews-section" id="reviews">
   <div class="section-inner">
     <div class="text-center reveal">
-      <div class="section-tag">Customer Reviews</div>
-      <h2 class="section-title">What Our Customers Say</h2>
+      <div class="section-tag" data-translate="reviews_tag">Customer Reviews</div>
+      <h2 class="section-title" data-translate="reviews_title">What Our Customers Say</h2>
     </div>
     <div class="reviews-track" id="reviewsTrack">
       <div class="review-card glass-card">
@@ -393,9 +383,9 @@ window.verifyOTP = async () => {
 <section id="team">
   <div class="section-inner">
     <div class="text-center reveal">
-      <div class="section-tag">Our Team</div>
-      <h2 class="section-title">Meet Our Trusted Staff</h2>
-      <p class="section-subtitle">Experienced professionals dedicated to serving you with care and efficiency.</p>
+      <div class="section-tag" data-translate="team_tag">Our Team</div>
+      <h2 class="section-title" data-translate="team_title">Meet Our Trusted Staff</h2>
+      <p class="section-subtitle" data-translate="team_subtitle">Experienced professionals dedicated to serving you with care and efficiency.</p>
     </div>
     <div class="team-grid reveal">
       <div class="team-card">
@@ -436,8 +426,8 @@ window.verifyOTP = async () => {
 <section class="location-section" id="location">
   <div class="section-inner">
     <div class="reveal">
-      <div class="section-tag">Find Us</div>
-      <h2 class="section-title">Our Location</h2>
+      <div class="section-tag" data-translate="find_us_tag">Find Us</div>
+      <h2 class="section-title" data-translate="find_us_title">Our Location</h2>
     </div>
     <div class="location-inner reveal">
       <div class="map-embed">
@@ -447,25 +437,25 @@ window.verifyOTP = async () => {
         <div class="contact-info-item glass-card">
           <div class="contact-icon">📍</div>
           <div>
-            <div class="contact-info-label">Address</div>
-            <div class="contact-info-value">Shop No. 12, Main Market Road</div>
-            <div class="contact-info-sub">Patna, Bihar — 800001</div>
+            <div class="contact-info-label" data-translate="addr_lbl">Address</div>
+            <div class="contact-info-value" data-translate="addr_val">Shop No. 12, Main Market Road</div>
+            <div class="contact-info-sub" data-translate="addr_sub">Patna, Bihar — 800001</div>
           </div>
         </div>
         <div class="contact-info-item glass-card">
           <div class="contact-icon"><i class="fas fa-phone"></i></div>
           <div>
-            <div class="contact-info-label">Phone</div>
+            <div class="contact-info-label" data-translate="phone_lbl">Phone</div>
             <div class="contact-info-value"><a href="tel:+919876543210" style="color:var(--text); text-decoration:none;">+91 98765 43210</a></div>
-            <div class="contact-info-sub">Call us during working hours</div>
+            <div class="contact-info-sub" data-translate="call_hours">Call us during working hours</div>
           </div>
         </div>
         <div class="contact-info-item glass-card">
           <div class="contact-icon">💬</div>
           <div>
-            <div class="contact-info-label">WhatsApp</div>
+            <div class="contact-info-label" data-translate="whatsapp_lbl">WhatsApp</div>
             <div class="contact-info-value"><a href="https://wa.me/919876543210" target="_blank" style="color:var(--text); text-decoration:none;">+91 98765 43210</a></div>
-            <div class="contact-info-sub">Message us anytime</div>
+            <div class="contact-info-sub" data-translate="msg_anytime">Message us anytime</div>
           </div>
         </div>
         <div class="contact-info-item glass-card">
