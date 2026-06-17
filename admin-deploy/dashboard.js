@@ -21,10 +21,56 @@ let _refreshTimer = null;
 let _activeSection = 'overview';
 
 // ============================================
+// CLOCK
+// ============================================
+function startDigitalClock() {
+  const clockEl = document.getElementById('digitalClockDisplay');
+  if (!clockEl) return;
+  
+  function updateTime() {
+    const now = new Date();
+    clockEl.textContent = now.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  }
+  
+  updateTime();
+  setInterval(updateTime, 1000);
+}
+
+// ============================================
+// CONTEXTUAL REFRESH
+// ============================================
+async function refreshActiveSection() {
+  const refreshBtn = document.querySelector('.db-topnav-btn i.fa-rotate');
+  if (refreshBtn) refreshBtn.classList.add('fa-spin');
+  
+  await DBSync.forceFetch();
+  
+  if (_activeSection === 'overview') refreshDashboard();
+  else if (_activeSection === 'queue') renderQueueTable();
+  else if (_activeSection === 'bookings') renderBookingsTable();
+  else if (_activeSection === 'queuecontrol') refreshQueueControl();
+  else if (_activeSection === 'calendar') renderCalendar();
+  else if (_activeSection === 'customers') renderCustomers();
+  else if (_activeSection === 'activity') renderActivity();
+  else if (_activeSection === 'admins') renderAdmins();
+  else if (_activeSection === 'notifications') renderNotifications();
+
+  setTimeout(() => {
+    if (refreshBtn) refreshBtn.classList.remove('fa-spin');
+  }, 500);
+}
+
+// ============================================
 // INIT
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('currentDateDisplay').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  startDigitalClock();
   loadActivityLog();
 
   // Subscribe to real-time changes
@@ -113,7 +159,7 @@ async function switchSection(id, el, type) {
   document.querySelectorAll('.db-sidebar-item').forEach(i => i.classList.remove('active'));
   document.querySelectorAll('.db-mobile-nav-item').forEach(i => i.classList.remove('active'));
 
-  if (el) el.classList.add('active');
+  _activeSection = id;
 
   await DBSync.forceFetch();
 
