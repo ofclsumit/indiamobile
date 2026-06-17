@@ -1,4 +1,30 @@
 // ============================================
+// FIREBASE INIT
+// ============================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDgbUt2SMxd4glTjn4Z1S8oAq4bCmSobDQ",
+  authDomain: "india-mobile-17134.firebaseapp.com",
+  projectId: "india-mobile-17134",
+  storageBucket: "india-mobile-17134.firebasestorage.app",
+  messagingSenderId: "20187455448",
+  appId: "1:20187455448:web:7f3d3bd09e8407ea389cad",
+  measurementId: "G-3XVP6GQ9WX"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+let recaptchaVerifier = null;
+function getRecaptcha() {
+  if (!recaptchaVerifier) {
+    recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+      size: 'invisible',
+      callback: () => {}
+    });
+  }
+  return recaptchaVerifier;
+}
+
+// ============================================
 // DATA STORE (localStorage-based for demo)
 // ============================================
 const DB = {
@@ -98,7 +124,7 @@ function updateLiveIndicator() {
 // ============================================
 // CURRENT SESSION
 // ============================================
-let sessionOTP = null;
+let sessionConfirmation = null;
 let sessionPhone = null;
 let sessionBookingData = {};
 let currentBookingStep = 1;
@@ -265,45 +291,36 @@ updateQueueDisplay();
 setInterval(updateQueueDisplay, 30000);
 
 // ============================================
-// OTP API
+// OTP API (Firebase Phone Auth)
 // ============================================
 async function sendOTP(phone) {
   sessionPhone = phone;
   try {
-    const res = await fetch('/api/otp?action=send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone })
-    });
-    const data = await res.json();
-    if (data.success) {
-      if (data.debug_otp) {
-        notify('OTP sent (Demo: ' + data.debug_otp + ')', 'info');
-        sessionOTP = data.debug_otp;
-      } else {
-        notify('OTP sent to ' + phone, 'success');
-      }
-    } else {
-      notify(data.message || 'Failed to send OTP', 'error');
+    const appVerifier = getRecaptcha();
+    const confirmationResult = await auth.signInWithPhoneNumber('+91' + phone, appVerifier);
+    sessionConfirmation = confirmationResult;
+    notify('OTP sent to ' + phone, 'success');
+    return { success: true };
+  } catch (e) {
+    notify(e.message || 'Failed to send OTP', 'error');
+    if (recaptchaVerifier) {
+      recaptchaVerifier.clear();
+      recaptchaVerifier = null;
     }
-    return data;
-  } catch(e) {
-    notify('Network error. Check server connection.', 'error');
-    return { success: false };
+    return { success: false, message: e.message };
   }
 }
 
 async function verifyOTP(entered) {
   try {
-    const res = await fetch('/api/otp?action=verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: sessionPhone, otp: entered })
-    });
-    const data = await res.json();
-    return data;
-  } catch(e) {
-    return { success: false, message: 'Network error' };
+    if (!sessionConfirmation) {
+      return { success: false, message: 'No OTP request found. Please request OTP again.' };
+    }
+    await sessionConfirmation.confirm(entered);
+    return { success: true };
+  } catch (e) {
+    const msg = e.code === 'auth/invalid-verification-code' ? 'Incorrect OTP. Please try again.' : (e.message || 'Verification failed');
+    return { success: false, message: msg };
   }
 }
 
