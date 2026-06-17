@@ -1,6 +1,12 @@
 {
+  "builds": [
+    { "src": "api/*.js", "use": "@vercel/node" },
+    { "src": "public/**", "use": "@vercel/static" }
+  ],
   "rewrites": [
-    { "source": "/aadhaar-portal.php", "destination": "/aadhaar-portal.html" },
-    { "source": "/aadhaar-portal", "destination": "/aadhaar-portal.html" }
+    { "source": "/aadhaar-portal.php", "destination": "/public/aadhaar-portal.html" },
+    { "source": "/aadhaar-portal", "destination": "/public/aadhaar-portal.html" },
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/:path*", "destination": "/public/:path*" }
   ]
 }
