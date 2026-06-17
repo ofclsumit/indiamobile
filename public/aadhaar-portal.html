@@ -311,6 +311,15 @@ let portalPhone = null;
 let portalData = {};
 let portalSelectedDate = null;
 
+function getDeviceId() {
+  let id = localStorage.getItem('ds_device_id');
+  if (!id) {
+    id = 'dev_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem('ds_device_id', id);
+  }
+  return id;
+}
+
 function notify(msg, type) {
   const n = document.getElementById('notif');
   n.textContent = msg;
@@ -400,14 +409,6 @@ async function sendPortalOTP() {
   const aadhaar = getFullAadhaar();
   if (aadhaar.length !== 12) {
     notify('Please enter your complete 12-digit Aadhaar number', 'error');
-    return;
-  }
-
-  // Check for existing booking
-  const bookings = DBSync.getBookings();
-  const existing = bookings.find(b => b.phone === phone && (b.status === 'pending' || b.status === 'approved'));
-  if (existing) {
-    notify('You already have an active booking (Token #' + existing.token + '). Check your token below.', 'error');
     return;
   }
 
@@ -505,16 +506,7 @@ function portalSelectDate(dateStr, el) {
   portalSelectedDate = dateStr;
 }
 
-function generateBookingId() {
-  return 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100);
-}
-
-function getNextToken(bookings) {
-  const max = bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0);
-  return String(max + 1).padStart(2, '0');
-}
-
-function portalConfirmBooking() {
+async function portalConfirmBooking() {
   if (!portalSelectedDate) {
     notify('Please select an appointment date', 'error');
     return;
@@ -524,30 +516,40 @@ function portalConfirmBooking() {
   statusEl.style.display = 'block';
   statusEl.textContent = 'Submitting...';
 
-  // Create booking via DBSync (shared across devices via /api/sync)
-  const bookings = DBSync.getBookings();
-  const token = getNextToken(bookings);
-  const bookingId = generateBookingId();
+  try {
+    const res = await fetch('/api/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: portalData.phone,
+        aadhaar: portalData.aadhaarFull,
+        deviceId: getDeviceId(),
+        date: portalSelectedDate,
+        service: 'Aadhaar Update'
+      })
+    });
+    const result = await res.json();
 
-  const booking = {
-    token,
-    bookingId,
-    phone: portalData.phone,
-    name: 'Portal User',
-    aadhaarFull: portalData.aadhaarFull,
-    aadhaarLast4: portalData.aadhaarLast4,
-    service: 'Aadhaar Update',
-    date: portalSelectedDate,
-    status: 'approved',
-    createdAt: new Date().toISOString()
-  };
+    if (!result.success) {
+      notify(result.message || 'Booking failed', 'error');
+      statusEl.style.display = 'none';
+      return;
+    }
 
-  bookings.push(booking);
-  DBSync.setBookings(bookings);
-  sessionStorage.setItem('myBooking', JSON.stringify(booking));
+    statusEl.style.display = 'none';
 
-  statusEl.style.display = 'none';
-  showConfirmation(booking);
+    if (result.isDuplicate) {
+      notify('You already have an active booking. Showing your existing token.', 'info');
+      sessionStorage.setItem('myBooking', JSON.stringify(result.booking));
+      showConfirmation(result.booking);
+    } else {
+      sessionStorage.setItem('myBooking', JSON.stringify(result.booking));
+      showConfirmation(result.booking);
+    }
+  } catch(e) {
+    notify('Network error. Please try again.', 'error');
+    statusEl.style.display = 'none';
+  }
 }
 
 function showConfirmation(booking) {
