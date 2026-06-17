@@ -801,7 +801,7 @@ function cancelBooking(bookingId) {
 // ADMIN
 // ============================================
 function openAdminLogin() {
-  window.open('https://admin-deploy-sage.vercel.app', '_blank');
+  window.open('https://indiamobile-admin.vercel.app/', '_blank');
 }
 
 function closeAdminLogin() {
@@ -1006,7 +1006,7 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
     e.preventDefault();
-    window.open('https://admin-deploy-sage.vercel.app', '_blank');
+    window.open('https://indiamobile-admin.vercel.app/', '_blank');
   }
 });
 
@@ -1021,7 +1021,7 @@ document.addEventListener('click', function(e) {
     logoTimer = setTimeout(() => { logoClickCount = 0; }, 1500);
     if (logoClickCount >= 5) {
       logoClickCount = 0;
-      window.open('https://admin-deploy-sage.vercel.app', '_blank');
+      window.open('https://indiamobile-admin.vercel.app/', '_blank');
     }
   }
 });
