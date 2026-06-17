@@ -1,6 +1,6 @@
 const crypto = require('crypto');
-const MSG91_KEY = process.env.MSG91_AUTH_KEY || '533064Tm39MGzFYq016a322f2eP1';
-const MSG91_SENDER = process.env.MSG91_SENDER_ID || 'MSGIND';
+const FAST2SMS_KEY = process.env.FAST2SMS_API_KEY || 'bb_xnSveCt6htm192Vs69Teg7mkFCv0mVQg';
+const FAST2SMS_SENDER = process.env.FAST2SMS_SENDER_ID || 'FTWSMS';
 const LIMIT = 100;
 let otpStore = {}, dCount = { d: '', c: 0 };
 
@@ -10,12 +10,13 @@ function hash(o) { return crypto.createHash('sha256').update('DS_OTP_SALT_2026_'
 
 async function sendSMS(phone, msg) {
   try {
-    const r = await fetch('https://api.msg91.com/api/v2/sendsms', {
+    const r = await fetch('https://www.fast2sms.com/dev/bulkV2', {
       method: 'POST',
-      headers: { authkey: MSG91_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: MSG91_SENDER, route: '4', country: '91', sms: [{ message: msg, to: [phone] }] })
+      headers: { authorization: FAST2SMS_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender_id: FAST2SMS_SENDER, message: msg, language: 'english', route: 'v3', numbers: phone })
     });
-    return ((await r.json()).type === 'success');
+    const data = await r.json();
+    return data.return === true;
   } catch { return false; }
 }
 
@@ -32,7 +33,7 @@ module.exports = async (req, res) => {
 
   if (req.method === 'GET' && action === 'status') {
     const c = count();
-    return res.json({ success: true, today: c.c, limit: LIMIT, remaining: Math.max(0, LIMIT - c.c), driver: 'msg91', otp_length: 6, otp_expiry: 300 });
+    return res.json({ success: true, today: c.c, limit: LIMIT, remaining: Math.max(0, LIMIT - c.c), driver: 'fast2sms', otp_length: 6, otp_expiry: 300 });
   }
 
   if (req.method !== 'POST') return res.status(405).json({ success: false, message: 'Method not allowed' });
