@@ -1,13 +1,8 @@
 {
-  "functions": {
-    "api/*.js": {}
-  },
-  "routes": [
-    { "src": "/api/otp", "dest": "/api/otp.js" },
-    { "src": "/api/sync", "dest": "/api/sync.js" },
-    { "src": "/api/otp\\?.*", "dest": "/api/otp.js" },
-    { "src": "/aadhaar-portal\\.php", "dest": "/public/aadhaar-portal.html" },
-    { "src": "/aadhaar-portal", "dest": "/public/aadhaar-portal.html" },
-    { "src": "/(.*)", "dest": "/public/$1" }
+  "rewrites": [
+    { "source": "/aadhaar-portal.php", "destination": "/public/aadhaar-portal.html" },
+    { "source": "/aadhaar-portal", "destination": "/public/aadhaar-portal.html" },
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/:path*", "destination": "/public/:path*" }
   ]
 }
