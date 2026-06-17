@@ -137,7 +137,7 @@ function globalSearchHandler(q) {
   const bookings = DBSync.getBookings();
   const results = bookings.filter(b =>
     b.name?.toLowerCase().includes(q.toLowerCase()) ||
-    b.phone?.includes(q) ||
+    b.email?.toLowerCase().includes(q.toLowerCase()) ||
     b.bookingId?.toLowerCase().includes(q) ||
     b.token?.includes(q)
   );
@@ -214,7 +214,7 @@ function renderQueueTable() {
   const search = (document.getElementById('queueSearch')?.value || '').toLowerCase();
   const statusFilter = document.getElementById('queueStatusFilter')?.value || '';
 
-  if (search) queue = queue.filter(b => b.name?.toLowerCase().includes(search) || b.phone?.includes(search) || b.token?.includes(search));
+  if (search) queue = queue.filter(b => b.name?.toLowerCase().includes(search) || b.email?.toLowerCase().includes(search) || b.token?.includes(search));
   if (statusFilter) queue = queue.filter(b => b.status === statusFilter);
 
   queue.sort((a, b) => {
@@ -488,7 +488,7 @@ function renderBookingsTable() {
   const serviceFilter = document.getElementById('bookingsServiceFilter')?.value || '';
   const statusFilter = document.getElementById('bookingsStatusFilter')?.value || '';
 
-  if (search) bookings = bookings.filter(b => b.name?.toLowerCase().includes(search) || b.phone?.includes(search) || b.token?.includes(search) || b.bookingId?.toLowerCase().includes(search));
+  if (search) bookings = bookings.filter(b => b.name?.toLowerCase().includes(search) || b.email?.toLowerCase().includes(search) || b.token?.includes(search) || b.bookingId?.toLowerCase().includes(search));
   if (dateFilter) bookings = bookings.filter(b => b.date === dateFilter);
   if (serviceFilter) bookings = bookings.filter(b => b.service === serviceFilter);
   if (statusFilter) bookings = bookings.filter(b => b.status === statusFilter);
@@ -515,7 +515,7 @@ function renderBookingsTable() {
     return `<tr>
       <td class="token-cell">${String(b.token).padStart(2, '0')}</td>
       <td class="name-cell">${b.name || 'N/A'}</td>
-      <td>${b.phone || '--'}</td>
+      <td>${b.email || '--'}</td>
       <td>${b.service || 'N/A'}</td>
       <td>${d}</td>
       <td><span class="db-badge ${statusClass}">${statusLabel}</span></td>
@@ -626,14 +626,14 @@ function renderCustomers() {
 
   const customerMap = {};
   bookings.forEach(b => {
-    if (!b.phone) return;
-    if (!customerMap[b.phone]) customerMap[b.phone] = { phone: b.phone, name: b.name || 'Unknown', aadhaar: b.aadhaarLast4 || '--', bookings: [] };
-    customerMap[b.phone].bookings.push(b);
-    if (b.name && !customerMap[b.phone].name.startsWith(b.name)) customerMap[b.phone].name = b.name;
+    if (!b.email) return;
+    if (!customerMap[b.email]) customerMap[b.email] = { email: b.email, name: b.name || 'Unknown', aadhaar: b.aadhaarLast4 || '--', bookings: [] };
+    customerMap[b.email].bookings.push(b);
+    if (b.name && !customerMap[b.email].name.startsWith(b.name)) customerMap[b.email].name = b.name;
   });
 
   let customers = Object.values(customerMap);
-  if (search) customers = customers.filter(c => c.name.toLowerCase().includes(search) || c.phone.includes(search));
+  if (search) customers = customers.filter(c => c.name.toLowerCase().includes(search) || c.email.toLowerCase().includes(search));
 
   customers.sort((a, b) => b.bookings.length - a.bookings.length);
 
@@ -645,7 +645,7 @@ function renderCustomers() {
     const initials = c.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
     return `<tr>
       <td><div style="display:flex;align-items:center;gap:10px;"><div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--db-accent),#6366f1);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;">${initials}</div><span class="name-cell">${c.name}</span></div></td>
-      <td>${c.phone}</td>
+      <td>${c.email}</td>
       <td style="font-family:'Space Grotesk',sans-serif;letter-spacing:0.05em;">xxxx xxxx ${c.aadhaar}</td>
       <td>${c.bookings.length}</td>
       <td>${lastDate}</td>

@@ -794,7 +794,7 @@ function cancelBooking(bookingId) {
 // ADMIN
 // ============================================
 function openAdminLogin() {
-  window.open('https://indiamobile-admin.vercel.app', '_blank');
+  window.open('https://admin-deploy-sage.vercel.app', '_blank');
 }
 
 function closeAdminLogin() {
@@ -998,7 +998,7 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
     e.preventDefault();
-    window.open('https://indiamobile-admin.vercel.app', '_blank');
+    window.open('https://admin-deploy-sage.vercel.app', '_blank');
   }
 });
 
@@ -1013,7 +1013,7 @@ document.addEventListener('click', function(e) {
     logoTimer = setTimeout(() => { logoClickCount = 0; }, 1500);
     if (logoClickCount >= 5) {
       logoClickCount = 0;
-      window.open('https://indiamobile-admin.vercel.app', '_blank');
+      window.open('https://admin-deploy-sage.vercel.app', '_blank');
     }
   }
 });
@@ -1207,14 +1207,23 @@ window.setLanguage = function(lang) {
     }
   });
 
-  const btn = document.getElementById('langToggleBtn');
-  if (btn) {
-    btn.innerHTML = lang === 'hi' ? '🌐 English' : '🌐 हिंदी';
-  }
-  const btnMob = document.getElementById('langToggleBtnMobile');
-  if (btnMob) {
-    btnMob.innerHTML = lang === 'hi' ? '🌐 English' : '🌐 हिंदी';
-  }
+  // Sync toggle switches
+  ['', 'Mobile'].forEach(suffix => {
+    const wrapper = document.getElementById('langSwitch' + suffix);
+    const hiOpt  = document.getElementById('langOptHi' + suffix);
+    const enOpt  = document.getElementById('langOptEn' + suffix);
+    if (wrapper) {
+      if (lang === 'en') {
+        wrapper.classList.add('en');
+      } else {
+        wrapper.classList.remove('en');
+      }
+    }
+    if (hiOpt && enOpt) {
+      hiOpt.classList.toggle('active', lang === 'hi');
+      enOpt.classList.toggle('active', lang === 'en');
+    }
+  });
 };
 
 window.toggleLanguage = function() {

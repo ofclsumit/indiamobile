@@ -19,6 +19,8 @@
   },
   "homepage": "https://github.com/ofclsumit/indiamobile#readme",
   "dependencies": {
-    "firebase": "^12.15.0"
+    "@vercel/blob": "^2.4.0",
+    "firebase": "^12.15.0",
+    "nodemailer": "^9.0.0"
   }
 }

@@ -21,7 +21,7 @@ const DBSync = {
     try { return JSON.parse(localStorage.getItem(this.KEYS.BOOKINGS)) || []; } catch(e) { return []; }
   },
   getToken() {
-    return parseInt(localStorage.getItem(this.KEYS.TOKEN)) || 7;
+    return parseInt(localStorage.getItem(this.KEYS.TOKEN)) || 0;
   },
   getDates() {
     try { return JSON.parse(localStorage.getItem(this.KEYS.DATES)) || []; } catch(e) { return []; }
@@ -148,8 +148,20 @@ window.addEventListener('storage', (e) => {
   }
 });
 
-// Auto-start polling
-DBSync.startPolling();
+// Push local data to server (called by app.js after data is ready)
+DBSync.pushToServer = async function () {
+  const bookings = this.getBookings();
+  const token = this.getToken();
+  const dates = this.getDates();
+  if (bookings.length > 0 || token > 0) {
+    await Promise.all([
+      this._syncToServer({ action: 'setBookings', bookings }),
+      this._syncToServer({ action: 'setToken', token }),
+      this._syncToServer({ action: 'setDates', dates }),
+    ]);
+  }
+};
 
-// Seed shared data from local storage if server is empty
+// Note: no auto-polling on main site — localStorage is source of truth.
+// Server is only notified of changes (push-only) to avoid data loss.
 

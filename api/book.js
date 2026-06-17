@@ -42,12 +42,12 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const body = req.body || {};
-  const phone = (body.phone || '').replace(/\D/g, '');
+  const email = (body.email || '').trim().toLowerCase();
   const aadhaar = (body.aadhaar || '').replace(/\D/g, '');
   const deviceId = (body.deviceId || '').trim();
   const date = (body.date || '').trim();
 
-  if (phone.length !== 10) return res.status(400).json({ success: false, message: 'Invalid phone' });
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, message: 'Invalid email' });
   if (aadhaar.length !== 12) return res.status(400).json({ success: false, message: 'Invalid Aadhaar' });
   if (!deviceId) return res.status(400).json({ success: false, message: 'Missing device ID' });
   if (!date) return res.status(400).json({ success: false, message: 'Missing date' });
@@ -55,8 +55,8 @@ module.exports = async (req, res) => {
   const bookings = await readBookings(req);
   const active = bookings.filter(isActive);
 
-  const dupPhone = active.find(b => b.phone === phone);
-  if (dupPhone) return res.json({ success: true, isDuplicate: true, field: 'phone', booking: dupPhone });
+  const dupEmail = active.find(b => b.email === email);
+  if (dupEmail) return res.json({ success: true, isDuplicate: true, field: 'email', booking: dupEmail });
 
   const dupAadhaar = active.find(b => b.aadhaarFull === aadhaar);
   if (dupAadhaar) return res.json({ success: true, isDuplicate: true, field: 'aadhaar', booking: dupAadhaar });
@@ -68,7 +68,7 @@ module.exports = async (req, res) => {
   const booking = {
     token,
     bookingId: bookingId(),
-    phone,
+    email,
     name: body.name || 'Portal User',
     aadhaarFull: aadhaar,
     aadhaarLast4: aadhaar.slice(-4),

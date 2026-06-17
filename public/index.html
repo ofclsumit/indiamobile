@@ -96,9 +96,17 @@ window.verifyOTP = async (code) => {
       <li><a href="#contact" data-translate="nav_contact">Contact</a></li>
     </ul>
     <div class="nav-cta" style="display:flex; gap:10px; align-items:center;">
-      <button class="lang-toggle-btn" onclick="toggleLanguage()" id="langToggleBtn" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); color:var(--text); padding:8px 12px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px; transition:background 0.2s;">
-        🌐 English
-      </button>
+      <div class="lang-switch" id="langSwitch" onclick="toggleLanguage()">
+        <div class="lang-switch-slider"></div>
+        <div class="lang-option active" id="langOptHi">
+          <span class="lang-option-flag">🇮🇳</span>
+          <span>हिंदी</span>
+        </div>
+        <div class="lang-option" id="langOptEn">
+          <span class="lang-option-flag">🇬🇧</span>
+          <span>English</span>
+        </div>
+      </div>
       <button class="btn-secondary" onclick="openCheckToken()" data-translate="btn_check_token">Check My Token</button>
     </div>
     <div class="hamburger" onclick="toggleMobileMenu()" id="hamburger">
@@ -109,11 +117,19 @@ window.verifyOTP = async (code) => {
 
 <!-- MOBILE MENU -->
 <div class="mobile-menu" id="mobileMenu">
-  <div style="padding: 10px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--glass-border); margin-bottom:10px;">
-    <span style="font-size:14px; font-weight:500;">Language / भाषा</span>
-    <button class="lang-toggle-btn" onclick="toggleLanguage(); closeMobileMenu();" id="langToggleBtnMobile" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); color:var(--text); padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:600;">
-      🌐 English
-    </button>
+  <div class="mobile-lang-switch-wrap">
+    <span class="mobile-lang-label"><span class="globe-icon">🌐</span> भाषा / Language</span>
+    <div class="lang-switch" id="langSwitchMobile" onclick="toggleLanguage(); closeMobileMenu();">
+      <div class="lang-switch-slider"></div>
+      <div class="lang-option active" id="langOptHiMobile">
+        <span class="lang-option-flag">🇮🇳</span>
+        <span>हिंदी</span>
+      </div>
+      <div class="lang-option" id="langOptEnMobile">
+        <span class="lang-option-flag">🇬🇧</span>
+        <span>English</span>
+      </div>
+    </div>
   </div>
   <a href="#services" onclick="closeMobileMenu()" data-translate="nav_services">Services</a>
   <a href="#about" onclick="closeMobileMenu()" data-translate="nav_about">About</a>
