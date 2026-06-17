@@ -19,8 +19,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="db-sync.js"></script>
 <style>
 .portal-nav {
@@ -259,26 +257,7 @@ resetInactivityTimer();
         <p style="font-size:12px;color:var(--text3);margin-top:6px;">Enter your 12-digit Aadhaar number as shown on your card</p>
       </div>
 
-      <!-- OTP Section (hidden until Send OTP) -->
-      <div id="portalOTPSection" style="display:none; margin-top:20px; padding-top:20px; border-top:1px solid var(--glass-border);">
-        <p style="font-size:13px; color:var(--text3); margin-bottom:16px;">Enter the 6-digit OTP sent to your mobile number</p>
-        <div class="otp-grid">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-        </div>
-        <button class="btn-primary btn-full" onclick="verifyPortalOTP()" style="margin-top:12px;">Verify OTP</button>
-        <p style="text-align:center; margin-top:12px;">
-          <a href="#" onclick="resendPortalOTP(); return false;" style="color:var(--accent); font-size:13px;">Resend OTP</a>
-        </p>
-      </div>
-
-      <div id="portalSendOTPBtn">
-        <button class="btn-primary btn-full" onclick="sendPortalOTP()">Send OTP to Verify</button>
-      </div>
+      <button class="btn-primary btn-full" onclick="continueToBooking()">Continue to Book</button>
     </div>
 
     <!-- Step 2: Date Selection -->
@@ -322,39 +301,9 @@ resetInactivityTimer();
 
 </div>
 
-<div id="recaptcha-container"></div>
-
 <div id="notif" style="display:none;" class="notification"></div>
 
 <script>
-// ============================================
-// FIREBASE INIT
-// ============================================
-firebase.initializeApp({
-  apiKey: "AIzaSyDgbUt2SMxd4glTjn4Z1S8oAq4bCmSobDQ",
-  authDomain: "india-mobile-17134.firebaseapp.com",
-  projectId: "india-mobile-17134",
-  storageBucket: "india-mobile-17134.firebasestorage.app",
-  messagingSenderId: "20187455448",
-  appId: "1:20187455448:web:7f3d3bd09e8407ea389cad",
-  measurementId: "G-3XVP6GQ9WX"
-});
-const portalAuth = firebase.auth();
-
-let portalRecaptchaVerifier = null;
-function portalGetRecaptcha() {
-  if (!portalRecaptchaVerifier) {
-    portalRecaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-      size: 'invisible',
-      callback: () => {}
-    });
-  }
-  return portalRecaptchaVerifier;
-}
-portalGetRecaptcha();
-let portalConfirmation = null;
-let portalPhone = null;
-
 // ============================================
 // FRONTEND
 // ============================================
@@ -406,7 +355,7 @@ function getFullAadhaar() {
   return aadInputs.map(i => i.value).join('');
 }
 
-async function sendPortalOTP() {
+function continueToBooking() {
   const phone = document.getElementById('portalPhone').value.trim().replace(/\D/g, '');
   if (phone.length !== 10) {
     notify('Please enter a valid 10-digit mobile number', 'error');
@@ -424,72 +373,7 @@ async function sendPortalOTP() {
   }
 
   portalData = { phone, name, aadhaarFull: aadhaar, aadhaarLast4: aadhaar.slice(-4), service: 'Aadhaar Update' };
-  portalPhone = phone;
-
-  try {
-    document.getElementById('portalSendOTPBtn').querySelector('button').disabled = true;
-    const appVerifier = portalGetRecaptcha();
-    portalConfirmation = await portalAuth.signInWithPhoneNumber('+91' + phone, appVerifier);
-    document.getElementById('portalSendOTPBtn').style.display = 'none';
-    document.getElementById('portalOTPSection').style.display = 'block';
-    setupPortalOTPInputs();
-    notify('OTP sent to ' + phone, 'success');
-  } catch (e) {
-    notify(e.message || 'Failed to send OTP', 'error');
-    document.getElementById('portalSendOTPBtn').querySelector('button').disabled = false;
-  }
-}
-
-function setupPortalOTPInputs() {
-  const inputs = document.querySelectorAll('.portal-otp');
-  inputs.forEach((inp, i) => {
-    inp.addEventListener('input', () => {
-      const v = inp.value.replace(/\D/g, '');
-      inp.value = v.slice(0, 1);
-      if (v && i < inputs.length - 1) inputs[i + 1].focus();
-    });
-    inp.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i - 1].focus();
-    });
-    inp.addEventListener('paste', (e) => {
-      e.preventDefault();
-      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
-      inputs.forEach((inp2, j) => { inp2.value = text[j] || ''; });
-    });
-  });
-}
-
-function getPortalOTPValue() {
-  return [...document.querySelectorAll('.portal-otp')].map(i => i.value).join('');
-}
-
-async function verifyPortalOTP() {
-  const otp = getPortalOTPValue();
-  if (otp.length !== 6) { notify('Enter the complete 6-digit OTP', 'error'); return; }
-  try {
-    if (!portalConfirmation) {
-      notify('No OTP request found. Please request OTP again.', 'error');
-      return;
-    }
-    await portalConfirmation.confirm(otp);
-    notify('Phone verified!', 'success');
-    showStep2();
-  } catch (e) {
-    const msg = e.code === 'auth/invalid-verification-code' ? 'Incorrect OTP. Please try again.' : (e.message || 'Verification failed');
-    notify(msg, 'error');
-  }
-}
-
-async function resendPortalOTP() {
-  if (portalPhone) {
-    try {
-      const appVerifier = portalGetRecaptcha();
-      portalConfirmation = await portalAuth.signInWithPhoneNumber('+91' + portalPhone, appVerifier);
-      notify('OTP resent', 'success');
-    } catch (e) {
-      notify(e.message || 'Failed to resend OTP', 'error');
-    }
-  }
+  showStep2();
 }
 
 function showStep2() {
