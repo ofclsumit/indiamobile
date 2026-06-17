@@ -35,7 +35,7 @@
 </script>
 <script type="module">
 import { initializeApp } from "firebase/app";
-import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDgbUt2SMxd4glTjn4Z1S8oAq4bCmSobDQ",
@@ -50,38 +50,52 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-window.__recaptchaVerifier = null;
+window.__verifiedEmail = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-  window.__recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-    'size': 'invisible',
-    'callback': () => {},
-    'expired-callback': () => {}
-  });
-});
+(function() {
+  if (isSignInWithEmailLink(auth, window.location.href)) {
+    const email = window.localStorage.getItem('emailForSignIn');
+    if (email) {
+      signInWithEmailLink(auth, email, window.location.href)
+        .then(() => {
+          window.localStorage.removeItem('emailForSignIn');
+          window.__verifiedEmail = email;
+          window.history.replaceState({}, document.title, window.location.pathname);
+          window.dispatchEvent(new CustomEvent('emailverified', { detail: { email } }));
+        })
+        .catch((error) => {
+          window.localStorage.removeItem('emailForSignIn');
+          window.history.replaceState({}, document.title, window.location.pathname);
+          window.dispatchEvent(new CustomEvent('emailverifyerror', { detail: { message: error.message } }));
+        });
+    } else {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      window.dispatchEvent(new CustomEvent('emailverifyerror', { detail: { message: 'Email verification link detected but email not found. Please request a new link.' } }));
+    }
+  }
+})();
 
-window.sessionConfirmation = null;
-window.sessionPhone = null;
-
-window.sendOTP = async (phone) => {
-  window.sessionPhone = phone;
+window.sendOTP = async (email) => {
   try {
-    const confirmationResult = await signInWithPhoneNumber(auth, '+91' + phone, window.__recaptchaVerifier);
-    window.sessionConfirmation = confirmationResult;
+    const actionCodeSettings = {
+      url: window.location.origin,
+      handleCodeInApp: true
+    };
+    await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+    window.localStorage.setItem('emailForSignIn', email);
     return { success: true };
   } catch (e) {
     return { success: false, message: e.message };
   }
 };
 
-window.verifyOTP = async (code) => {
-  try {
-    await window.sessionConfirmation.confirm(code);
-    return { success: true };
-  } catch (e) {
-    const msg = e.code === 'auth/invalid-verification-code' ? 'Incorrect OTP. Please try again.' : (e.message || 'Verification failed');
-    return { success: false, message: msg };
+window.verifyOTP = async () => {
+  if (window.__verifiedEmail) {
+    const email = window.__verifiedEmail;
+    window.__verifiedEmail = null;
+    return { success: true, email };
   }
+  return { success: false, message: 'Email not yet verified. Click the link sent to your email.' };
 };
 </script>
 </head>

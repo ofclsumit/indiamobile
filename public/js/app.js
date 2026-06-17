@@ -60,12 +60,12 @@ const DB = {
     return booking;
   },
 
-  getByPhone(phone) {
-    return this.bookings.filter(b => b.phone === phone && b.status !== 'cancelled');
+  getByEmail(email) {
+    return this.bookings.filter(b => b.email === email && b.status !== 'cancelled');
   },
 
-  getActiveByPhone(phone) {
-    return this.bookings.find(b => b.phone === phone && (b.status === 'pending' || b.status === 'approved'));
+  getActiveByEmail(email) {
+    return this.bookings.find(b => b.email === email && (b.status === 'pending' || b.status === 'approved'));
   },
 
   getActiveByAadhaar(aadhaar) {
@@ -74,6 +74,36 @@ const DB = {
 };
 
 DB.load();
+
+// Email verification auto-detect (after redirect from magic link)
+window.addEventListener('emailverified', (e) => {
+  const pending = sessionStorage.getItem('pendingBooking');
+  if (pending) {
+    const data = JSON.parse(pending);
+    if (data.email === e.detail.email) {
+      sessionBookingData = data;
+      sessionStorage.removeItem('pendingBooking');
+      openBooking(true);
+      renderBookingStep(2);
+    }
+  }
+});
+
+window.addEventListener('emailverifyerror', (e) => {
+  notify(e.detail.message, 'error');
+});
+
+// If we came back from email verification and have pending booking data
+if (window.__verifiedEmail && sessionStorage.getItem('pendingBooking')) {
+  const data = JSON.parse(sessionStorage.getItem('pendingBooking'));
+  if (data.email === window.__verifiedEmail) {
+    sessionBookingData = data;
+    sessionStorage.removeItem('pendingBooking');
+    window.__verifiedEmail = null;
+    openBooking(true);
+    renderBookingStep(2);
+  }
+}
 
 // Listen for remote data changes (admin actions, other tabs)
 DBSync.subscribe(function(data) {
@@ -98,11 +128,10 @@ function updateLiveIndicator() {
 // ============================================
 // CURRENT SESSION
 // ============================================
-let sessionPhone = null;
 let sessionBookingData = {};
 let currentBookingStep = 1;
 let checkTokenStep = 1;
-let verifiedPhoneForCheck = null;
+let verifiedEmailForCheck = null;
 let selectedDate = null;
 
 // ============================================
@@ -264,39 +293,14 @@ updateQueueDisplay();
 setInterval(updateQueueDisplay, 30000);
 
 // ============================================
-// OTP API (Firebase Phone Auth - v9 modular)
+// EMAIL VERIFICATION via Firebase Email Link
 // ============================================
-async function sendOTP(phone) {
-  return await window.sendOTP(phone);
+async function sendOTP(email) {
+  return await window.sendOTP(email);
 }
 
-async function verifyOTP(code) {
-  return await window.verifyOTP(code);
-}
-
-function setupOTPInputs(prefix) {
-  const inputs = document.querySelectorAll('.' + prefix + '-otp');
-  inputs.forEach((inp, i) => {
-    inp.addEventListener('input', () => {
-      const v = inp.value.replace(/\D/g, '');
-      inp.value = v.slice(0, 1);
-      if (v && i < inputs.length - 1) inputs[i+1].focus();
-    });
-    inp.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i-1].focus();
-    });
-    inp.addEventListener('paste', (e) => {
-      e.preventDefault();
-      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
-      inputs.forEach((inp2, j) => {
-        inp2.value = text[j] || '';
-      });
-    });
-  });
-}
-
-function getOTPValue(prefix) {
-  return [...document.querySelectorAll('.' + prefix + '-otp')].map(i => i.value).join('');
+async function verifyOTP() {
+  return await window.verifyOTP();
 }
 
 // ============================================
@@ -352,17 +356,14 @@ function renderBookingStep(step) {
 
       <div style="height:1px; background:var(--glass-border); margin:20px 0;"></div>
 
-      <!-- Mobile Number -->
+      <!-- Email -->
       <div class="form-group">
-        <label class="form-label">Mobile Number</label>
-        <div style="display:flex; align-items:center; gap:0; background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); border-radius:10px; overflow:hidden; transition:border-color 0.2s;" id="phoneFieldWrap">
-          <span style="padding:13px 14px; font-size:14px; color:var(--text); font-family:'Space Grotesk',sans-serif; letter-spacing:0.1em; border-right:1px solid var(--glass-border); background:rgba(255,255,255,0.02); user-select:none; flex-shrink:0;">+91</span>
-          <input type="tel" class="form-input" id="bookPhone" placeholder="Enter 10-digit mobile number" maxlength="10" inputmode="numeric" value="${sessionBookingData.phone || ''}"
-            style="flex:1; background:transparent; border:none; outline:none; padding:13px 14px; color:var(--text); font-size:14px; font-family:'Space Grotesk',sans-serif; letter-spacing:0.15em; font-weight:600;"
-            onfocus="document.getElementById('phoneFieldWrap').style.borderColor='rgba(59,130,246,0.5)'"
-            onblur="document.getElementById('phoneFieldWrap').style.borderColor='var(--glass-border)'"
-          >
-        </div>
+        <label class="form-label">Email Address</label>
+        <input type="email" class="form-input" id="bookEmail" placeholder="your@email.com"
+          value="${sessionBookingData.email || ''}"
+          style="width:100%;padding:13px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s;"
+          onfocus="this.style.borderColor='rgba(59,130,246,0.5)'"
+          onblur="this.style.borderColor='var(--glass-border)'">
       </div>
 
       <!-- Aadhaar Number — last 4 digits -->
@@ -382,26 +383,22 @@ function renderBookingStep(step) {
         </div>
       </div>
 
-      <!-- OTP section (hidden until Send OTP is clicked) -->
+      <!-- Email verification section (hidden until Send Magic Link is clicked) -->
       <div id="bookOTPSection" style="display:none;">
         <div style="height:1px; background:var(--glass-border); margin:4px 0 20px;"></div>
-        <p style="font-size:13px; color:var(--text3); margin-bottom:16px;">Enter the 6-digit OTP sent to your mobile number</p>
-        <div class="otp-grid">
-          <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
+        <div style="text-align:center;padding:16px 0;">
+          <div style="font-size:40px;margin-bottom:12px;"><i class="fas fa-envelope-open-text" style="color:var(--accent);"></i></div>
+          <p style="font-size:15px;font-weight:600;margin-bottom:8px;">Check your email</p>
+          <p id="bookEmailSentMsg" style="font-size:13px;color:var(--text2);margin-bottom:16px;">We sent a magic link. Click it to verify your email.</p>
+          <button class="btn-primary btn-full" onclick="verifyBookingOTP()" style="margin-top:8px;">I've Clicked the Link</button>
+          <p style="text-align:center; margin-top:12px;">
+            <a href="#" onclick="resendOTP(); return false;" style="color:var(--accent); font-size:13px;">Resend magic link</a>
+          </p>
         </div>
-        <button class="btn-primary btn-full" onclick="verifyBookingOTP()" style="margin-top:12px;">Verify OTP &amp; Continue</button>
-        <p style="text-align:center; margin-top:12px;">
-          <a href="#" onclick="resendOTP('book'); return false;" style="color:var(--accent); font-size:13px;">Resend OTP</a>
-        </p>
       </div>
 
       <div id="bookSendOTPBtn" style="margin-top:8px;">
-        <button class="btn-primary btn-full" onclick="sendBookingOTP()">Send OTP to Verify</button>
+        <button class="btn-primary btn-full" onclick="sendBookingOTP()">Send Magic Link</button>
       </div>
     `;
 
@@ -494,9 +491,9 @@ function renderBookingStep(step) {
 }
 
 async function sendBookingOTP() {
-  const phone = document.getElementById('bookPhone').value.trim().replace(/\D/g, '');
-  if (phone.length !== 10) {
-    notify('Please enter a valid 10-digit mobile number', 'error');
+  const email = document.getElementById('bookEmail').value.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    notify('Please enter a valid email address', 'error');
     return;
   }
 
@@ -506,46 +503,48 @@ async function sendBookingOTP() {
     return;
   }
 
-  const existing = DB.getActiveByPhone(phone);
+  const existing = DB.getActiveByEmail(email);
   if (existing) {
     notify('You already have an active booking (Token #' + existing.token + '). Please cancel it first or check your token.', 'error');
     return;
   }
 
-  sessionBookingData.phone = phone;
+  sessionBookingData.email = email;
   sessionBookingData.aadhaarLast4 = aadhaarLast4;
+  sessionStorage.setItem('pendingBooking', JSON.stringify(sessionBookingData));
 
-  const res = await sendOTP(phone);
+  const res = await sendOTP(email);
   if (res.success) {
-    notify('OTP sent to ' + phone, 'success');
+    notify('Magic link sent! Check your email.', 'success');
     document.getElementById('bookSendOTPBtn').style.display = 'none';
     document.getElementById('bookOTPSection').style.display = 'block';
-    setTimeout(() => setupOTPInputs('book'), 100);
+    document.getElementById('bookEmailSentMsg').textContent = 'We sent a magic link to ' + email + '. Click it to verify.';
   } else {
-    notify(res.message || 'Failed to send OTP', 'error');
+    notify(res.message || 'Failed to send verification email', 'error');
   }
 }
 
-async function verifyBookingOTP() {
-  const otp = getOTPValue('book');
-  if (otp.length !== 6) { notify('Enter the complete 6-digit OTP', 'error'); return; }
+function verifyBookingOTP() {
   const btn = document.querySelector('#bookingModalBody .btn-primary');
   if (btn) btn.disabled = true;
-  const result = await verifyOTP(otp);
-  if (btn) btn.disabled = false;
-  if (result.success) {
-    notify('Phone verified successfully!', 'success');
-    renderBookingStep(2);
-  } else {
-    notify(result.message || 'Incorrect OTP. Please try again.', 'error');
-  }
+  verifyOTP().then(result => {
+    if (btn) btn.disabled = false;
+    if (result.success) {
+      notify('Email verified successfully!', 'success');
+      renderBookingStep(2);
+    } else {
+      notify(result.message || 'Email not yet verified. Click the link sent to your email.', 'error');
+    }
+  });
 }
 
-async function resendOTP(prefix) {
-  if (sessionPhone) {
-    const res = await sendOTP(sessionPhone);
-    if (res.success) notify('OTP resent', 'success');
-    else notify(res.message || 'Failed to resend OTP', 'error');
+function resendOTP() {
+  const email = sessionBookingData.email;
+  if (email) {
+    sendOTP(email).then(res => {
+      if (res.success) notify('Magic link resent to ' + email, 'success');
+      else notify(res.message || 'Failed to resend', 'error');
+    });
   }
 }
 
@@ -583,16 +582,16 @@ function submitBookingStep2() {
   }
 
   const existingAadhaar = DB.getActiveByAadhaar(aadhaarLast4);
-  if (existingAadhaar && existingAadhaar.phone !== sessionBookingData.phone) {
+  if (existingAadhaar && existingAadhaar.email !== sessionBookingData.email) {
     notify('This Aadhaar number already has an active booking.', 'error');
     return;
   }
 
-  sessionBookingData.name = sessionBookingData.name || ('User ' + sessionBookingData.phone.slice(-4));
+  sessionBookingData.name = sessionBookingData.name || ('User ' + sessionBookingData.email.split('@')[0]);
   sessionBookingData.service = service;
 
   const booking = DB.addBooking({
-    phone: sessionBookingData.phone,
+    email: sessionBookingData.email,
     name: sessionBookingData.name,
     aadhaarLast4: sessionBookingData.aadhaarLast4,
     service: sessionBookingData.service,
@@ -623,7 +622,7 @@ function submitBookingStep3() {
 // ============================================
 function openCheckToken() {
   checkTokenStep = 1;
-  verifiedPhoneForCheck = null;
+  verifiedEmailForCheck = null;
   document.getElementById('checkTokenModal').classList.add('open');
   renderCheckTokenStep(1);
 }
@@ -637,33 +636,35 @@ function renderCheckTokenStep(step) {
 
   if (step === 1) {
     body.innerHTML = `
-      <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">Enter the mobile number you used when booking your token.</p>
+      <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">Enter the email you used when booking your token.</p>
       <div class="form-group">
-        <label class="form-label">Registered Mobile Number</label>
-        <input type="tel" class="form-input" id="checkPhone" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
+        <label class="form-label">Registered Email</label>
+        <input type="email" class="form-input" id="checkEmail" placeholder="your@email.com">
       </div>
       <div id="checkOTPSection" style="display:none;">
-        <p style="font-size:13px; color:var(--text3); margin-bottom:16px;">Enter the 6-digit OTP sent to your number</p>
-        <div class="otp-grid">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
+        <div style="text-align:center;padding:16px 0;">
+          <div style="font-size:40px;margin-bottom:12px;"><i class="fas fa-envelope-open-text" style="color:var(--accent);"></i></div>
+          <p style="font-size:15px;font-weight:600;margin-bottom:8px;">Check your email</p>
+          <p id="checkEmailSentMsg" style="font-size:13px;color:var(--text2);margin-bottom:16px;">We sent a magic link. Click it to verify.</p>
+          <button class="btn-primary btn-full" onclick="verifyCheckOTP()">I've Clicked the Link</button>
+          <p style="text-align:center; margin-top:12px;">
+            <a href="#" onclick="resendCheckOTP(); return false;" style="color:var(--accent); font-size:13px;">Resend magic link</a>
+          </p>
         </div>
-        <button class="btn-primary btn-full" onclick="verifyCheckOTP()">Verify OTP</button>
-        <p style="text-align:center; margin-top:12px;">
-          <a href="#" onclick="resendOTP('check'); return false;" style="color:var(--accent); font-size:13px;">Resend OTP</a>
-        </p>
       </div>
       <div id="checkSendBtn">
-        <button class="btn-primary btn-full" onclick="sendCheckOTP()">Send OTP</button>
+        <button class="btn-primary btn-full" onclick="sendCheckOTP()">Send Magic Link</button>
       </div>
     `;
-    setTimeout(() => setupOTPInputs('check'), 100);
   } else if (step === 2) {
-    const bookings = DB.getByPhone(verifiedPhoneForCheck);
+    const bookings = DB.getByEmail(verifiedEmailForCheck);
+    // Also check phone-based bookings for backward compat
+    if (bookings.length === 0) {
+      const phone = verifiedEmailForCheck;
+      // Try phone lookup as fallback
+      const phoneBookings = DB.getByPhone(verifiedEmailForCheck);
+      bookings.push(...phoneBookings);
+    }
     const ct = DB.currentToken;
 
     if (bookings.length === 0) {
@@ -741,35 +742,43 @@ function renderCheckTokenStep(step) {
 }
 
 async function sendCheckOTP() {
-  const phone = document.getElementById('checkPhone').value.trim().replace(/\D/g, '');
-  if (phone.length !== 10) {
-    notify('Please enter a valid 10-digit mobile number', 'error');
+  const email = document.getElementById('checkEmail').value.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    notify('Please enter a valid email address', 'error');
     return;
   }
-  verifiedPhoneForCheck = phone;
-  const res = await sendOTP(phone);
+  verifiedEmailForCheck = email;
+  const res = await sendOTP(email);
   if (res.success) {
-    notify('OTP sent to ' + phone, 'success');
+    notify('Magic link sent! Check your email.', 'success');
     document.getElementById('checkSendBtn').style.display = 'none';
     document.getElementById('checkOTPSection').style.display = 'block';
-    setTimeout(() => setupOTPInputs('check'), 100);
+    document.getElementById('checkEmailSentMsg').textContent = 'We sent a magic link to ' + email + '. Click it to verify.';
   } else {
-    notify(res.message || 'Failed to send OTP', 'error');
+    notify(res.message || 'Failed to send verification email', 'error');
   }
 }
 
-async function verifyCheckOTP() {
-  const otp = getOTPValue('check');
-  if (otp.length !== 6) { notify('Enter the complete 6-digit OTP', 'error'); return; }
+function verifyCheckOTP() {
   const btn = document.querySelector('#checkTokenBody .btn-primary');
   if (btn) btn.disabled = true;
-  const result = await verifyOTP(otp);
-  if (btn) btn.disabled = false;
-  if (result.success) {
-    notify('Phone verified!', 'success');
-    renderCheckTokenStep(2);
-  } else {
-    notify(result.message || 'Incorrect OTP. Please try again.', 'error');
+  verifyOTP().then(result => {
+    if (btn) btn.disabled = false;
+    if (result.success) {
+      notify('Email verified!', 'success');
+      renderCheckTokenStep(2);
+    } else {
+      notify(result.message || 'Email not yet verified. Click the link sent to your email.', 'error');
+    }
+  });
+}
+
+function resendCheckOTP() {
+  if (verifiedEmailForCheck) {
+    sendOTP(verifiedEmailForCheck).then(res => {
+      if (res.success) notify('Magic link resent to ' + verifiedEmailForCheck, 'success');
+      else notify(res.message || 'Failed to resend', 'error');
+    });
   }
 }
 

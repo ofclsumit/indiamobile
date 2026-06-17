@@ -25,7 +25,7 @@
 </script>
 <script type="module">
 import { initializeApp } from "firebase/app";
-import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDgbUt2SMxd4glTjn4Z1S8oAq4bCmSobDQ",
@@ -40,38 +40,52 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-window.__recaptchaVerifier = null;
+window.__verifiedEmail = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-  window.__recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-    'size': 'invisible',
-    'callback': () => {},
-    'expired-callback': () => {}
-  });
-});
+(function() {
+  if (isSignInWithEmailLink(auth, window.location.href)) {
+    const email = window.localStorage.getItem('emailForSignIn');
+    if (email) {
+      signInWithEmailLink(auth, email, window.location.href)
+        .then(() => {
+          window.localStorage.removeItem('emailForSignIn');
+          window.__verifiedEmail = email;
+          window.history.replaceState({}, document.title, window.location.pathname);
+          window.dispatchEvent(new CustomEvent('emailverified', { detail: { email } }));
+        })
+        .catch((error) => {
+          window.localStorage.removeItem('emailForSignIn');
+          window.history.replaceState({}, document.title, window.location.pathname);
+          window.dispatchEvent(new CustomEvent('emailverifyerror', { detail: { message: error.message } }));
+        });
+    } else {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      window.dispatchEvent(new CustomEvent('emailverifyerror', { detail: { message: 'Email verification link detected but email not found. Please request a new link.' } }));
+    }
+  }
+})();
 
-window.sessionConfirmation = null;
-window.sessionPhone = null;
-
-window.sendOTP = async (phone) => {
-  window.sessionPhone = phone;
+window.sendOTP = async (email) => {
   try {
-    const confirmationResult = await signInWithPhoneNumber(auth, '+91' + phone, window.__recaptchaVerifier);
-    window.sessionConfirmation = confirmationResult;
+    const actionCodeSettings = {
+      url: window.location.origin,
+      handleCodeInApp: true
+    };
+    await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+    window.localStorage.setItem('emailForSignIn', email);
     return { success: true };
   } catch (e) {
     return { success: false, message: e.message };
   }
 };
 
-window.verifyOTP = async (code) => {
-  try {
-    await window.sessionConfirmation.confirm(code);
-    return { success: true };
-  } catch (e) {
-    const msg = e.code === 'auth/invalid-verification-code' ? 'Incorrect OTP. Please try again.' : (e.message || 'Verification failed');
-    return { success: false, message: msg };
+window.verifyOTP = async () => {
+  if (window.__verifiedEmail) {
+    const email = window.__verifiedEmail;
+    window.__verifiedEmail = null;
+    return { success: true, email };
   }
+  return { success: false, message: 'Email not yet verified. Click the link sent to your email.' };
 };
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -285,14 +299,11 @@ resetInactivityTimer();
       </div>
 
       <div class="form-group">
-        <label class="form-label">Mobile Number</label>
-        <div style="display:flex;align-items:center;gap:0;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;overflow:hidden;transition:border-color 0.2s;" id="portalPhoneWrap">
-          <span style="padding:13px 14px;font-size:14px;color:var(--text);font-family:'Space Grotesk',sans-serif;letter-spacing:0.1em;border-right:1px solid var(--glass-border);background:rgba(255,255,255,0.02);user-select:none;flex-shrink:0;">+91</span>
-          <input type="tel" class="form-input" id="portalPhone" placeholder="Enter 10-digit mobile number" maxlength="10" inputmode="numeric"
-            style="flex:1;background:transparent;border:none;outline:none;padding:13px 14px;color:var(--text);font-size:14px;font-family:'Space Grotesk',sans-serif;letter-spacing:0.15em;font-weight:600;"
-            onfocus="document.getElementById('portalPhoneWrap').style.borderColor='rgba(59,130,246,0.5)'"
-            onblur="document.getElementById('portalPhoneWrap').style.borderColor='var(--glass-border)'">
-        </div>
+        <label class="form-label">Email Address</label>
+        <input type="email" class="form-input" id="portalEmail" placeholder="your@email.com"
+          style="width:100%;padding:13px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s;"
+          onfocus="this.style.borderColor='rgba(59,130,246,0.5)'"
+          onblur="this.style.borderColor='var(--glass-border)'">
       </div>
 
       <div class="form-group">
@@ -319,20 +330,16 @@ resetInactivityTimer();
 
       <div id="portalOTPSection" style="display:none; margin-top: 20px;">
         <div style="height:1px;background:var(--glass-border);margin:4px 0 20px;"></div>
-        <p style="font-size:13px;color:var(--text3);margin-bottom:16px;">Enter the 6-digit OTP sent to your mobile</p>
-        <div class="otp-grid">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
+        <div style="text-align:center;padding:16px 0;">
+          <div style="font-size:40px;margin-bottom:12px;"><i class="fas fa-envelope-open-text" style="color:var(--accent);"></i></div>
+          <p style="font-size:15px;font-weight:600;margin-bottom:8px;">Check your email</p>
+          <p id="portalEmailSentMsg" style="font-size:13px;color:var(--text2);margin-bottom:16px;">We sent a magic link. Click it to verify.</p>
+          <button class="btn-primary btn-full" onclick="verifyPortalOTP()" style="margin-top:8px;">I've Clicked the Link</button>
         </div>
-        <button class="btn-primary btn-full" onclick="verifyPortalOTP()" style="margin-top:12px;">Verify OTP &amp; Continue</button>
       </div>
 
       <div id="portalSendBtn">
-        <button class="btn-primary btn-full" onclick="continueToBooking()">Send OTP to Verify</button>
+        <button class="btn-primary btn-full" onclick="continueToBooking()">Send Magic Link</button>
       </div>
     </div>
 
@@ -429,9 +436,9 @@ function getFullAadhaar() {
 }
 
 function continueToBooking() {
-  const phone = document.getElementById('portalPhone').value.trim().replace(/\D/g, '');
-  if (phone.length !== 10) {
-    notify('Please enter a valid 10-digit mobile number', 'error');
+  const email = document.getElementById('portalEmail').value.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    notify('Please enter a valid email address', 'error');
     return;
   }
   const name = document.getElementById('portalName').value.trim();
@@ -444,56 +451,32 @@ function continueToBooking() {
     notify('Please enter your complete 12-digit Aadhaar number', 'error');
     return;
   }
-  portalData = { phone, name, aadhaarFull: aadhaar, aadhaarLast4: aadhaar.slice(-4), service: 'Aadhaar Update' };
+  portalData = { email, name, aadhaarFull: aadhaar, aadhaarLast4: aadhaar.slice(-4), service: 'Aadhaar Update' };
   const btn = document.querySelector('#portalSendBtn button');
   if (btn) btn.disabled = true;
-  window.sendOTP(phone).then(res => {
+  window.sendOTP(email).then(res => {
+    if (btn) btn.disabled = false;
     if (res.success) {
-      notify('OTP sent to ' + phone, 'success');
+      notify('Magic link sent! Check your email.', 'success');
       document.getElementById('portalSendBtn').style.display = 'none';
       document.getElementById('portalOTPSection').style.display = 'block';
-      setTimeout(() => setupOTPInputs('portal'), 100);
+      document.getElementById('portalEmailSentMsg').textContent = 'We sent a magic link to ' + email + '. Click it to verify.';
     } else {
-      if (btn) btn.disabled = false;
-      notify(res.message || 'Failed to send OTP', 'error');
+      notify(res.message || 'Failed to send verification email', 'error');
     }
   });
 }
 
-function setupOTPInputs(prefix) {
-  document.querySelectorAll('.' + prefix + '-otp').forEach((inp, i, inputs) => {
-    inp.addEventListener('input', () => {
-      const v = inp.value.replace(/\D/g, '');
-      inp.value = v.slice(0, 1);
-      if (v && i < inputs.length - 1) inputs[i + 1].focus();
-    });
-    inp.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i - 1].focus();
-    });
-    inp.addEventListener('paste', (e) => {
-      e.preventDefault();
-      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
-      inputs.forEach((inp2, j) => { inp2.value = text[j] || ''; });
-    });
-  });
-}
-
-function getOTPValue(prefix) {
-  return [...document.querySelectorAll('.' + prefix + '-otp')].map(i => i.value).join('');
-}
-
 function verifyPortalOTP() {
-  const code = getOTPValue('portal');
-  if (code.length !== 6) { notify('Enter the complete 6-digit OTP', 'error'); return; }
   const btn = document.querySelector('#portalOTPSection button');
   if (btn) btn.disabled = true;
-  window.verifyOTP(code).then(result => {
+  window.verifyOTP().then(result => {
     if (btn) btn.disabled = false;
     if (result.success) {
-      notify('Phone verified successfully!', 'success');
+      notify('Email verified successfully!', 'success');
       showStep2();
     } else {
-      notify(result.message || 'Incorrect OTP. Please try again.', 'error');
+      notify(result.message || 'Email not yet verified. Click the link sent to your email.', 'error');
     }
   });
 }
@@ -558,7 +541,7 @@ async function portalConfirmBooking() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        phone: portalData.phone,
+        email: portalData.email,
         name: portalData.name,
         aadhaar: portalData.aadhaarFull,
         deviceId: getDeviceId(),
@@ -609,18 +592,23 @@ function showConfirmation(booking) {
 }
 
 function findMyBooking() {
-  const phone = document.getElementById('findPhone').value.trim().replace(/\D/g, '');
+  const query = document.getElementById('findPhone').value.trim();
   const aadhaar = document.getElementById('findAadhaar').value.trim().replace(/\D/g, '');
   const resultEl = document.getElementById('findResult');
-  if (!phone && !aadhaar) {
+  if (!query && !aadhaar) {
     resultEl.style.display = 'block';
-    resultEl.innerHTML = '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px;font-size:13px;color:#ef4444;text-align:center;">Enter phone number or Aadhaar number to search.</div>';
+    resultEl.innerHTML = '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px;font-size:13px;color:#ef4444;text-align:center;">Enter email/phone or Aadhaar number to search.</div>';
     return;
   }
   const bookings = DBSync.getBookings();
   let found = null;
-  if (phone && phone.length === 10) {
-    found = bookings.find(b => b.phone === phone);
+  if (query) {
+    const isPhone = /^\d{10}$/.test(query);
+    if (isPhone) {
+      found = bookings.find(b => b.phone === query);
+    } else {
+      found = bookings.find(b => b.email && b.email.toLowerCase() === query.toLowerCase());
+    }
   }
   if (!found && aadhaar && aadhaar.length >= 4) {
     found = bookings.find(b => b.aadhaarFull === aadhaar || b.aadhaarLast4 === aadhaar.slice(-4));
@@ -632,6 +620,7 @@ function findMyBooking() {
     const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const displayDate = `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
     const statusColor = found.status === 'completed' ? '#22c55e' : found.status === 'cancelled' ? '#ef4444' : '#3b82f6';
+    const contact = found.email || (found.phone ? '+91 ' + found.phone.replace(/(\d{5})(\d{5})/, '$1 $2') : '-');
     resultEl.innerHTML = `
       <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:16px;">
         <div style="text-align:center;margin-bottom:12px;">
@@ -642,11 +631,30 @@ function findMyBooking() {
           <div style="color:var(--text3);">Booking ID:</div><div style="color:var(--text);font-weight:500;">${found.bookingId || '-'}</div>
           <div style="color:var(--text3);">Date:</div><div style="color:var(--text);font-weight:500;">${displayDate}</div>
           <div style="color:var(--text3);">Status:</div><div style="color:${statusColor};font-weight:600;">${found.status.charAt(0).toUpperCase() + found.status.slice(1)}</div>
-          <div style="color:var(--text3);">Phone:</div><div style="color:var(--text);font-weight:500;">${found.phone ? '+91 ' + found.phone.replace(/(\d{5})(\d{5})/, '$1 $2') : '-'}</div>
+          <div style="color:var(--text3);">Contact:</div><div style="color:var(--text);font-weight:500;">${contact}</div>
         </div>
       </div>`;
   } else {
     resultEl.innerHTML = '<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:12px;font-size:13px;color:#fbbf24;text-align:center;">No booking found with the given information.</div>';
+  }
+}
+
+// Email verification auto-detect (after redirect from magic link)
+window.addEventListener('emailverified', (e) => {
+  if (portalData.email && portalData.email === e.detail.email) {
+    notify('Email verified! Continuing...', 'success');
+    showStep2();
+  }
+});
+
+window.addEventListener('emailverifyerror', (e) => {
+  notify(e.detail.message, 'error');
+});
+
+if (window.__verifiedEmail) {
+  if (portalData.email && portalData.email === window.__verifiedEmail) {
+    window.__verifiedEmail = null;
+    showStep2();
   }
 }
 </script>
