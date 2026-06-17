@@ -351,6 +351,7 @@ function portalGetRecaptcha() {
   }
   return portalRecaptchaVerifier;
 }
+portalGetRecaptcha();
 let portalConfirmation = null;
 let portalPhone = null;
 
@@ -435,10 +436,6 @@ async function sendPortalOTP() {
     notify('OTP sent to ' + phone, 'success');
   } catch (e) {
     notify(e.message || 'Failed to send OTP', 'error');
-    if (portalRecaptchaVerifier) {
-      portalRecaptchaVerifier.clear();
-      portalRecaptchaVerifier = null;
-    }
     document.getElementById('portalSendOTPBtn').querySelector('button').disabled = false;
   }
 }
@@ -491,10 +488,6 @@ async function resendPortalOTP() {
       notify('OTP resent', 'success');
     } catch (e) {
       notify(e.message || 'Failed to resend OTP', 'error');
-      if (portalRecaptchaVerifier) {
-        portalRecaptchaVerifier.clear();
-        portalRecaptchaVerifier = null;
-      }
     }
   }
 }

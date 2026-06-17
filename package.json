@@ -1,0 +1,24 @@
+{
+  "name": "aadhaar-update",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ofclsumit/indiamobile.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ofclsumit/indiamobile/issues"
+  },
+  "homepage": "https://github.com/ofclsumit/indiamobile#readme",
+  "dependencies": {
+    "firebase": "^12.15.0"
+  }
+}

@@ -23,6 +23,8 @@ function getRecaptcha() {
   }
   return recaptchaVerifier;
 }
+// Render once at startup
+getRecaptcha();
 
 // ============================================
 // DATA STORE (localStorage-based for demo)
@@ -303,10 +305,6 @@ async function sendOTP(phone) {
     return { success: true };
   } catch (e) {
     notify(e.message || 'Failed to send OTP', 'error');
-    if (recaptchaVerifier) {
-      recaptchaVerifier.clear();
-      recaptchaVerifier = null;
-    }
     return { success: false, message: e.message };
   }
 }
