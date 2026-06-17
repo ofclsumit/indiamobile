@@ -25,16 +25,26 @@ let _activeSection = 'overview';
 // ============================================
 function startDigitalClock() {
   const clockEl = document.getElementById('digitalClockDisplay');
-  if (!clockEl) return;
+  const dateEl = document.getElementById('currentDateDisplay');
   
   function updateTime() {
     const now = new Date();
-    clockEl.textContent = now.toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true
-    });
+    if (clockEl) {
+      clockEl.textContent = now.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    }
+    if (dateEl) {
+      dateEl.textContent = now.toLocaleDateString('en-IN', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
   }
   
   updateTime();
