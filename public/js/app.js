@@ -264,10 +264,39 @@ updateQueueDisplay();
 setInterval(updateQueueDisplay, 30000);
 
 // ============================================
-// PHONE VALIDATION
+// OTP API (Firebase Phone Auth - v9 modular)
 // ============================================
-function validatePhone(phone) {
-  return phone.length === 10 && /^\d{10}$/.test(phone);
+async function sendOTP(phone) {
+  return await window.sendOTP(phone);
+}
+
+async function verifyOTP(code) {
+  return await window.verifyOTP(code);
+}
+
+function setupOTPInputs(prefix) {
+  const inputs = document.querySelectorAll('.' + prefix + '-otp');
+  inputs.forEach((inp, i) => {
+    inp.addEventListener('input', () => {
+      const v = inp.value.replace(/\D/g, '');
+      inp.value = v.slice(0, 1);
+      if (v && i < inputs.length - 1) inputs[i+1].focus();
+    });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i-1].focus();
+    });
+    inp.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+      inputs.forEach((inp2, j) => {
+        inp2.value = text[j] || '';
+      });
+    });
+  });
+}
+
+function getOTPValue(prefix) {
+  return [...document.querySelectorAll('.' + prefix + '-otp')].map(i => i.value).join('');
 }
 
 // ============================================
@@ -353,7 +382,27 @@ function renderBookingStep(step) {
         </div>
       </div>
 
-      <button class="btn-primary btn-full" onclick="sendBookingOTP()" style="margin-top:8px;">Continue</button>
+      <!-- OTP section (hidden until Send OTP is clicked) -->
+      <div id="bookOTPSection" style="display:none;">
+        <div style="height:1px; background:var(--glass-border); margin:4px 0 20px;"></div>
+        <p style="font-size:13px; color:var(--text3); margin-bottom:16px;">Enter the 6-digit OTP sent to your mobile number</p>
+        <div class="otp-grid">
+          <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
+        </div>
+        <button class="btn-primary btn-full" onclick="verifyBookingOTP()" style="margin-top:12px;">Verify OTP &amp; Continue</button>
+        <p style="text-align:center; margin-top:12px;">
+          <a href="#" onclick="resendOTP('book'); return false;" style="color:var(--accent); font-size:13px;">Resend OTP</a>
+        </p>
+      </div>
+
+      <div id="bookSendOTPBtn" style="margin-top:8px;">
+        <button class="btn-primary btn-full" onclick="sendBookingOTP()">Send OTP to Verify</button>
+      </div>
     `;
 
   } else if (step === 2) {
@@ -444,7 +493,7 @@ function renderBookingStep(step) {
   }
 }
 
-function sendBookingOTP() {
+async function sendBookingOTP() {
   const phone = document.getElementById('bookPhone').value.trim().replace(/\D/g, '');
   if (phone.length !== 10) {
     notify('Please enter a valid 10-digit mobile number', 'error');
@@ -465,7 +514,39 @@ function sendBookingOTP() {
 
   sessionBookingData.phone = phone;
   sessionBookingData.aadhaarLast4 = aadhaarLast4;
-  renderBookingStep(2);
+
+  const res = await sendOTP(phone);
+  if (res.success) {
+    notify('OTP sent to ' + phone, 'success');
+    document.getElementById('bookSendOTPBtn').style.display = 'none';
+    document.getElementById('bookOTPSection').style.display = 'block';
+    setTimeout(() => setupOTPInputs('book'), 100);
+  } else {
+    notify(res.message || 'Failed to send OTP', 'error');
+  }
+}
+
+async function verifyBookingOTP() {
+  const otp = getOTPValue('book');
+  if (otp.length !== 6) { notify('Enter the complete 6-digit OTP', 'error'); return; }
+  const btn = document.querySelector('#bookingModalBody .btn-primary');
+  if (btn) btn.disabled = true;
+  const result = await verifyOTP(otp);
+  if (btn) btn.disabled = false;
+  if (result.success) {
+    notify('Phone verified successfully!', 'success');
+    renderBookingStep(2);
+  } else {
+    notify(result.message || 'Incorrect OTP. Please try again.', 'error');
+  }
+}
+
+async function resendOTP(prefix) {
+  if (sessionPhone) {
+    const res = await sendOTP(sessionPhone);
+    if (res.success) notify('OTP resent', 'success');
+    else notify(res.message || 'Failed to resend OTP', 'error');
+  }
 }
 
 function handleAadhaarGroupInput(input, nextId) {
@@ -561,8 +642,26 @@ function renderCheckTokenStep(step) {
         <label class="form-label">Registered Mobile Number</label>
         <input type="tel" class="form-input" id="checkPhone" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
       </div>
-      <button class="btn-primary btn-full" onclick="sendCheckOTP()">Check My Token</button>
+      <div id="checkOTPSection" style="display:none;">
+        <p style="font-size:13px; color:var(--text3); margin-bottom:16px;">Enter the 6-digit OTP sent to your number</p>
+        <div class="otp-grid">
+          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
+        </div>
+        <button class="btn-primary btn-full" onclick="verifyCheckOTP()">Verify OTP</button>
+        <p style="text-align:center; margin-top:12px;">
+          <a href="#" onclick="resendOTP('check'); return false;" style="color:var(--accent); font-size:13px;">Resend OTP</a>
+        </p>
+      </div>
+      <div id="checkSendBtn">
+        <button class="btn-primary btn-full" onclick="sendCheckOTP()">Send OTP</button>
+      </div>
     `;
+    setTimeout(() => setupOTPInputs('check'), 100);
   } else if (step === 2) {
     const bookings = DB.getByPhone(verifiedPhoneForCheck);
     const ct = DB.currentToken;
@@ -641,14 +740,37 @@ function renderCheckTokenStep(step) {
   }
 }
 
-function sendCheckOTP() {
+async function sendCheckOTP() {
   const phone = document.getElementById('checkPhone').value.trim().replace(/\D/g, '');
   if (phone.length !== 10) {
     notify('Please enter a valid 10-digit mobile number', 'error');
     return;
   }
   verifiedPhoneForCheck = phone;
-  renderCheckTokenStep(2);
+  const res = await sendOTP(phone);
+  if (res.success) {
+    notify('OTP sent to ' + phone, 'success');
+    document.getElementById('checkSendBtn').style.display = 'none';
+    document.getElementById('checkOTPSection').style.display = 'block';
+    setTimeout(() => setupOTPInputs('check'), 100);
+  } else {
+    notify(res.message || 'Failed to send OTP', 'error');
+  }
+}
+
+async function verifyCheckOTP() {
+  const otp = getOTPValue('check');
+  if (otp.length !== 6) { notify('Enter the complete 6-digit OTP', 'error'); return; }
+  const btn = document.querySelector('#checkTokenBody .btn-primary');
+  if (btn) btn.disabled = true;
+  const result = await verifyOTP(otp);
+  if (btn) btn.disabled = false;
+  if (result.success) {
+    notify('Phone verified!', 'success');
+    renderCheckTokenStep(2);
+  } else {
+    notify(result.message || 'Incorrect OTP. Please try again.', 'error');
+  }
 }
 
 function cancelBooking(bookingId) {

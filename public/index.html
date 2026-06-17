@@ -25,6 +25,65 @@
   });
 })();
 </script>
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"
+  }
+}
+</script>
+<script type="module">
+import { initializeApp } from "firebase/app";
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDgbUt2SMxd4glTjn4Z1S8oAq4bCmSobDQ",
+  authDomain: "india-mobile-17134.firebaseapp.com",
+  projectId: "india-mobile-17134",
+  storageBucket: "india-mobile-17134.firebasestorage.app",
+  messagingSenderId: "20187455448",
+  appId: "1:20187455448:web:7f3d3bd09e8407ea389cad",
+  measurementId: "G-3XVP6GQ9WX"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+window.__recaptchaVerifier = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  window.__recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    'size': 'invisible',
+    'callback': () => {},
+    'expired-callback': () => {}
+  });
+});
+
+window.sessionConfirmation = null;
+window.sessionPhone = null;
+
+window.sendOTP = async (phone) => {
+  window.sessionPhone = phone;
+  try {
+    const confirmationResult = await signInWithPhoneNumber(auth, '+91' + phone, window.__recaptchaVerifier);
+    window.sessionConfirmation = confirmationResult;
+    return { success: true };
+  } catch (e) {
+    return { success: false, message: e.message };
+  }
+};
+
+window.verifyOTP = async (code) => {
+  try {
+    await window.sessionConfirmation.confirm(code);
+    return { success: true };
+  } catch (e) {
+    const msg = e.code === 'auth/invalid-verification-code' ? 'Incorrect OTP. Please try again.' : (e.message || 'Verification failed');
+    return { success: false, message: msg };
+  }
+};
+</script>
 </head>
 <body>
 
@@ -713,8 +772,9 @@
 
 <!-- NOTIFICATION -->
 <div id="notif" style="display:none;" class="notification"></div>
+<div id="recaptcha-container" style="position:fixed;bottom:0;left:0;width:0;height:0;overflow:hidden;"></div>
 
 <script src="db-sync.js"></script>
-<script src="js/app.js"></script>
+<script defer src="js/app.js"></script>
 </body>
 </html>

@@ -15,6 +15,65 @@
   sessionStorage.setItem('vt', r);
 })();
 </script>
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"
+  }
+}
+</script>
+<script type="module">
+import { initializeApp } from "firebase/app";
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDgbUt2SMxd4glTjn4Z1S8oAq4bCmSobDQ",
+  authDomain: "india-mobile-17134.firebaseapp.com",
+  projectId: "india-mobile-17134",
+  storageBucket: "india-mobile-17134.firebasestorage.app",
+  messagingSenderId: "20187455448",
+  appId: "1:20187455448:web:7f3d3bd09e8407ea389cad",
+  measurementId: "G-3XVP6GQ9WX"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+window.__recaptchaVerifier = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  window.__recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    'size': 'invisible',
+    'callback': () => {},
+    'expired-callback': () => {}
+  });
+});
+
+window.sessionConfirmation = null;
+window.sessionPhone = null;
+
+window.sendOTP = async (phone) => {
+  window.sessionPhone = phone;
+  try {
+    const confirmationResult = await signInWithPhoneNumber(auth, '+91' + phone, window.__recaptchaVerifier);
+    window.sessionConfirmation = confirmationResult;
+    return { success: true };
+  } catch (e) {
+    return { success: false, message: e.message };
+  }
+};
+
+window.verifyOTP = async (code) => {
+  try {
+    await window.sessionConfirmation.confirm(code);
+    return { success: true };
+  } catch (e) {
+    const msg = e.code === 'auth/invalid-verification-code' ? 'Incorrect OTP. Please try again.' : (e.message || 'Verification failed');
+    return { success: false, message: msg };
+  }
+};
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
@@ -258,7 +317,23 @@ resetInactivityTimer();
         <p style="font-size:12px;color:var(--text3);margin-top:6px;">Enter your 12-digit Aadhaar number as shown on your card</p>
       </div>
 
-      <button class="btn-primary btn-full" onclick="continueToBooking()">Continue</button>
+      <div id="portalOTPSection" style="display:none; margin-top: 20px;">
+        <div style="height:1px;background:var(--glass-border);margin:4px 0 20px;"></div>
+        <p style="font-size:13px;color:var(--text3);margin-bottom:16px;">Enter the 6-digit OTP sent to your mobile</p>
+        <div class="otp-grid">
+          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
+        </div>
+        <button class="btn-primary btn-full" onclick="verifyPortalOTP()" style="margin-top:12px;">Verify OTP &amp; Continue</button>
+      </div>
+
+      <div id="portalSendBtn">
+        <button class="btn-primary btn-full" onclick="continueToBooking()">Send OTP to Verify</button>
+      </div>
     </div>
 
     <!-- Step 2: Date Selection -->
@@ -303,7 +378,9 @@ resetInactivityTimer();
 </div>
 
 <div id="notif" style="display:none;" class="notification"></div>
+<div id="recaptcha-container" style="position:fixed;bottom:0;left:0;width:0;height:0;overflow:hidden;"></div>
 
+<script>
 let portalData = {};
 let portalSelectedDate = null;
 
@@ -368,7 +445,57 @@ function continueToBooking() {
     return;
   }
   portalData = { phone, name, aadhaarFull: aadhaar, aadhaarLast4: aadhaar.slice(-4), service: 'Aadhaar Update' };
-  showStep2();
+  const btn = document.querySelector('#portalSendBtn button');
+  if (btn) btn.disabled = true;
+  window.sendOTP(phone).then(res => {
+    if (res.success) {
+      notify('OTP sent to ' + phone, 'success');
+      document.getElementById('portalSendBtn').style.display = 'none';
+      document.getElementById('portalOTPSection').style.display = 'block';
+      setTimeout(() => setupOTPInputs('portal'), 100);
+    } else {
+      if (btn) btn.disabled = false;
+      notify(res.message || 'Failed to send OTP', 'error');
+    }
+  });
+}
+
+function setupOTPInputs(prefix) {
+  document.querySelectorAll('.' + prefix + '-otp').forEach((inp, i, inputs) => {
+    inp.addEventListener('input', () => {
+      const v = inp.value.replace(/\D/g, '');
+      inp.value = v.slice(0, 1);
+      if (v && i < inputs.length - 1) inputs[i + 1].focus();
+    });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i - 1].focus();
+    });
+    inp.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+      inputs.forEach((inp2, j) => { inp2.value = text[j] || ''; });
+    });
+  });
+}
+
+function getOTPValue(prefix) {
+  return [...document.querySelectorAll('.' + prefix + '-otp')].map(i => i.value).join('');
+}
+
+function verifyPortalOTP() {
+  const code = getOTPValue('portal');
+  if (code.length !== 6) { notify('Enter the complete 6-digit OTP', 'error'); return; }
+  const btn = document.querySelector('#portalOTPSection button');
+  if (btn) btn.disabled = true;
+  window.verifyOTP(code).then(result => {
+    if (btn) btn.disabled = false;
+    if (result.success) {
+      notify('Phone verified successfully!', 'success');
+      showStep2();
+    } else {
+      notify(result.message || 'Incorrect OTP. Please try again.', 'error');
+    }
+  });
 }
 
 function showStep2() {
