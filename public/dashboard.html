@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Operations Dashboard — India Mobile</title>
+<script>
+(function() {
+  var p = new URLSearchParams(window.location.search);
+  var vt = p.get('vt');
+  var stored = sessionStorage.getItem('vt');
+  if (!vt || vt !== stored) { window.location.replace('/'); return; }
+  var r = Math.random().toString(36).slice(2, 10);
+  sessionStorage.setItem('vt', r);
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">

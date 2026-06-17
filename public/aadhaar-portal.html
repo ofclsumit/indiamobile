@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aadhaar Update Booking — India Mobile</title>
 <meta name="description" content="Book your Aadhaar update appointment online at India Mobile Center. Fast and secure booking.">
+<script>
+(function() {
+  var p = new URLSearchParams(window.location.search);
+  var vt = p.get('vt');
+  var stored = sessionStorage.getItem('vt');
+  if (!vt || vt !== stored) { window.location.replace('/'); return; }
+  var r = Math.random().toString(36).slice(2, 10);
+  sessionStorage.setItem('vt', r);
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">

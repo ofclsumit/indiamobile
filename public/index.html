@@ -8,6 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script>
+(function() {
+  var vt = Date.now().toString(36) + '.' + Math.random().toString(36).slice(2, 10);
+  sessionStorage.setItem('vt', vt);
+  var r = Math.random().toString(36).slice(2, 8);
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('a[href*=".html"]').forEach(function(a) {
+      if (a.href.includes('index.html') || a.pathname === '/' || a.pathname === '') return;
+      a.href += (a.href.includes('?') ? '&' : '?') + 'vt=' + vt + '&r=' + r;
+    });
+  });
+})();
+</script>
 </head>
 <body>
 

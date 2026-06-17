@@ -212,7 +212,9 @@ function handleServiceSelect(val) {
   const note = document.getElementById('comingSoonNote');
   if (val === 'aadhaar') {
     note.style.display = 'none';
-    window.location.href = 'aadhaar-portal.html';
+    var vt = sessionStorage.getItem('vt') || '';
+    var r = Math.random().toString(36).slice(2, 8);
+    window.location.href = 'aadhaar-portal.html?vt=' + vt + '&r=' + r;
   } else if (val && val !== '') {
     note.style.display = 'block';
   } else {
