@@ -19,8 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
 <script src="db-sync.js"></script>
 <style>
 .portal-nav {
@@ -259,25 +258,7 @@ resetInactivityTimer();
         <p style="font-size:12px;color:var(--text3);margin-top:6px;">Enter your 12-digit Aadhaar number as shown on your card</p>
       </div>
 
-      <div id="recaptcha-container"></div>
-
-      <div id="portalOTPSection" style="display:none; margin-top: 20px;">
-        <div style="height:1px;background:var(--glass-border);margin:4px 0 20px;"></div>
-        <p style="font-size:13px;color:var(--text3);margin-bottom:16px;">Enter the 6-digit OTP sent to your mobile</p>
-        <div class="otp-grid">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
-        </div>
-        <button class="btn-primary btn-full" onclick="verifyPortalOTP()" style="margin-top:12px;">Verify OTP &amp; Continue</button>
-      </div>
-
-      <div id="portalSendBtn">
-        <button class="btn-primary btn-full" onclick="continueToBooking()">Send OTP to Verify</button>
-      </div>
+      <button class="btn-primary btn-full" onclick="continueToBooking()">Continue</button>
     </div>
 
     <!-- Step 2: Date Selection -->
@@ -323,49 +304,8 @@ resetInactivityTimer();
 
 <div id="notif" style="display:none;" class="notification"></div>
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDgbUt2SMxd4glTjn4Z1S8oAq4bCmSobDQ",
-  authDomain: "india-mobile-17134.firebaseapp.com",
-  projectId: "india-mobile-17134",
-  storageBucket: "india-mobile-17134.firebasestorage.app",
-  messagingSenderId: "20187455448",
-  appId: "1:20187455448:web:7f3d3bd09e8407ea389cad",
-  measurementId: "G-3XVP6GQ9WX"
-};
-
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-
 let portalData = {};
 let portalSelectedDate = null;
-
-document.addEventListener('DOMContentLoaded', () => {
-  window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-    'size': 'invisible',
-    'callback': (response) => {
-      // reCAPTCHA solved
-    }
-  });
-});
-
-function setupOTPInputs(prefix) {
-  document.querySelectorAll('.' + prefix + '-otp').forEach((inp, i, inputs) => {
-    inp.addEventListener('input', () => {
-      const v = inp.value.replace(/\D/g, '');
-      inp.value = v.slice(0, 1);
-      if (v && i < inputs.length - 1) inputs[i + 1].focus();
-    });
-    inp.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i - 1].focus();
-    });
-  });
-}
-
-function getOTPValue(prefix) {
-  return [...document.querySelectorAll('.' + prefix + '-otp')].map(i => i.value).join('');
-}
 
 function getDeviceId() {
   let id = localStorage.getItem('ds_device_id');
@@ -384,7 +324,6 @@ function notify(msg, type) {
   clearTimeout(n._t);
   n._t = setTimeout(() => n.style.display = 'none', 3500);
 }
-
 
 // Aadhaar auto-grouping
 const aadInputs = [document.getElementById('aad1'), document.getElementById('aad2'), document.getElementById('aad3')];
@@ -412,7 +351,7 @@ function getFullAadhaar() {
   return aadInputs.map(i => i.value).join('');
 }
 
-async function continueToBooking() {
+function continueToBooking() {
   const phone = document.getElementById('portalPhone').value.trim().replace(/\D/g, '');
   if (phone.length !== 10) {
     notify('Please enter a valid 10-digit mobile number', 'error');
@@ -428,59 +367,18 @@ async function continueToBooking() {
     notify('Please enter your complete 12-digit Aadhaar number', 'error');
     return;
   }
-
-  const sendBtn = document.querySelector('#portalSendBtn button');
-  if (sendBtn) sendBtn.disabled = true;
-  notify('Sending verification code...', 'info');
-
-  const appVerifier = window.recaptchaVerifier;
-  const formatPhone = '+91' + phone;
-
-  auth.signInWithPhoneNumber(formatPhone, appVerifier)
-    .then((confirmationResult) => {
-      window.confirmationResult = confirmationResult;
-      portalData = { phone, name, aadhaarFull: aadhaar, aadhaarLast4: aadhaar.slice(-4), service: 'Aadhaar Update' };
-      notify('OTP sent successfully to ' + phone, 'success');
-      document.getElementById('portalSendBtn').style.display = 'none';
-      document.getElementById('portalOTPSection').style.display = 'block';
-      setTimeout(() => setupOTPInputs('portal'), 100);
-    }).catch((error) => {
-      if (sendBtn) sendBtn.disabled = false;
-      console.error('Firebase SMS fail:', error);
-      notify(error.message || 'SMS sending failed. Please check network/settings.', 'error');
-    });
-}
-
-async function verifyPortalOTP() {
-  const code = getOTPValue('portal');
-  if (code.length !== 6) {
-    notify('Enter the complete 6-digit OTP', 'error');
-    return;
-  }
-
-  const verifyBtn = document.querySelector('#portalOTPSection button');
-  if (verifyBtn) verifyBtn.disabled = true;
-  notify('Verifying OTP...', 'info');
-
-  window.confirmationResult.confirm(code)
-    .then((result) => {
-      notify('Phone verified successfully!', 'success');
-      showStep2();
-    }).catch((error) => {
-      if (verifyBtn) verifyBtn.disabled = false;
-      notify('Incorrect OTP or verification expired. Try again.', 'error');
-    });
+  portalData = { phone, name, aadhaarFull: aadhaar, aadhaarLast4: aadhaar.slice(-4), service: 'Aadhaar Update' };
+  showStep2();
 }
 
 function showStep2() {
   document.getElementById('portalStep1').style.display = 'none';
   document.getElementById('portalStep2').style.display = 'block';
 
-  // Load dates from DBSync (admin-controlled) or generate defaults (Tue/Fri)
   let dates = DBSync.getDates().filter(d => d.enabled);
   if (!dates || dates.length === 0) {
     const now = new Date();
-    const targetDays = [2, 5]; // Tuesday, Friday
+    const targetDays = [2, 5];
     dates = [];
     for (let i = 1; i <= 14; i++) {
       const d = new Date(now);
@@ -525,11 +423,9 @@ async function portalConfirmBooking() {
     notify('Please select an appointment date', 'error');
     return;
   }
-
   const statusEl = document.getElementById('portalSubmitStatus');
   statusEl.style.display = 'block';
   statusEl.textContent = 'Submitting...';
-
   try {
     const res = await fetch('/api/book', {
       method: 'POST',
@@ -544,15 +440,12 @@ async function portalConfirmBooking() {
       })
     });
     const result = await res.json();
-
     if (!result.success) {
       notify(result.message || 'Booking failed', 'error');
       statusEl.style.display = 'none';
       return;
     }
-
     statusEl.style.display = 'none';
-
     if (result.isDuplicate) {
       notify('You already have an active booking. Showing your existing token.', 'info');
       sessionStorage.setItem('myBooking', JSON.stringify(result.booking));
@@ -570,23 +463,16 @@ async function portalConfirmBooking() {
 function showConfirmation(booking) {
   document.getElementById('bookingForm').style.display = 'none';
   document.getElementById('confirmView').style.display = 'block';
-
   document.getElementById('confirmToken').textContent = booking.token;
   document.getElementById('confirmBookingId').textContent = 'Booking ID: ' + booking.bookingId;
   document.getElementById('confirmName').textContent = booking.name || '-';
   document.getElementById('confirmService').textContent = booking.service;
-
-  // Format Aadhaar
   const aad = booking.aadhaarFull || '';
   document.getElementById('confirmAadhaar').textContent = aad.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3');
-
-  // Format date
   const d = new Date(booking.date + 'T00:00:00');
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   document.getElementById('confirmDate').textContent = `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-
-  // Animate SVG check
   setTimeout(() => {
     const circle = document.querySelector('.anim-circle');
     const check = document.querySelector('.anim-check');
@@ -599,32 +485,26 @@ function findMyBooking() {
   const phone = document.getElementById('findPhone').value.trim().replace(/\D/g, '');
   const aadhaar = document.getElementById('findAadhaar').value.trim().replace(/\D/g, '');
   const resultEl = document.getElementById('findResult');
-
   if (!phone && !aadhaar) {
     resultEl.style.display = 'block';
     resultEl.innerHTML = '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px;font-size:13px;color:#ef4444;text-align:center;">Enter phone number or Aadhaar number to search.</div>';
     return;
   }
-
   const bookings = DBSync.getBookings();
   let found = null;
-
   if (phone && phone.length === 10) {
     found = bookings.find(b => b.phone === phone);
   }
   if (!found && aadhaar && aadhaar.length >= 4) {
     found = bookings.find(b => b.aadhaarFull === aadhaar || b.aadhaarLast4 === aadhaar.slice(-4));
   }
-
   resultEl.style.display = 'block';
-
   if (found) {
     const d = new Date(found.date + 'T00:00:00');
     const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const displayDate = `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
     const statusColor = found.status === 'completed' ? '#22c55e' : found.status === 'cancelled' ? '#ef4444' : '#3b82f6';
-
     resultEl.innerHTML = `
       <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:16px;">
         <div style="text-align:center;margin-bottom:12px;">
