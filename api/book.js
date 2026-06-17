@@ -11,20 +11,101 @@ function nextToken(bookings) {
   return String(max + 1).padStart(2, '0');
 }
 
+// --- Firestore REST API helpers ---
+const FIRESTORE_PROJECT = 'india-mobile-17134';
+const FIRESTORE_DOC_PATH = 'appData/sync';
+const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
+
+function firestoreValueToJS(val) {
+  if (val.stringValue !== undefined) return val.stringValue;
+  if (val.integerValue !== undefined) return parseInt(val.integerValue);
+  if (val.doubleValue !== undefined) return val.doubleValue;
+  if (val.booleanValue !== undefined) return val.booleanValue;
+  if (val.nullValue !== undefined) return null;
+  if (val.arrayValue) return (val.arrayValue.values || []).map(firestoreValueToJS);
+  if (val.mapValue) {
+    const obj = {};
+    for (const [k, v] of Object.entries(val.mapValue.fields || {})) {
+      obj[k] = firestoreValueToJS(v);
+    }
+    return obj;
+  }
+  return null;
+}
+
+function jsToFirestoreValue(val) {
+  if (val === null || val === undefined) return { nullValue: null };
+  if (typeof val === 'string') return { stringValue: val };
+  if (typeof val === 'boolean') return { booleanValue: val };
+  if (typeof val === 'number') {
+    if (Number.isInteger(val)) return { integerValue: String(val) };
+    return { doubleValue: val };
+  }
+  if (Array.isArray(val)) {
+    return { arrayValue: { values: val.map(jsToFirestoreValue) } };
+  }
+  if (typeof val === 'object') {
+    const fields = {};
+    for (const [k, v] of Object.entries(val)) {
+      fields[k] = jsToFirestoreValue(v);
+    }
+    return { mapValue: { fields } };
+  }
+  return { stringValue: String(val) };
+}
+
+async function readBookingsFromFirestore() {
+  try {
+    const res = await fetch(FIRESTORE_URL);
+    if (!res.ok) return null;
+    const doc = await res.json();
+    if (!doc.fields || !doc.fields.bookings) return [];
+    return firestoreValueToJS(doc.fields.bookings) || [];
+  } catch (e) {
+    console.error('Firestore read failed:', e);
+    return null;
+  }
+}
+
+async function writeBookingsToFirestore(bookings) {
+  try {
+    // Use PATCH with updateMask to only update the bookings field
+    const url = FIRESTORE_URL + '?updateMask.fieldPaths=bookings&updateMask.fieldPaths=_lastUpdated';
+    const body = {
+      fields: {
+        bookings: jsToFirestoreValue(bookings),
+        _lastUpdated: jsToFirestoreValue(Date.now())
+      }
+    };
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('Firestore write failed:', res.status, text);
+    }
+  } catch (e) {
+    console.error('Firestore write error:', e);
+  }
+}
+
+// Fallback to sync API
 async function getSyncURL(req) {
   const host = req.headers['x-forwarded-host'] || req.headers.host || '';
   const proto = req.headers['x-forwarded-proto'] || 'https';
   return `${proto}://${host}/api/sync`;
 }
 
-async function readBookings(req) {
+async function readBookingsFallback(req) {
   const url = await getSyncURL(req);
   const res = await fetch(url);
   const data = await res.json();
   return data.bookings || [];
 }
 
-async function writeBookings(req, bookings) {
+async function writeBookingsFallback(req, bookings) {
   const url = await getSyncURL(req);
   await fetch(url, {
     method: 'POST',
@@ -52,7 +133,13 @@ module.exports = async (req, res) => {
   if (!deviceId) return res.status(400).json({ success: false, message: 'Missing device ID' });
   if (!date) return res.status(400).json({ success: false, message: 'Missing date' });
 
-  const bookings = await readBookings(req);
+  // Try Firestore first, fallback to sync API
+  let bookings = await readBookingsFromFirestore();
+  let useFirestore = bookings !== null;
+  if (!useFirestore) {
+    bookings = await readBookingsFallback(req);
+  }
+
   const active = bookings.filter(isActive);
 
   const dupEmail = active.find(b => b.email === email);
@@ -80,7 +167,13 @@ module.exports = async (req, res) => {
   };
 
   bookings.push(booking);
-  await writeBookings(req, bookings);
+
+  // Write to Firestore (primary) and sync API (fallback)
+  if (useFirestore) {
+    await writeBookingsToFirestore(bookings);
+  }
+  // Also write to sync API for backward compat
+  try { await writeBookingsFallback(req, bookings); } catch(e) {}
 
   return res.json({ success: true, isDuplicate: false, booking });
 };

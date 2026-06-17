@@ -19,7 +19,8 @@
 {
   "imports": {
     "firebase/app": "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js",
-    "firebase/auth": "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"
   }
 }
 </script>
@@ -74,7 +75,30 @@ window.verifyOTP = async (code) => {
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
+<!-- Firebase Compat SDK for Firestore (needed by db-sync.js) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+  // Initialize Firebase for Firestore (compat SDK for db-sync.js)
+  if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+    firebase.initializeApp({
+      apiKey: "AIzaSyDgbUt2SMxd4glTjn4Z1S8oAq4bCmSobDQ",
+      authDomain: "india-mobile-17134.firebaseapp.com",
+      projectId: "india-mobile-17134",
+      storageBucket: "india-mobile-17134.firebasestorage.app",
+      messagingSenderId: "20187455448",
+      appId: "1:20187455448:web:7f3d3bd09e8407ea389cad",
+      measurementId: "G-3XVP6GQ9WX"
+    });
+  }
+</script>
 <script src="db-sync.js"></script>
+<script>
+  // Initialize Firestore in db-sync and start real-time listener
+  DBSync.initFirestore().then(ok => {
+    if (ok) DBSync.startRealtimeListener();
+  });
+</script>
 <style>
 .portal-nav {
   background: rgba(8,12,20,0.95);

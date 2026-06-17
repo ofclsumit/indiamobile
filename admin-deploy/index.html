@@ -369,7 +369,36 @@
   </nav>
 </div>
 
+<!-- Firebase Compat SDK for Firestore real-time sync -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+  // Initialize Firebase for Firestore
+  if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+    firebase.initializeApp({
+      apiKey: "AIzaSyDgbUt2SMxd4glTjn4Z1S8oAq4bCmSobDQ",
+      authDomain: "india-mobile-17134.firebaseapp.com",
+      projectId: "india-mobile-17134",
+      storageBucket: "india-mobile-17134.firebasestorage.app",
+      messagingSenderId: "20187455448",
+      appId: "1:20187455448:web:7f3d3bd09e8407ea389cad",
+      measurementId: "G-3XVP6GQ9WX"
+    });
+  }
+</script>
 <script src="db-sync.js"></script>
+<script>
+  // Initialize Firestore and start real-time listener
+  DBSync.initFirestore().then(ok => {
+    if (ok) {
+      DBSync.startRealtimeListener();
+      console.log('[Admin] Firestore real-time sync active');
+    } else {
+      // Fallback: forceFetch then poll
+      DBSync.forceFetch().then(() => DBSync.startPolling(3000));
+    }
+  });
+</script>
 <script src="dashboard.js"></script>
 </body>
 </html>

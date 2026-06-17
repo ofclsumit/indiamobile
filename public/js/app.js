@@ -26,13 +26,10 @@ const DB = {
   initDates() {
     const dates = [];
     const now = new Date();
-    const targetDays = [2, 5]; // Tuesday, Friday
     for (let i = 1; i <= 7; i++) {
       const d = new Date(now);
       d.setDate(now.getDate() + i);
-      if (targetDays.includes(d.getDay())) {
-        dates.push({ date: d.toISOString().split('T')[0], enabled: true });
-      }
+      dates.push({ date: d.toISOString().split('T')[0], enabled: true });
     }
     this.enabledDates = dates;
     this.save();
@@ -74,6 +71,15 @@ const DB = {
 };
 
 DB.load();
+
+function archiveBooking(booking) {
+  if (!booking || (booking.status !== 'completed' && booking.status !== 'cancelled')) return;
+  const cache = DBSync.getCache();
+  if (!cache.find(b => b.bookingId === booking.bookingId)) {
+    cache.push({ ...booking, archivedAt: new Date().toISOString() });
+    DBSync.setCache(cache);
+  }
+}
 
 // Listen for remote data changes (admin actions, other tabs)
 DBSync.subscribe(function(data) {
@@ -783,6 +789,7 @@ function cancelBooking(bookingId) {
   if (b) {
     b.status = 'cancelled';
     DB.save();
+    archiveBooking(b);
     sessionStorage.removeItem('myBooking');
     updateQueueDisplay();
     notify('Booking cancelled.', 'info');
@@ -893,6 +900,7 @@ function updateBookingStatus(bookingId, status) {
   if (b) {
     b.status = status;
     DB.save();
+    if (status === 'completed' || status === 'cancelled') archiveBooking(b);
     refreshAdminData();
     updateQueueDisplay();
     notify('Booking updated to ' + status, 'success');
@@ -912,6 +920,7 @@ function markNextComplete() {
   if (active) {
     active.status = 'completed';
     DB.save();
+    archiveBooking(active);
     refreshAdminData();
     notify('Token ' + String(DB.currentToken).padStart(2,'0') + ' marked complete', 'success');
   } else {
@@ -920,7 +929,6 @@ function markNextComplete() {
 }
 
 function advanceToken() {
-  markNextComplete();
   DB.currentToken += 1;
   DB.save();
   document.getElementById('adminTokenDisplay').textContent = String(DB.currentToken).padStart(2, '0');
@@ -1020,7 +1028,10 @@ document.addEventListener('click', function(e) {
 
 // Add demo bookings for demonstration
 (function seedDemoData() {
-  if (DB.bookings.length > 0) return;
+  if (DB.bookings.length > 0) {
+    DBSync.pushToServer();
+    return;
+  }
   const demoBookings = [
     { email: 'ramesh@example.com', name: 'Ramesh Kumar', aadhaarLast4: '1234', service: 'Mobile Number Update', date: new Date(Date.now() + 86400000).toISOString().split('T')[0], status: 'approved', token: '01', bookingId: 'DS100001', createdAt: new Date().toISOString() },
     { email: 'priya@example.com', name: 'Priya Singh', aadhaarLast4: '5678', service: 'Address Update', date: new Date(Date.now() + 86400000).toISOString().split('T')[0], status: 'approved', token: '02', bookingId: 'DS100002', createdAt: new Date().toISOString() },
@@ -1029,7 +1040,9 @@ document.addEventListener('click', function(e) {
     { email: 'mohammad@example.com', name: 'Mohammad Raza', aadhaarLast4: '7890', service: 'Date of Birth Update', date: new Date(Date.now() + 3*86400000).toISOString().split('T')[0], status: 'approved', token: '05', bookingId: 'DS100005', createdAt: new Date().toISOString() },
   ];
   DB.bookings = demoBookings;
+  DB.currentToken = 1;
   DB.save();
+  DBSync.pushToServer();
 })();
 
 updateQueueDisplay();
