@@ -6,7 +6,7 @@ const DBSync = {
   _listeners: [],
   _pollId: null,
   _lastHash: null,
-  API: 'api/sync.php',
+  API: '/api/sync',
 
   KEYS: {
     BOOKINGS: 'ds_bookings',

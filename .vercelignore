@@ -1,0 +1,7 @@
+php/
+platform-tools/
+platform-tools-latest-windows.zip
+test_*.php
+data/
+.git
+.gitignore

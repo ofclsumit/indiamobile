@@ -1,5 +1,6 @@
 # Sensitive config (contains API keys)
 data/sms-config.json
+.vercel
 # Auto-generated OTP & SMS data
 data/otps.json
 data/sms-counter.json
@@ -13,3 +14,4 @@ test_api.php
 # OS files
 Thumbs.db
 .DS_Store
+.vercel

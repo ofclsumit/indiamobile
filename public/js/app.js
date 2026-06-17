@@ -212,7 +212,7 @@ function handleServiceSelect(val) {
   const note = document.getElementById('comingSoonNote');
   if (val === 'aadhaar') {
     note.style.display = 'none';
-    window.location.href = 'aadhaar-portal.php';
+    window.location.href = 'aadhaar-portal.html';
   } else if (val && val !== '') {
     note.style.display = 'block';
   } else {
@@ -233,11 +233,14 @@ function toggleAccordion(header) {
 // ============================================
 function updateQueueDisplay() {
   const ct = DB.currentToken;
-  document.getElementById('heroCurrentToken').textContent = String(ct).padStart(2, '0');
-  document.getElementById('liveCurrentToken').textContent = String(ct).padStart(2, '0');
+  const heroTokenEl = document.getElementById('heroCurrentToken');
+  if (heroTokenEl) heroTokenEl.textContent = String(ct).padStart(2, '0');
+  const liveTokenEl = document.getElementById('liveCurrentToken');
+  if (liveTokenEl) liveTokenEl.textContent = String(ct).padStart(2, '0');
 
   const inQueue = DB.bookings.filter(b => b.status === 'approved' || b.status === 'pending').length;
-  document.getElementById('heroInQueue').textContent = inQueue;
+  const heroQueueEl = document.getElementById('heroInQueue');
+  if (heroQueueEl) heroQueueEl.textContent = inQueue;
 
   const myBookingRaw = sessionStorage.getItem('myBooking');
   if (myBookingRaw) {
@@ -265,7 +268,7 @@ setInterval(updateQueueDisplay, 30000);
 async function sendOTP(phone) {
   sessionPhone = phone;
   try {
-    const res = await fetch('api/otp.php?action=send', {
+    const res = await fetch('/api/otp?action=send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone })
@@ -290,7 +293,7 @@ async function sendOTP(phone) {
 
 async function verifyOTP(entered) {
   try {
-    const res = await fetch('api/otp.php?action=verify', {
+    const res = await fetch('/api/otp?action=verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone: sessionPhone, otp: entered })
@@ -590,11 +593,14 @@ async function verifyBookingOTP() {
 }
 
 function submitBookingStep2() {
-  const name = document.getElementById('bookName').value.trim();
-  const service = document.getElementById('bookService').value;
+  const service = document.getElementById('bookService') ? document.getElementById('bookService').value : sessionBookingData.service;
 
-  if (!name) { notify('Please enter your full name', 'error'); return; }
   if (!service) { notify('Please select a service', 'error'); return; }
+
+  if (!sessionBookingData.date) {
+    notify('Please select an appointment date', 'error');
+    return;
+  }
 
   const aadhaarLast4 = sessionBookingData.aadhaarLast4;
   if (!aadhaarLast4 || aadhaarLast4.length !== 4) {
@@ -608,23 +614,8 @@ function submitBookingStep2() {
     return;
   }
 
-  sessionBookingData.name = name;
+  sessionBookingData.name = sessionBookingData.name || ('User ' + sessionBookingData.phone.slice(-4));
   sessionBookingData.service = service;
-  renderBookingStep(3);
-}
-
-function selectDate(dateStr, el) {
-  document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  sessionBookingData.date = dateStr;
-  selectedDate = dateStr;
-}
-
-function submitBookingStep3() {
-  if (!sessionBookingData.date) {
-    notify('Please select an appointment date', 'error');
-    return;
-  }
 
   const booking = DB.addBooking({
     phone: sessionBookingData.phone,
@@ -637,8 +628,21 @@ function submitBookingStep3() {
   sessionBookingData.confirmedBooking = booking;
   sessionStorage.setItem('myBooking', JSON.stringify(booking));
   updateQueueDisplay();
-  renderBookingStep(4);
+  renderBookingStep(3);
 }
+
+function selectDate(dateStr, el) {
+  document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  sessionBookingData.date = dateStr;
+  selectedDate = dateStr;
+}
+
+function submitBookingStep3() {
+  // Legacy alias — booking is now created in submitBookingStep2
+  renderBookingStep(3);
+}
+
 
 // ============================================
 // CHECK TOKEN MODAL
@@ -1013,7 +1017,7 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
     e.preventDefault();
-    window.open('http://localhost:8001', '_blank');
+    window.location.href = 'admin.php';
   }
 });
 
@@ -1028,7 +1032,7 @@ document.addEventListener('click', function(e) {
     logoTimer = setTimeout(() => { logoClickCount = 0; }, 1500);
     if (logoClickCount >= 5) {
       logoClickCount = 0;
-      window.open('http://localhost:8001', '_blank');
+      window.location.href = 'admin.php';
     }
   }
 });

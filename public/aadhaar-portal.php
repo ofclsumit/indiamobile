@@ -2,8 +2,8 @@
 // ============================================
 // PHP BACKEND (must run before any HTML output)
 // ============================================
-$dataDir = __DIR__ . '/data';
-if (!is_dir($dataDir)) mkdir($dataDir, 0755, true);
+$dataDir = is_writable(__DIR__ . '/data') ? __DIR__ . '/data' : (sys_get_temp_dir() . '/indiamobile_data');
+if (!is_dir($dataDir)) @mkdir($dataDir, 0755, true);
 $bookingsFile = $dataDir . '/portal_bookings.json';
 
 function loadBookings() {
@@ -435,7 +435,7 @@ function notify(msg, type) {
 
 async function sendPortalOTPApi(phone) {
   try {
-    const res = await fetch('api/otp.php?action=send', {
+    const res = await fetch('/api/otp?action=send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone })
@@ -448,7 +448,7 @@ async function sendPortalOTPApi(phone) {
 
 async function verifyPortalOTPApi(phone, otp) {
   try {
-    const res = await fetch('api/otp.php?action=verify', {
+    const res = await fetch('/api/otp?action=verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, otp })

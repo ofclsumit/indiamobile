@@ -63,8 +63,8 @@ function toggleSmsFields() {
 
 function loadSmsConfig() {
   Promise.all([
-    fetch('api/otp.php?action=status').then(r => r.json()).catch(() => ({})),
-    fetch('api/otp.php?action=get_config').then(r => r.json()).catch(() => ({}))
+    fetch('api/otp?action=status').then(r => r.json()).catch(() => ({})),
+    fetch('api/otp?action=get_config').then(r => r.json()).catch(() => ({}))
   ]).then(([status, cfgData]) => {
     const cfg = cfgData.config || {};
     if (document.getElementById('setOtpLength')) document.getElementById('setOtpLength').value = status.otp_length || cfg.otp_length || 6;
@@ -933,7 +933,7 @@ function saveSettings() {
     sms_template: document.getElementById('setSmsTemplate')?.value || '',
   };
 
-  fetch('api/otp.php?action=status', {
+  fetch('api/otp?action=status', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ _saveConfig: true, config: smsConfig })
