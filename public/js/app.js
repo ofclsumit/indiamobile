@@ -1026,24 +1026,7 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Add demo bookings for demonstration
-(function seedDemoData() {
-  if (DB.bookings.length > 0) {
-    DBSync.pushToServer();
-    return;
-  }
-  const demoBookings = [
-    { email: 'ramesh@example.com', name: 'Ramesh Kumar', aadhaarLast4: '1234', service: 'Mobile Number Update', date: new Date(Date.now() + 86400000).toISOString().split('T')[0], status: 'approved', token: '01', bookingId: 'DS100001', createdAt: new Date().toISOString() },
-    { email: 'priya@example.com', name: 'Priya Singh', aadhaarLast4: '5678', service: 'Address Update', date: new Date(Date.now() + 86400000).toISOString().split('T')[0], status: 'approved', token: '02', bookingId: 'DS100002', createdAt: new Date().toISOString() },
-    { email: 'amit@example.com', name: 'Amit Sharma', aadhaarLast4: '9012', service: 'Biometric Update', date: new Date(Date.now() + 2*86400000).toISOString().split('T')[0], status: 'pending', token: '03', bookingId: 'DS100003', createdAt: new Date().toISOString() },
-    { email: 'sunita@example.com', name: 'Sunita Devi', aadhaarLast4: '3456', service: 'Name Correction', date: new Date(Date.now() - 86400000).toISOString().split('T')[0], status: 'completed', token: '04', bookingId: 'DS100004', createdAt: new Date().toISOString() },
-    { email: 'mohammad@example.com', name: 'Mohammad Raza', aadhaarLast4: '7890', service: 'Date of Birth Update', date: new Date(Date.now() + 3*86400000).toISOString().split('T')[0], status: 'approved', token: '05', bookingId: 'DS100005', createdAt: new Date().toISOString() },
-  ];
-  DB.bookings = demoBookings;
-  DB.currentToken = 1;
-  DB.save();
-  DBSync.pushToServer();
-})();
+// Demo data seeding removed
 
 updateQueueDisplay();
 
