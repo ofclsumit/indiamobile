@@ -523,9 +523,6 @@ async function qcSaveExit() {
   notify('State saved. Redirecting to dashboard...', 'info');
   setTimeout(function() { window.location.href = 'index.html'; }, 800);
 }
-  notify('#' + String(ct).padStart(2, '0') + ' marked no-show.', 'warning');
-  refreshQueue();
-}
 
 if (_qcAuthorized) {
   DBSync.subscribe(() => refreshQueue());
