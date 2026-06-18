@@ -243,38 +243,19 @@ function toggleAccordion(header) {
 }
 
 // ============================================
-// QUEUE DISPLAY
+// HERO TOKEN DISPLAY
 // ============================================
-function updateQueueDisplay() {
+function updateHeroDisplay() {
   const ct = DB.currentToken;
   const heroTokenEl = document.getElementById('heroCurrentToken');
   if (heroTokenEl) heroTokenEl.textContent = String(ct).padStart(2, '0');
-  const liveTokenEl = document.getElementById('liveCurrentToken');
-  if (liveTokenEl) liveTokenEl.textContent = String(ct).padStart(2, '0');
-
   const inQueue = DB.bookings.filter(b => b.status === 'approved' || b.status === 'pending').length;
   const heroQueueEl = document.getElementById('heroInQueue');
   if (heroQueueEl) heroQueueEl.textContent = inQueue;
-
-  const myBookingRaw = sessionStorage.getItem('myBooking');
-  if (myBookingRaw) {
-    try {
-      const myB = JSON.parse(myBookingRaw);
-      const myToken = parseInt(myB.token);
-      document.getElementById('liveYourToken').textContent = String(myToken).padStart(2, '0');
-      const ahead = DB.bookings.filter(b => {
-        const t = parseInt(b.token);
-        return t > ct && t < myToken && (b.status === 'approved' || b.status === 'pending');
-      }).length;
-      document.getElementById('livePeopleAhead').textContent = ahead;
-      document.getElementById('liveWaitTime').textContent = (ahead + 1) * 15 + t('wait_min');
-      document.getElementById('liveLoginPrompt').style.display = 'none';
-    } catch(e) {}
-  }
 }
 
-updateQueueDisplay();
-setInterval(updateQueueDisplay, 30000);
+updateHeroDisplay();
+setInterval(updateHeroDisplay, 30000);
 
 // ============================================
 // EMAIL VERIFICATION via Firebase Email Link
@@ -1003,10 +984,10 @@ const translations = {
   hi: {
     nav_services: "सर्विस",
     nav_about: "हमारे बारे में",
-    nav_queue: "लाइव कतार",
     nav_location: "लोकेशन",
     nav_contact: "कॉन्टैक्ट",
     btn_check_token: "टोकन चेक करें",
+    btn_live_token: "लाइव टोकन",
     check_token_sub: "अपनी बुकिंग स्टेटस, कतार पोजीशन और वेटिंग टाइम देखें।",
     services_tag: "सर्विस",
     services_title: "हम आपकी क्या मदद कर सकते हैं?",
@@ -1048,15 +1029,6 @@ const translations = {
     stat_completed: "आधार अपडेट पूरे",
     stat_years: "अनुभव के वर्ष",
     stat_satisfaction: "ग्राहक संतुष्टि %",
-    queue_tag: "लाइव कतार",
-    queue_title: "रियल-टाइम टोकन स्टेटस",
-    queue_subtitle: "अभी की कतार देखें और अपनी पोजीशन लाइव ट्रैक करें।",
-    queue_live: "लाइव कतार",
-    current_token_lbl: "अभी का टोकन",
-    your_token_lbl: "आपका टोकन",
-    people_ahead_lbl: "आपसे आगे लोग",
-    est_wait_lbl: "अनुमानित इंतज़ार",
-    refresh_info: "हर 30 सेकंड में ऑटो अपडेट होता है",
     reviews_tag: "ग्राहक रिव्यू",
     reviews_title: "हमारे ग्राहक क्या कहते हैं",
     team_tag: "हमारी टीम",
@@ -1128,7 +1100,7 @@ const translations = {
     footer_home: "होम",
     footer_services: "सर्विस",
     footer_about: "हमारे बारे में",
-    footer_queue: "लाइव कतार",
+    footer_live_token: "लाइव टोकन",
     footer_location: "लोकेशन",
     footer_contact: "कॉन्टैक्ट",
     footer_serv_title: "सर्विस",
@@ -1240,10 +1212,10 @@ const translations = {
   en: {
     nav_services: "Services",
     nav_about: "About",
-    nav_queue: "Queue",
     nav_location: "Location",
     nav_contact: "Contact",
     btn_check_token: "Check My Token",
+    btn_live_token: "Live Token",
     check_token_sub: "View your booking status, queue position & estimated wait time",
     services_tag: "Services",
     services_title: "What Can We Help You With?",
@@ -1285,15 +1257,6 @@ const translations = {
     stat_completed: "Aadhaar Updates Completed",
     stat_years: "Years of Experience",
     stat_satisfaction: "Customer Satisfaction %",
-    queue_tag: "Live Queue",
-    queue_title: "Real-Time Token Status",
-    queue_subtitle: "See the current queue and track your position live.",
-    queue_live: "Live Queue",
-    current_token_lbl: "Current Token",
-    your_token_lbl: "Your Token",
-    people_ahead_lbl: "People Ahead of You",
-    est_wait_lbl: "Estimated Wait",
-    refresh_info: "Auto-refreshes every 30 seconds",
     reviews_tag: "Customer Reviews",
     reviews_title: "What Our Customers Say",
     team_tag: "Our Team",
@@ -1365,7 +1328,7 @@ const translations = {
     footer_home: "Home",
     footer_services: "Services",
     footer_about: "About Us",
-    footer_queue: "Live Queue",
+    footer_live_token: "Live Token",
     footer_location: "Location",
     footer_contact: "Contact",
     footer_serv_title: "Services",

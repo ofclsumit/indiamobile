@@ -91,7 +91,6 @@ window.verifyOTP = async (code) => {
     <ul class="nav-links">
       <li><a href="#services" data-translate="nav_services">Services</a></li>
       <li><a href="#about" data-translate="nav_about">About</a></li>
-      <li><a href="#queue" data-translate="nav_queue">Queue</a></li>
       <li><a href="#location" data-translate="nav_location">Location</a></li>
       <li><a href="#contact" data-translate="nav_contact">Contact</a></li>
     </ul>
@@ -116,7 +115,6 @@ window.verifyOTP = async (code) => {
 <div class="mobile-menu" id="mobileMenu">
   <a href="#services" onclick="closeMobileMenu()" data-translate="nav_services">Services</a>
   <a href="#about" onclick="closeMobileMenu()" data-translate="nav_about">About</a>
-  <a href="#queue" onclick="closeMobileMenu()" data-translate="nav_queue">Queue</a>
   <a href="#location" onclick="closeMobileMenu()" data-translate="nav_location">Location</a>
   <a href="#contact" onclick="closeMobileMenu()" data-translate="nav_contact">Contact</a>
 </div>
@@ -142,13 +140,15 @@ window.verifyOTP = async (code) => {
           This service is coming soon. Please check back later or contact us for assistance.
         </div>
       </div>
-      <div class="check-token-promo" onclick="openCheckToken()">
-        <div class="check-token-icon"><i class="fas fa-ticket"></i></div>
-        <div>
-          <div class="check-token-title" data-translate="btn_check_token">Check My Token</div>
-          <div class="check-token-sub" data-translate="check_token_sub">View your booking status, queue position &amp; estimated wait time</div>
+      <div class="promo-buttons-row">
+        <div class="promo-btn promo-btn-check" onclick="openCheckToken()">
+          <div class="promo-btn-icon"><i class="fas fa-ticket"></i></div>
+          <div class="promo-btn-title" data-translate="btn_check_token">Check My Token</div>
         </div>
-        <div class="check-token-arrow"><i class="fas fa-chevron-right"></i></div>
+        <div class="promo-btn promo-btn-live" onclick="location.href='live-token.html'">
+          <div class="promo-btn-icon"><i class="fas fa-broadcast-tower"></i></div>
+          <div class="promo-btn-title" data-translate="btn_live_token">Live Token</div>
+        </div>
       </div>
       <div id="inlineBookingFields" style="display:none;"></div>
       <div class="guidelines-section">
@@ -296,50 +296,7 @@ window.verifyOTP = async (code) => {
   </div>
 </section>
 
-<div class="section-divider"></div>
 
-<!-- QUEUE TRACKER SECTION -->
-<section class="queue-section" id="queue">
-  <div class="section-inner">
-    <div class="text-center reveal">
-      <div class="section-tag" data-translate="queue_tag">Live Queue</div>
-      <h2 class="section-title" data-translate="queue_title">Real-Time Token Status</h2>
-      <p class="section-subtitle" data-translate="queue_subtitle">See the current queue and track your position live.</p>
-    </div>
-    <div class="queue-tracker-card glass-card reveal">
-      <div class="queue-live-badge">
-        <span class="queue-live-dot"></span> <span data-translate="queue_live">Live Queue</span>
-      </div>
-      <div class="current-token-display">
-        <div class="current-token-box">
-          <div class="current-token-label" data-translate="current_token_lbl">Current Token</div>
-          <div class="current-token-number" id="liveCurrentToken">07</div>
-        </div>
-        <div class="queue-divider"></div>
-        <div class="queue-your-box">
-          <div class="queue-your-label" data-translate="your_token_lbl">Your Token</div>
-          <div class="queue-your-number" id="liveYourToken">—</div>
-          <div id="liveLoginPrompt" style="margin-top:12px;">
-            <button class="btn-secondary" onclick="openCheckToken()" data-translate="btn_check_token" style="font-size:13px; padding:8px 16px;">Check My Token</button>
-          </div>
-        </div>
-      </div>
-      <div class="queue-stats-row">
-        <div class="queue-stat-item">
-          <div class="queue-stat-num" id="livePeopleAhead">—</div>
-          <div class="queue-stat-desc" data-translate="people_ahead_lbl">People Ahead of You</div>
-        </div>
-        <div class="queue-stat-item">
-          <div class="queue-stat-num" id="liveWaitTime">—</div>
-          <div class="queue-stat-desc" data-translate="est_wait_lbl">Estimated Wait</div>
-        </div>
-      </div>
-      <div class="refresh-info" id="refreshInfo" data-translate="refresh_info">Auto-refreshes every 30 seconds</div>
-    </div>
-  </div>
-</section>
-
-<div class="section-divider"></div>
 
 <!-- REVIEWS SECTION -->
 <section class="reviews-section" id="reviews">
@@ -603,7 +560,7 @@ window.verifyOTP = async (code) => {
           <li><a href="#home" data-translate="footer_home">Home</a></li>
           <li><a href="#services" data-translate="footer_services">Services</a></li>
           <li><a href="#about" data-translate="footer_about">About Us</a></li>
-          <li><a href="#queue" data-translate="footer_queue">Live Queue</a></li>
+          <li><a href="live-token.html" data-translate="footer_live_token">Live Token</a></li>
           <li><a href="#location" data-translate="footer_location">Location</a></li>
           <li><a href="#contact" data-translate="footer_contact">Contact</a></li>
         </ul>

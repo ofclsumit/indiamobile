@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Token — India Mobile Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+/* standalone page overrides */
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; }
+.live-page-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+.live-card {
+  max-width: 500px;
+  width: 100%;
+  padding: 48px 40px;
+  background: var(--bg2);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  text-align: center;
+}
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: #fc8585;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 100px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+}
+.live-badge-dot { width: 7px; height: 7px; background: #ef4444; border-radius: 50%; }
+.live-token-number {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 120px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  text-shadow: 0 0 60px rgba(45,212,191,0.3);
+  margin-bottom: 8px;
+}
+.live-token-label {
+  font-size: 14px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+  margin-bottom: 36px;
+}
+.live-divider {
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  margin: 0 auto 28px;
+}
+.live-datetime {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 32px;
+}
+.live-date {
+  font-size: 18px;
+  color: var(--text2);
+  font-weight: 500;
+}
+.live-time {
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: 0.03em;
+}
+.live-seconds {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--accent);
+  font-family: 'Space Grotesk', sans-serif;
+}
+.live-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+.live-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.live-status-text {
+  font-size: 14px;
+  color: var(--text3);
+  margin-top: 24px;
+  line-height: 1.5;
+}
+.live-header {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--bg);
+}
+.live-header-logo {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text);
+  text-decoration: none;
+}
+.live-header-logo span { color: var(--accent); }
+.live-header-back {
+  font-size: 14px;
+  color: var(--text2);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+.live-header-back:hover { color: var(--accent); }
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(45,212,191,0.3); }
+  50% { box-shadow: 0 0 0 12px rgba(45,212,191,0); }
+  100% { box-shadow: 0 0 0 0 rgba(45,212,191,0); }
+}
+.live-pulse-ring { animation: live-pulse 2s infinite; }
+@media (max-width: 500px) {
+  .live-card { padding: 32px 20px; }
+  .live-token-number { font-size: 80px; }
+  .live-time { font-size: 32px; }
+  .live-seconds { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="live-header">
+  <a href="index.html" class="live-header-logo">India<span>Mobile</span>Center</a>
+  <a href="index.html" class="live-header-back"><i class="fas fa-arrow-left"></i> Home</a>
+</div>
+
+<main class="live-page-main">
+  <div class="live-card">
+    <div class="live-badge">
+      <span class="live-badge-dot"></span> LIVE
+    </div>
+
+    <div class="live-token-number live-pulse-ring" id="ltToken">--</div>
+    <div class="live-token-label">Current Serving Token</div>
+
+    <div class="live-divider"></div>
+
+    <div class="live-datetime">
+      <div class="live-date" id="ltDate">--</div>
+      <div class="live-time">
+        <span id="ltTime">--</span><span class="live-seconds" id="ltSeconds">--</span>
+      </div>
+    </div>
+
+    <div class="live-actions">
+      <div class="live-actions-row">
+        <button class="btn-secondary" style="justify-content:center; font-size:13px;" onclick="location.href='index.html'">Home</button>
+        <button class="btn-primary" style="justify-content:center; font-size:13px;" onclick="location.href='index.html'">Book Appointment</button>
+      </div>
+      <button class="btn-secondary" style="justify-content:center; font-size:13px;" onclick="location.href='index.html#services'">Check My Token</button>
+    </div>
+
+    <div class="live-status-text">
+      Token numbers are updated in real-time. Visit our center before your token is called.
+    </div>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"></script>
+<script src="db-sync.js"></script>
+<script>
+// ---- Date & Time Clock ----
+function updateClock() {
+  const now = new Date();
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const d = days[now.getDay()];
+  const mo = months[now.getMonth()];
+  const date = now.getDate();
+  const yr = now.getFullYear();
+  document.getElementById('ltDate').textContent = d + ', ' + date + ' ' + mo + ' ' + yr;
+
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('ltTime').textContent = h + ':' + m + ':';
+  document.getElementById('ltSeconds').textContent = String(now.getSeconds()).padStart(2,'0');
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ---- Token from Firestore ----
+function updateToken() {
+  var el = document.getElementById('ltToken');
+  if (typeof DB !== 'undefined' && DB.currentToken !== undefined) {
+    el.textContent = String(DB.currentToken).padStart(2, '0');
+  }
+}
+
+var dbCheckInterval = setInterval(function() {
+  if (typeof DB !== 'undefined' && typeof DB.currentToken !== 'undefined') {
+    updateToken();
+    setInterval(updateToken, 5000);
+    clearInterval(dbCheckInterval);
+  }
+}, 500);
+</script>
+</body>
+</html>
