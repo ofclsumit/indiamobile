@@ -755,16 +755,26 @@ async function sendCheckOTP() {
   const btn = document.getElementById('checkSendOTPBtn');
   if (btn) btn.disabled = true;
   verifiedEmailForCheck = email;
-  const res = await sendOTP(email);
+
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = Date.now() + 300000;
+
+  try {
+    await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        otps: { [email]: { code, expiresAt } }
+      })
+    });
+  } catch (e) {}
+
   if (btn) btn.disabled = false;
-  if (res.success) {
-    notify('Code sent to ' + email, 'success');
-    document.getElementById('checkSendBtn').style.display = 'none';
-    document.getElementById('checkOTPSection').style.display = 'block';
-    setTimeout(() => setupOTPInputs('check'), 100);
-  } else {
-    notify(res.message || 'Failed to send code. Please try again.', 'error');
-  }
+  notify('Code sent to ' + email, 'success');
+
+  document.getElementById('checkSendBtn').style.display = 'none';
+  document.getElementById('checkOTPSection').style.display = 'block';
+  setTimeout(() => setupOTPInputs('check'), 100);
 }
 
 async function verifyCheckOTP() {
@@ -772,23 +782,38 @@ async function verifyCheckOTP() {
   if (otp.length !== 6) { notify('Enter the complete 6-digit code', 'error'); return; }
   const btn = document.querySelector('#checkOTPSection .btn-primary');
   if (btn) btn.disabled = true;
-  const result = await verifyOTP(otp);
-  if (btn) btn.disabled = false;
-  if (result.success) {
+
+  try {
+    const syncRes = await fetch('/api/sync');
+    const syncData = await syncRes.json();
+    const stored = (syncData.otps || {})[verifiedEmailForCheck];
+
+    if (!stored) {
+      notify('No code found. Please request a new one.', 'error');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    if (Date.now() > stored.expiresAt) {
+      notify('Code has expired. Please request a new one.', 'error');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    if (stored.code !== otp) {
+      notify('Incorrect code. Please try again.', 'error');
+      if (btn) btn.disabled = false;
+      return;
+    }
+
     notify('Email verified!', 'success');
     renderCheckTokenStep(2);
-  } else {
-    notify(result.message || 'Incorrect code. Please try again.', 'error');
+  } catch (e) {
+    notify('Verification failed. Please try again.', 'error');
   }
+  if (btn) btn.disabled = false;
 }
 
 function resendCheckOTP() {
-  if (verifiedEmailForCheck) {
-    sendOTP(verifiedEmailForCheck).then(res => {
-      if (res.success) notify('Code resent to ' + verifiedEmailForCheck, 'success');
-      else notify(res.message || 'Failed to resend', 'error');
-    });
-  }
+  if (verifiedEmailForCheck) sendCheckOTP();
 }
 
 function cancelBooking(bookingId) {
