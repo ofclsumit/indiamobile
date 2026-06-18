@@ -318,19 +318,24 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
     measurementId: "G-3XVP6GQ9WX"
   });
 }
-firebase.auth().onAuthStateChanged(function(user) {
-  if (user) {
-    console.log('[QC] Auth restored for', user.email);
-  } else {
-    console.log('[QC] No auth — will use API fallback for Firestore writes');
-  }
-});
+function waitForAuth() {
+  return new Promise(function(resolve) {
+    var unsubscribe = firebase.auth().onAuthStateChanged(function(user) {
+      unsubscribe();
+      if (user) console.log('[QC] Auth restored for', user.email);
+      else console.log('[QC] No auth — will use API fallback for Firestore writes');
+      resolve();
+    });
+  });
+}
 </script>
 <script src="db-sync.js"></script>
 <script>
-DBSync.initFirestore().then(ok => {
-  if (ok) DBSync.startRealtimeListener();
-  else DBSync.forceFetch().then(() => DBSync.startPolling(3000));
+waitForAuth().then(function() {
+  DBSync.initFirestore().then(ok => {
+    if (ok) DBSync.startRealtimeListener();
+    else DBSync.forceFetch().then(() => DBSync.startPolling(3000));
+  });
 });
 
 let queueData = [];
