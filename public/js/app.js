@@ -769,14 +769,8 @@ async function sendCheckOTP() {
     });
   } catch (e) {}
 
-  const res = await sendOTP(email);
   if (btn) btn.disabled = false;
-
-  if (res.success) {
-    notify('Code sent to ' + email, 'success');
-  } else {
-    notify('Your verification code is: ' + code, 'info');
-  }
+  notify('Your verification code is: ' + code, 'info');
 
   document.getElementById('checkSendBtn').style.display = 'none';
   document.getElementById('checkOTPSection').style.display = 'block';
