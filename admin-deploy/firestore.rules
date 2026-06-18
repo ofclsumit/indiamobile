@@ -27,9 +27,10 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // appData — admin only (DBSync internal state)
+    // appData — public read (live-token, queue control), admin write
     match /appData/{doc} {
-      allow read, write: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // admins — any authenticated user can read/list (to check

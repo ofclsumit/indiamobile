@@ -239,6 +239,8 @@ const DBSync = {
 
     for (const [key, kKey] of Object.entries(fields)) {
       if (server[key] === undefined) continue;
+      if (key === 'bookings' && (!server[key] || server[key].length === 0)) continue;
+      if (key === 'token' && (!server[key] || server[key] === 0) && this.getToken() > 0) continue;
       const raw = JSON.stringify(server[key]);
       const local = localStorage.getItem(this.KEYS[kKey]);
       if (raw !== local) {
@@ -273,6 +275,8 @@ const DBSync = {
           };
           for (const [key, kKey] of Object.entries(fields)) {
             if (server[key] === undefined) continue;
+            if (key === 'bookings' && (!server[key] || server[key].length === 0)) continue;
+            if (key === 'token' && (!server[key] || server[key] === 0) && this.getToken() > 0) continue;
             const raw = JSON.stringify(server[key]);
             const local = localStorage.getItem(this.KEYS[kKey]);
             if (raw !== local) {
@@ -301,6 +305,8 @@ const DBSync = {
     };
     for (const [key, kKey] of Object.entries(fields)) {
       if (server[key] === undefined) continue;
+      if (key === 'bookings' && (!server[key] || server[key].length === 0)) continue;
+      if (key === 'token' && (!server[key] || server[key] === 0) && this.getToken() > 0) continue;
       const raw = JSON.stringify(server[key]);
       const local = localStorage.getItem(this.KEYS[kKey]);
       if (raw !== local) {
