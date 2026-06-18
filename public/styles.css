@@ -577,9 +577,9 @@ section { padding: 100px 24px; }
 .promo-buttons-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
   margin: 20px auto 0;
-  max-width: 500px;
+  max-width: 320px;
 }
 
 .promo-btn {

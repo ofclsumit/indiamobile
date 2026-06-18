@@ -89,7 +89,7 @@ function archiveBooking(booking) {
 DBSync.subscribe(function(data) {
   DB.bookings = data.bookings;
   DB.currentToken = data.token;
-  updateQueueDisplay();
+  updateHeroDisplay();
   updateLiveIndicator();
 });
 
