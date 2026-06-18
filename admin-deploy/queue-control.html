@@ -305,6 +305,7 @@ body {
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script>
 if (typeof firebase !== 'undefined' && !firebase.apps.length) {
   firebase.initializeApp({
@@ -317,6 +318,13 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
     measurementId: "G-3XVP6GQ9WX"
   });
 }
+firebase.auth().onAuthStateChanged(function(user) {
+  if (user) {
+    console.log('[QC] Auth restored for', user.email);
+  } else {
+    console.log('[QC] No auth — will use API fallback for Firestore writes');
+  }
+});
 </script>
 <script src="db-sync.js"></script>
 <script>
