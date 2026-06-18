@@ -368,13 +368,9 @@ var _qcRefreshTimer = null;
   const params = new URLSearchParams(window.location.search);
   const key = params.get('key');
   const stored = sessionStorage.getItem('qc_auth');
-  const storedPersistent = localStorage.getItem('qc_auth');
   if (key && stored && key === stored) {
     _qcAuthorized = true;
     sessionStorage.removeItem('qc_auth');
-    localStorage.setItem('qc_auth', stored);
-  } else if (storedPersistent) {
-    _qcAuthorized = true;
   } else {
     window.location.href = 'https://indiamobile-admin.vercel.app/';
     return;
@@ -521,8 +517,9 @@ async function qcSendToLast() {
 }
 
 async function qcSaveExit() {
-  if (!(await showQCModal('Save current state and exit? Queue position is preserved — it will resume when you return.'))) return;
-  logQCAction('Saved & Exited', DBSync.getToken() || '--', 'Success');
+  if (!(await showQCModal('Save current state and exit? The live token will be reset.'))) return;
+  DBSync.setToken(0);
+  logQCAction('Saved & Exited', '--', 'Success');
   notify('State saved. Redirecting to dashboard...', 'info');
   setTimeout(function() { window.location.href = 'index.html'; }, 800);
 }
