@@ -27,20 +27,16 @@ const DB = {
   },
 
   addBooking(data) {
-    const token = String(Date.now()).slice(-2);
+    const max = this.bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0);
+    const token = String(max + 1);
     const bid = 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random()*100);
     const booking = { ...data, token, bookingId: bid, status: 'approved', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    this.bookings.push(booking);
     if (window.__bookingsRef) {
-      window.__bookingsRef.add(booking).then(ref => {
-        booking.bookingId = ref.id;
-        booking.token = String(Date.now()).slice(-4);
-        ref.update({ bookingId: ref.id, token: booking.token });
-      }).catch(e => {
-        this.bookings.push(booking);
+      window.__bookingsRef.add(booking).catch(e => {
         try { DBSync.setBookings(this.bookings); } catch(ex) {}
       });
     } else {
-      this.bookings.push(booking);
       try { DBSync.setBookings(this.bookings); } catch(ex) {}
     }
     return booking;
@@ -1171,18 +1167,24 @@ function changeToken(delta) {
 function markNextComplete() {
   if (!window.__bookingsRef || !adminQueueData) return;
   const ct = adminQueueData.currentToken || 1;
-  window.__bookingsRef.where('token', '==', String(ct).padStart(2,'0'))
-    .where('status', 'in', ['approved','pending']).get().then(snap => {
-      if (snap.empty) {
-        notify('No active booking for current token', 'info');
-        return;
-      }
-      snap.forEach(doc => {
-        doc.ref.update({ status: 'completed', updatedAt: serverTS() });
-      });
-      logAdminAction(getAdminUser(), 'Marked complete', String(ct).padStart(2,'0'), 'success');
-      notify('Token ' + String(ct).padStart(2,'0') + ' marked complete', 'success');
-    });
+  const tokenStr = String(parseInt(ct));
+  findBookingByToken(tokenStr).then(booking => {
+    if (!booking) {
+      notify('No active booking for current token', 'info');
+      return;
+    }
+    booking.ref.update({ status: 'completed', updatedAt: serverTS() });
+    logAdminAction(getAdminUser(), 'Marked complete', tokenStr, 'success');
+    notify('Token ' + tokenStr + ' marked complete', 'success');
+  });
+}
+
+async function findBookingByToken(tokenStr) {
+  var snap = await window.__bookingsRef.where('token', '==', tokenStr).where('status', 'in', ['approved','pending','waiting']).get();
+  if (!snap.empty) return snap.docs[0];
+  snap = await window.__bookingsRef.where('token', '==', tokenStr.padStart(2,'0')).where('status', 'in', ['approved','pending','waiting']).get();
+  if (!snap.empty) return snap.docs[0];
+  return null;
 }
 
 function advanceToken() {

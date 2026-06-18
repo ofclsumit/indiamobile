@@ -8,7 +8,7 @@ function bookingId() {
 
 function nextToken(bookings) {
   const max = bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0);
-  return String(max + 1).padStart(2, '0');
+  return String(max + 1);
 }
 
 // --- Firestore REST API helpers ---
@@ -151,7 +151,7 @@ module.exports = async (req, res) => {
   const dupDevice = active.find(b => b.deviceId === deviceId);
   if (dupDevice) return res.json({ success: true, isDuplicate: true, field: 'device', booking: dupDevice });
 
-  const token = nextToken(active);
+  const token = nextToken(bookings);
   const booking = {
     token,
     bookingId: bookingId(),
