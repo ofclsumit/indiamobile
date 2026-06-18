@@ -1869,3 +1869,18 @@ window.toggleLanguage = function() {
 
 // Apply default language as Hindi
 window.setLanguage(currentLang);
+
+// Auto-open Check Token modal if ?checkToken=1 in URL
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('checkToken') === '1') {
+    var checkEl = document.getElementById('checkTokenModal');
+    if (checkEl && typeof openCheckToken === 'function') {
+      openCheckToken();
+    } else {
+      document.addEventListener('DOMContentLoaded', function() {
+        if (typeof openCheckToken === 'function') openCheckToken();
+      });
+    }
+  }
+})();

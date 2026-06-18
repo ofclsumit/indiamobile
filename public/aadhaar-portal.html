@@ -418,20 +418,10 @@ resetInactivityTimer();
       <div id="portalSubmitStatus" style="margin-top:12px;text-align:center;font-size:13px;color:var(--text3);display:none;"></div>
     </div>
 
-    <!-- FIND MY BOOKING -->
-    <div class="form-card" style="margin-top:16px;border:1px solid rgba(59,130,246,0.15);">
-      <div onclick="toggleFindBooking()" style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;">
-        <i class="fas fa-chevron-down" id="findBookingChevron" style="font-size:12px;color:var(--text3);transition:transform 0.2s;"></i>
-        <span style="font-weight:600;font-size:14px;">Already booked? Find your token</span>
-      </div>
-      <div id="findBookingBody" style="display:none;margin-top:16px;border-top:1px solid var(--glass-border);padding-top:16px;">
-        <p style="font-size:13px;color:var(--text3);margin-bottom:12px;">Enter the last 4 digits of your Aadhaar to find your booking.</p>
-        <div style="display:flex;gap:10px;">
-          <input type="text" id="findAadhaarLast4" placeholder="Last 4 digits" maxlength="4" inputmode="numeric" style="flex:1;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:8px;color:var(--text);font-size:16px;font-family:'Space Grotesk',sans-serif;letter-spacing:0.15em;text-align:center;font-weight:600;outline:none;">
-          <button class="btn-primary" onclick="findMyBooking()" style="padding:10px 20px;flex-shrink:0;justify-content:center;"><i class="fas fa-search" style="font-size:13px;"></i></button>
-        </div>
-        <div id="findResult" style="margin-top:12px;display:none;"></div>
-      </div>
+    <div style="text-align:center;margin-top:16px;">
+      <a href="index.html?checkToken=1" style="color:var(--accent);font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+        Already booked? <strong>Find your token</strong> <i class="fas fa-arrow-right" style="font-size:11px;"></i>
+      </a>
     </div>
   </div>
 
@@ -723,49 +713,7 @@ function showConfirmation(booking) {
   }, 100);
 }
 
-function toggleFindBooking() {
-  const body = document.getElementById('findBookingBody');
-  const chevron = document.getElementById('findBookingChevron');
-  const isOpen = body.style.display === 'block';
-  body.style.display = isOpen ? 'none' : 'block';
-  chevron.className = 'fas fa-chevron-' + (isOpen ? 'down' : 'up');
-  if (!isOpen) setTimeout(() => document.getElementById('findAadhaarLast4').focus(), 200);
-}
 
-function findMyBooking() {
-  const input = document.getElementById('findAadhaarLast4');
-  const last4 = input.value.trim().replace(/\D/g, '');
-  const resultEl = document.getElementById('findResult');
-  if (last4.length !== 4) {
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px;font-size:13px;color:#ef4444;text-align:center;">Please enter the last 4 digits of your Aadhaar.</div>';
-    return;
-  }
-  const bookings = DBSync.getBookings();
-  const found = bookings.find(b => b.aadhaarLast4 === last4);
-  resultEl.style.display = 'block';
-  if (found) {
-    const d = new Date(found.date + 'T00:00:00');
-    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const displayDate = `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-    const statusColor = found.status === 'completed' ? '#22c55e' : found.status === 'cancelled' ? '#ef4444' : '#3b82f6';
-    resultEl.innerHTML = `
-      <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:16px;">
-        <div style="text-align:center;margin-bottom:12px;">
-          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;">Your Token Number</div>
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:48px;font-weight:700;color:var(--accent);line-height:1.2;text-shadow:0 0 20px rgba(56,189,248,0.2);">${found.token}</div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
-          <div style="color:var(--text3);">Booking ID:</div><div style="color:var(--text);font-weight:500;">${found.bookingId || '-'}</div>
-          <div style="color:var(--text3);">Date:</div><div style="color:var(--text);font-weight:500;">${displayDate}</div>
-          <div style="color:var(--text3);">Status:</div><div style="color:${statusColor};font-weight:600;">${found.status.charAt(0).toUpperCase() + found.status.slice(1)}</div>
-        </div>
-      </div>`;
-  } else {
-    resultEl.innerHTML = '<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:12px;font-size:13px;color:#fbbf24;text-align:center;">No booking found with an Aadhaar ending in <strong>' + last4 + '</strong>.</div>';
-  }
-}
 </script>
 
 <!-- Language Toggle -->
@@ -788,8 +736,7 @@ function findMyBooking() {
       confirm_booking: "बुकिंग कन्फर्म करें",
       booking_confirmed: "बुकिंग कन्फर्म हुई",
       token_number: "आपका टोकन नंबर",
-      find_booking: "अपनी बुकिंग खोजें",
-      enter_aadhaar_last4: "अपने आधार के अंतिम 4 अंक दर्ज करें",
+
       resend_otp: "दोबारा OTP भेजें",
       otp_sent: "OTP भेज दिया गया है",
       verifying: "वेरिफाई हो रहा है...",
@@ -811,8 +758,6 @@ function findMyBooking() {
       confirm_booking: "Confirm Booking",
       booking_confirmed: "Booking Confirmed",
       token_number: "Your Token Number",
-      find_booking: "Find My Booking",
-      enter_aadhaar_last4: "Enter last 4 digits of your Aadhaar",
       resend_otp: "Resend OTP",
       otp_sent: "OTP has been sent",
       verifying: "Verifying...",
