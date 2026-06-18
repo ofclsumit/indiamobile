@@ -67,6 +67,10 @@ const DB = {
 
   getActiveByAadhaar(aadhaar) {
     return this.bookings.find(b => b.aadhaarLast4 === aadhaar && (b.status === 'pending' || b.status === 'approved'));
+  },
+
+  getByAadhaar(aadhaar) {
+    return this.bookings.filter(b => b.aadhaarLast4 === aadhaar && b.status !== 'cancelled');
   }
 };
 
@@ -106,8 +110,7 @@ function updateLiveIndicator() {
 // ============================================
 let sessionBookingData = {};
 let currentBookingStep = 1;
-let checkTokenStep = 1;
-let verifiedEmailForCheck = null;
+let verifiedAadhaar = null;
 let selectedDate = null;
 
 // ============================================
@@ -624,8 +627,6 @@ function submitBookingStep3() {
 // CHECK TOKEN MODAL
 // ============================================
 function openCheckToken() {
-  checkTokenStep = 1;
-  verifiedEmailForCheck = null;
   document.getElementById('checkTokenModal').classList.add('open');
   renderCheckTokenStep(1);
 }
@@ -639,35 +640,22 @@ function renderCheckTokenStep(step) {
 
   if (step === 1) {
     body.innerHTML = `
-      <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">Enter the email you used when booking. We'll send a 6-digit code to verify it's you.</p>
+      <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">Enter the last 4 digits of the Aadhaar number used at the time of booking.</p>
       <div class="form-group">
-        <label class="form-label">Registered Email</label>
-        <input type="email" class="form-input" id="checkEmail" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendCheckOTP()">
-      </div>
-      <div id="checkOTPSection" style="display:none;">
-        <div style="height:1px; background:var(--glass-border); margin:4px 0 20px;"></div>
-        <p style="font-size:13px; color:var(--text3); margin-bottom:16px;">Enter the 6-digit code sent to your email</p>
-        <div class="otp-grid">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
+        <label class="form-label">Aadhaar Number (Last 4 Digits)</label>
+        <div style="position:relative;">
+          <div style="display:flex; align-items:center; gap:0; background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); border-radius:10px; overflow:hidden;">
+            <span style="padding:13px 14px; font-size:14px; color:var(--text3); letter-spacing:0.1em; font-family:'Space Grotesk',sans-serif; border-right:1px solid var(--glass-border); background:rgba(255,255,255,0.02); user-select:none; flex-shrink:0;">xxxx xxxx</span>
+            <input type="text" id="checkAadhaar" placeholder="XXXX" maxlength="4" inputmode="numeric"
+              style="flex:1; background:transparent; border:none; outline:none; padding:13px 14px; color:var(--text); font-size:14px; font-family:'Space Grotesk',sans-serif; letter-spacing:0.15em; font-weight:600;"
+              onkeydown="if(event.key==='Enter')lookupByAadhaar()">
+          </div>
         </div>
-        <button class="btn-primary btn-full" onclick="verifyCheckOTP()" style="margin-top:12px;">Verify &amp; View Booking</button>
-        <p style="text-align:center; margin-top:12px;">
-          <a href="#" onclick="resendCheckOTP(); return false;" style="color:var(--accent); font-size:13px;">Resend code</a>
-          &middot;
-          <a href="#" onclick="document.getElementById('checkOTPSection').style.display='none';document.getElementById('checkSendBtn').style.display='block'; return false;" style="color:var(--text3); font-size:13px;">Change email</a>
-        </p>
       </div>
-      <div id="checkSendBtn">
-        <button class="btn-primary btn-full" id="checkSendOTPBtn" onclick="sendCheckOTP()">Send Code</button>
-      </div>
+      <button class="btn-primary btn-full" onclick="lookupByAadhaar()">Check My Token</button>
     `;
   } else if (step === 2) {
-    const bookings = DB.getByEmail(verifiedEmailForCheck);
+    const bookings = DB.getByAadhaar(verifiedAadhaar);
     const ct = DB.currentToken;
 
     if (bookings.length === 0) {
@@ -675,7 +663,7 @@ function renderCheckTokenStep(step) {
         <div style="text-align:center; padding:32px 0;">
           <div style="font-size:48px; margin-bottom:16px; opacity:0.4;"><i class="fas fa-clipboard-list"></i></div>
           <h3 style="font-size:18px; font-weight:600; margin-bottom:8px;">No Bookings Found</h3>
-          <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">We could not find any bookings for this email.</p>
+          <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">We could not find any bookings for Aadhaar ending with <strong>${verifiedAadhaar}</strong>.</p>
           <button class="btn-primary" onclick="closeCheckToken(); openBooking();">Book a Token Now</button>
           <button class="btn-secondary" onclick="renderCheckTokenStep(1)" style="margin-top:8px; justify-content:center;">Try Again</button>
         </div>
@@ -739,54 +727,21 @@ function renderCheckTokenStep(step) {
     }).join('');
 
     body.innerHTML = `
-      <p style="font-size:14px; color:var(--text2); margin-bottom:20px;">Found ${bookings.length} booking(s) for this email.</p>
+      <p style="font-size:14px; color:var(--text2); margin-bottom:20px;">Found ${bookings.length} booking(s) for Aadhaar ending with <strong>${verifiedAadhaar}</strong>.</p>
       ${bookingCards}
       <button class="btn-secondary btn-full" style="justify-content:center; margin-top:8px;" onclick="renderCheckTokenStep(1)">Check Another</button>
     `;
   }
 }
 
-async function sendCheckOTP() {
-  const email = document.getElementById('checkEmail').value.trim();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    notify('Please enter a valid email address', 'error');
+function lookupByAadhaar() {
+  const aadhaar = document.getElementById('checkAadhaar').value.trim().replace(/\D/g, '');
+  if (aadhaar.length !== 4) {
+    notify('Please enter the last 4 digits of your Aadhaar', 'error');
     return;
   }
-  verifiedEmailForCheck = email;
-  const code = String(Math.floor(100000 + Math.random() * 900000));
-  const expiresAt = Date.now() + 300000;
-  try {
-    await fetch('/api/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ otps: { [email]: { code, expiresAt } } })
-    });
-  } catch (e) {}
-  notify('Your verification code is: ' + code, 'info');
-  document.getElementById('checkSendBtn').style.display = 'none';
-  document.getElementById('checkOTPSection').style.display = 'block';
-  setTimeout(() => setupOTPInputs('check'), 100);
-}
-
-async function verifyCheckOTP() {
-  const otp = getOTPValue('check');
-  if (otp.length !== 6) { notify('Enter the complete 6-digit code', 'error'); return; }
-  try {
-    const syncRes = await fetch('/api/sync');
-    const syncData = await syncRes.json();
-    const stored = (syncData.otps || {})[verifiedEmailForCheck];
-    if (!stored) { notify('No code found. Request a new one.', 'error'); return; }
-    if (Date.now() > stored.expiresAt) { notify('Code expired. Request a new one.', 'error'); return; }
-    if (stored.code !== otp) { notify('Incorrect code. Try again.', 'error'); return; }
-    notify('Email verified!', 'success');
-    renderCheckTokenStep(2);
-  } catch (e) {
-    notify('Verification failed. Try again.', 'error');
-  }
-}
-
-function resendCheckOTP() {
-  if (verifiedEmailForCheck) sendCheckOTP();
+  verifiedAadhaar = aadhaar;
+  renderCheckTokenStep(2);
 }
 
 function cancelBooking(bookingId) {
