@@ -140,6 +140,11 @@ body {
   letter-spacing: 0.05em;
 }
 .qc-action-btn i { font-size: 20px; }
+.qc-action-btn .qc-btn-desc {
+  font-size: 9px; font-weight: 400; text-transform: none;
+  color: var(--text3); letter-spacing: 0.02em; margin-top: 2px;
+  opacity: 0.7; line-height: 1.3;
+}
 .qc-action-btn:hover {
   background: var(--surface-hover);
   border-color: var(--text3);
@@ -294,10 +299,10 @@ body {
     </button>
 
     <div class="qc-actions">
-    <button class="qc-action-btn next" onclick="qcCallNext()"><i class="fas fa-forward-step"></i> Next</button>
-    <button class="qc-action-btn complete" onclick="qcMarkComplete()"><i class="fas fa-check-circle"></i> Complete</button>
-    <button class="qc-action-btn cancel" onclick="qcCancel()"><i class="fas fa-ban"></i> Cancel</button>
-    <button class="qc-action-btn sendtolast" onclick="qcSendToLast()"><i class="fas fa-forward"></i> Send to Last</button>
+    <button class="qc-action-btn next" onclick="qcCallNext()"><i class="fas fa-forward-step"></i> Next<span class="qc-btn-desc">Call next waiting customer</span></button>
+    <button class="qc-action-btn complete" onclick="qcMarkComplete()"><i class="fas fa-check-circle"></i> Complete<span class="qc-btn-desc">Mark current as done</span></button>
+    <button class="qc-action-btn cancel" onclick="qcCancel()"><i class="fas fa-ban"></i> Cancel<span class="qc-btn-desc">Cancel current token</span></button>
+    <button class="qc-action-btn sendtolast" onclick="qcSendToLast()"><i class="fas fa-forward"></i> Send to Last<span class="qc-btn-desc">Move to end of queue</span></button>
   </div>
 
   <button class="qc-save-exit" onclick="qcSaveExit()"><i class="fas fa-floppy-disk"></i> Save &amp; Exit</button>
