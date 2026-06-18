@@ -179,15 +179,56 @@ nav {
   flex-direction: column;
   gap: 5px;
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
+  position: relative;
+  z-index: 1000;
+  width: 36px; height: 32px;
+  align-items: center;
+  justify-content: center;
 }
 
 .hamburger span {
   display: block;
   width: 24px; height: 2px;
   background: var(--text2);
-  border-radius: 2px;
-  transition: all 0.3s;
+  border-radius: 3px;
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center;
+  position: absolute;
+  left: 50%;
+  margin-left: -12px;
+}
+
+.hamburger span:nth-child(1) { top: 6px; }
+.hamburger span:nth-child(2) { top: 14px; opacity: 1; }
+.hamburger span:nth-child(3) { top: 22px; }
+
+.hamburger.active span:nth-child(1) {
+  top: 14px;
+  transform: rotate(225deg) scaleX(1.1);
+  background: var(--accent);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.hamburger.active span:nth-child(3) {
+  top: 14px;
+  transform: rotate(-225deg) scaleX(1.1);
+  background: var(--accent);
+}
+
+@media (hover: hover) {
+  .hamburger:hover span:not(.active *) {
+    background: var(--accent);
+  }
+  .hamburger:hover span:nth-child(1) { transform: translateY(-1px); }
+  .hamburger:hover span:nth-child(3) { transform: translateY(1px); }
+  .hamburger.active:hover span { background: var(--accent); }
+  .hamburger.active:hover span:nth-child(1) { transform: rotate(225deg) scaleX(1.15); }
+  .hamburger.active:hover span:nth-child(3) { transform: rotate(-225deg) scaleX(1.15); }
 }
 
 /* Mobile menu */

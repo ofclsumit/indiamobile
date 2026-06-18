@@ -130,10 +130,12 @@ function notify(msg, type = 'info') {
 // ============================================
 function toggleMobileMenu() {
   document.getElementById('mobileMenu').classList.toggle('open');
+  document.getElementById('hamburger').classList.toggle('active');
 }
 
 function closeMobileMenu() {
   document.getElementById('mobileMenu').classList.remove('open');
+  document.getElementById('hamburger').classList.remove('active');
 }
 
 document.addEventListener('click', function(e) {
@@ -141,6 +143,7 @@ document.addEventListener('click', function(e) {
   const hb = document.getElementById('hamburger');
   if (mm.classList.contains('open') && !mm.contains(e.target) && !hb.contains(e.target)) {
     mm.classList.remove('open');
+    hb.classList.remove('active');
   }
 });
 
