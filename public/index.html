@@ -178,6 +178,25 @@ window.hidePageLoader = function() {
       <div class="section-tag" data-translate="services_tag">Services</div>
       <h2 class="section-title" data-translate="services_title">What Can We Help You With?</h2>
       <p class="section-subtitle" data-translate="services_subtitle">We provide a range of government and digital services. Select a service below to get started with your booking.</p>
+      <div class="services-dropdown-wrap">
+        <p class="services-select-label" data-translate="services_select_lbl">Select a Service to Book</p>
+        <div class="custom-dropdown" id="serviceDropdown">
+          <div class="custom-dropdown-trigger" onclick="toggleCustomDropdown()">
+            <span class="custom-dropdown-selected" data-translate="service_aadhaar">Aadhaar Update</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="custom-dropdown-menu">
+            <div class="custom-dropdown-item" data-value="aadhaar" data-translate-opt="service_aadhaar" onclick="selectService('aadhaar', this)">Aadhaar Update</div>
+            <div class="custom-dropdown-item disabled" data-value="pan" data-translate-opt="service_pan">PAN Services (Coming Soon)</div>
+            <div class="custom-dropdown-item disabled" data-value="passport" data-translate-opt="service_passport">Passport Services (Coming Soon)</div>
+            <div class="custom-dropdown-item disabled" data-value="online" data-translate-opt="service_online">Online Applications (Coming Soon)</div>
+            <div class="custom-dropdown-item disabled" data-value="ticket" data-translate-opt="service_ticket">Ticket Booking (Coming Soon)</div>
+          </div>
+        </div>
+        <div class="service-coming-soon" id="comingSoonNote" data-translate="coming_soon_note">
+          This service is coming soon. Please check back later or contact us for assistance.
+        </div>
+      </div>
       <div class="promo-buttons-row">
         <div class="promo-btn promo-btn-check" onclick="openCheckToken()">
           <div class="promo-btn-icon"><i class="fas fa-ticket"></i></div>

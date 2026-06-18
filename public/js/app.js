@@ -304,7 +304,38 @@ function scrollReviews(dir) {
 // ============================================
 // SERVICE DROPDOWN
 // ============================================
-// ============================================
+window.toggleCustomDropdown = function() {
+  const dd = document.getElementById('serviceDropdown');
+  dd.classList.toggle('open');
+  document.addEventListener('click', closeDropdownOutside);
+};
+function closeDropdownOutside(e) {
+  const dd = document.getElementById('serviceDropdown');
+  if (!dd.contains(e.target)) { dd.classList.remove('open'); document.removeEventListener('click', closeDropdownOutside); }
+}
+window.selectService = function(value, el) {
+  document.querySelectorAll('.custom-dropdown-item').forEach(i => i.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  document.getElementById('serviceDropdown').classList.remove('open');
+  const label = el ? el.textContent : '-- Choose a Service --';
+  document.querySelector('.custom-dropdown-selected').textContent = label;
+  handleServiceSelect(value);
+};
+
+function handleServiceSelect(val) {
+  const note = document.getElementById('comingSoonNote');
+  if (val === 'aadhaar') {
+    note.style.display = 'none';
+    var vt = sessionStorage.getItem('vt') || '';
+    var r = Math.random().toString(36).slice(2, 8);
+    window.location.href = 'aadhaar-portal.html?vt=' + vt + '&r=' + r;
+  } else if (val && val !== '') {
+    note.style.display = 'block';
+  } else {
+    note.style.display = 'none';
+  }
+}
+
 // ============================================
 // ACCORDION
 // ============================================
