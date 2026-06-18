@@ -105,7 +105,6 @@ window.verifyOTP = async (code) => {
           <span class="lang-opt-text">EN</span>
         </div>
       </div>
-      <button class="btn-secondary" onclick="openCheckToken()" data-translate="btn_check_token">Check My Token</button>
     </div>
     <div class="hamburger" onclick="toggleMobileMenu()" id="hamburger">
       <span></span><span></span><span></span>
@@ -155,6 +154,14 @@ window.verifyOTP = async (code) => {
         <div class="service-coming-soon" id="comingSoonNote" data-translate="coming_soon_note">
           This service is coming soon. Please check back later or contact us for assistance.
         </div>
+      </div>
+      <div class="check-token-promo" onclick="openCheckToken()">
+        <div class="check-token-icon"><i class="fas fa-ticket"></i></div>
+        <div>
+          <div class="check-token-title" data-translate="btn_check_token">Check My Token</div>
+          <div class="check-token-sub">View your booking status, queue position &amp; estimated wait time</div>
+        </div>
+        <div class="check-token-arrow"><i class="fas fa-chevron-right"></i></div>
       </div>
       <div id="inlineBookingFields" style="display:none;"></div>
     </div>

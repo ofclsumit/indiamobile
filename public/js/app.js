@@ -642,26 +642,9 @@ function renderCheckTokenStep(step) {
       <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">Enter the email you used when booking your token.</p>
       <div class="form-group">
         <label class="form-label">Registered Email</label>
-        <input type="email" class="form-input" id="checkEmail" placeholder="your@email.com">
+        <input type="email" class="form-input" id="checkEmail" placeholder="your@email.com" onkeydown="if(event.key==='Enter')lookupBooking()">
       </div>
-      <div id="checkOTPSection" style="display:none;">
-        <p style="font-size:13px; color:var(--text3); margin-bottom:16px;">Enter the 6-digit OTP sent to your email</p>
-        <div class="otp-grid">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-        </div>
-        <button class="btn-primary btn-full" onclick="verifyCheckOTP()" style="margin-top:12px;">Verify OTP &amp; Continue</button>
-        <p style="text-align:center; margin-top:12px;">
-          <a href="#" onclick="resendCheckOTP(); return false;" style="color:var(--accent); font-size:13px;">Resend OTP</a>
-        </p>
-      </div>
-      <div id="checkSendBtn">
-        <button class="btn-primary btn-full" onclick="sendCheckOTP()">Send OTP</button>
-      </div>
+      <button class="btn-primary btn-full" onclick="lookupBooking()">Check My Token</button>
     `;
   } else if (step === 2) {
     const bookings = DB.getByEmail(verifiedEmailForCheck);
@@ -674,6 +657,7 @@ function renderCheckTokenStep(step) {
           <h3 style="font-size:18px; font-weight:600; margin-bottom:8px;">No Bookings Found</h3>
           <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">We could not find any bookings for this email.</p>
           <button class="btn-primary" onclick="closeCheckToken(); openBooking();">Book a Token Now</button>
+          <button class="btn-secondary" onclick="renderCheckTokenStep(1)" style="margin-top:8px; justify-content:center;">Try Again</button>
         </div>
       `;
       return;
@@ -735,52 +719,21 @@ function renderCheckTokenStep(step) {
     }).join('');
 
     body.innerHTML = `
-      <p style="font-size:14px; color:var(--text2); margin-bottom:20px;">Found ${bookings.length} booking(s) for your number.</p>
+      <p style="font-size:14px; color:var(--text2); margin-bottom:20px;">Found ${bookings.length} booking(s) for this email.</p>
       ${bookingCards}
+      <button class="btn-secondary btn-full" style="justify-content:center; margin-top:8px;" onclick="renderCheckTokenStep(1)">Check Another</button>
     `;
   }
 }
 
-async function sendCheckOTP() {
+function lookupBooking() {
   const email = document.getElementById('checkEmail').value.trim();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     notify('Please enter a valid email address', 'error');
     return;
   }
   verifiedEmailForCheck = email;
-  const res = await sendOTP(email);
-  if (res.success) {
-    notify('OTP sent to ' + email, 'success');
-    document.getElementById('checkSendBtn').style.display = 'none';
-    document.getElementById('checkOTPSection').style.display = 'block';
-    setTimeout(() => setupOTPInputs('check'), 100);
-  } else {
-    notify(res.message || 'Failed to send OTP', 'error');
-  }
-}
-
-async function verifyCheckOTP() {
-  const otp = getOTPValue('check');
-  if (otp.length !== 6) { notify('Enter the complete 6-digit OTP', 'error'); return; }
-  const btn = document.querySelector('#checkTokenBody .btn-primary');
-  if (btn) btn.disabled = true;
-  const result = await verifyOTP(otp);
-  if (btn) btn.disabled = false;
-  if (result.success) {
-    notify('Email verified!', 'success');
-    renderCheckTokenStep(2);
-  } else {
-    notify(result.message || 'Incorrect OTP. Please try again.', 'error');
-  }
-}
-
-function resendCheckOTP() {
-  if (verifiedEmailForCheck) {
-    sendOTP(verifiedEmailForCheck).then(res => {
-      if (res.success) notify('OTP resent to ' + verifiedEmailForCheck, 'success');
-      else notify(res.message || 'Failed to resend', 'error');
-    });
-  }
+  renderCheckTokenStep(2);
 }
 
 function cancelBooking(bookingId) {
