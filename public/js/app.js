@@ -29,11 +29,19 @@ const DB = {
   addBooking(data) {
     const token = String(Date.now()).slice(-2);
     const bid = 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random()*100);
-    const booking = { ...data, token, bookingId: bid, status: 'approved', createdAt: new Date().toISOString() };
-    this.bookings.push(booking);
-    this.save();
+    const booking = { ...data, token, bookingId: bid, status: 'approved', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     if (window.__bookingsRef) {
-      window.__bookingsRef.add(booking).catch(() => {});
+      window.__bookingsRef.add(booking).then(ref => {
+        booking.bookingId = ref.id;
+        booking.token = String(Date.now()).slice(-4);
+        ref.update({ bookingId: ref.id, token: booking.token });
+      }).catch(e => {
+        this.bookings.push(booking);
+        try { DBSync.setBookings(this.bookings); } catch(ex) {}
+      });
+    } else {
+      this.bookings.push(booking);
+      try { DBSync.setBookings(this.bookings); } catch(ex) {}
     }
     return booking;
   },
@@ -68,13 +76,31 @@ function archiveBooking(booking) {
   } catch(e) {}
 }
 
-// Firestore real-time listener for public data
-if (typeof window.__bookingsRef !== 'undefined') {
-  window.__bookingsRef.onSnapshot(() => {
+// Firestore real-time sync for public data
+function initPublicFirestoreListeners() {
+  if (typeof window.__bookingsRef === 'undefined' || typeof window.__queueRef === 'undefined') {
+    setTimeout(initPublicFirestoreListeners, 800);
+    return;
+  }
+  // Keep local DB in sync with Firestore bookings
+  window.__bookingsRef.onSnapshot(snap => {
+    DB.bookings = [];
+    snap.forEach(doc => DB.bookings.push({ id: doc.id, ...doc.data() }));
     updateHeroDisplay();
-    updateLiveIndicator();
+    if (document.getElementById('checkTokenModal')?.classList.contains('open')) {
+      renderCheckTokenStep(checkTokenStep);
+    }
   }, () => {});
+
+  // Track current token from queue collection
+  window.__queueRef.onSnapshot(snap => {
+    snap.forEach(doc => { DB.currentToken = doc.data().currentToken || 1; });
+    updateHeroDisplay();
+  }, () => {});
+
+  console.log('[Sync] Public Firestore listeners active');
 }
+initPublicFirestoreListeners();
 
 // Flash dot to show live connection
 let liveDot = null;
@@ -949,7 +975,7 @@ function filterBookings() { renderBookingsTable(); }
 
 function updateBookingStatus(docId, status) {
   if (!window.__bookingsRef || !docId) return;
-  window.__bookingsRef.doc(docId).update({ status, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+  window.__bookingsRef.doc(docId).update({ status, updatedAt: serverTS() })
     .then(() => {
       logAdminAction(sessionStorage.getItem('adminUser') || 'Admin', 'Booking ' + status, docId, status === 'completed' ? 'success' : 'info');
       notify('Booking updated to ' + status, 'success');
@@ -970,7 +996,7 @@ function changeToken(delta) {
     } else {
       window.__queueRef.add({ currentToken: newToken });
     }
-    logAdminAction(sessionStorage.getItem('adminUser') || 'Admin', 'Token changed', String(newToken).padStart(2,'0'), 'info');
+    logAdminAction(getAdminUser(), 'Token changed', String(newToken).padStart(2,'0'), 'info');
     notify('Token updated to ' + String(newToken).padStart(2,'0'), 'info');
   });
 }
@@ -985,9 +1011,9 @@ function markNextComplete() {
         return;
       }
       snap.forEach(doc => {
-        doc.ref.update({ status: 'completed', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        doc.ref.update({ status: 'completed', updatedAt: serverTS() });
       });
-      logAdminAction(sessionStorage.getItem('adminUser') || 'Admin', 'Marked complete', String(ct).padStart(2,'0'), 'success');
+      logAdminAction(getAdminUser(), 'Marked complete', String(ct).padStart(2,'0'), 'success');
       notify('Token ' + String(ct).padStart(2,'0') + ' marked complete', 'success');
     });
 }
@@ -1004,7 +1030,7 @@ function advanceToken() {
     } else {
       window.__queueRef.add({ currentToken: newToken });
     }
-    logAdminAction(sessionStorage.getItem('adminUser') || 'Admin', 'Advanced token', String(newToken).padStart(2,'0'), 'info');
+    logAdminAction(getAdminUser(), 'Advanced token', String(newToken).padStart(2,'0'), 'info');
     notify('Advanced to next token', 'info');
   });
 }
@@ -1012,6 +1038,19 @@ function advanceToken() {
 function skipToken() {
   advanceToken();
   notify('Token skipped', 'info');
+}
+
+function getAdminUser() {
+  return sessionStorage.getItem('adminUser') || 'Admin';
+}
+
+function serverTS() {
+  try {
+    if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
+      return firebase.firestore.FieldValue.serverTimestamp();
+    }
+  } catch(e) {}
+  return new Date().toISOString();
 }
 
 // -- Activity Logs --
@@ -1022,7 +1061,7 @@ function logAdminAction(admin, action, detail, type) {
     action: action || 'Unknown action',
     detail: detail || '',
     type: type || 'info',
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    timestamp: serverTS()
   }).catch(() => {});
 }
 
@@ -1150,7 +1189,7 @@ function submitContactForm() {
     window.__activityRef.add({
       type: 'contact',
       name, phone, msg,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      timestamp: serverTS()
     }).catch(() => {});
   }
   notify('Message sent! We will get back to you soon.', 'success');
