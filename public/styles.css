@@ -233,6 +233,7 @@ nav {
 
 /* Mobile menu */
 .mobile-menu {
+  display: flex;
   position: fixed;
   top: 72px; left: 0; right: 0;
   background: rgba(8,12,20,0.97);
