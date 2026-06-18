@@ -995,6 +995,17 @@ document.addEventListener('click', function(e) {
 updateQueueDisplay();
 
 // ============================================
+// NOTIFICATION SECTION TOGGLE
+// ============================================
+function toggleNotifPanel() {
+  const checked = document.getElementById('notifToggle').checked;
+  document.getElementById('notifPanelLinks').style.display = checked ? 'none' : '';
+  document.getElementById('notifPanelDocs').style.display = checked ? '' : 'none';
+  document.getElementById('notifLabelLinks').classList.toggle('notif-toggle-active', !checked);
+  document.getElementById('notifLabelDocs').classList.toggle('notif-toggle-active', checked);
+}
+
+// ============================================
 // BILINGUAL LANGUAGE SYSTEM (HINDI / ENGLISH)
 // ============================================
 const translations = {

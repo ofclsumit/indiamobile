@@ -151,6 +151,29 @@ window.verifyOTP = async (code) => {
         <div class="check-token-arrow"><i class="fas fa-chevron-right"></i></div>
       </div>
       <div id="inlineBookingFields" style="display:none;"></div>
+      <div class="notif-section" id="notifSection">
+        <div class="notif-toggle-row">
+          <span class="notif-toggle-label notif-toggle-active" id="notifLabelLinks">Daily Updates</span>
+          <label class="notif-switch">
+            <input type="checkbox" id="notifToggle" onchange="toggleNotifPanel()">
+            <span class="notif-slider"></span>
+          </label>
+          <span class="notif-toggle-label" id="notifLabelDocs">Documents</span>
+        </div>
+        <div class="notif-panel" id="notifPanelLinks">
+          <a href="#" class="notif-link"><span class="notif-dot"></span> Aadhaar PVC Card — order status &amp; tracking</a>
+          <a href="#" class="notif-link"><span class="notif-dot"></span> Aadhaar enrolment &amp; update centre holidays</a>
+          <a href="#" class="notif-link"><span class="notif-dot"></span> PAN card application — latest processing times</a>
+          <a href="#" class="notif-link"><span class="notif-dot"></span> Passport appointment slots — availability alert</a>
+          <a href="#" class="notif-link"><span class="notif-dot"></span> Digital Life Certificate — submission schedule</a>
+        </div>
+        <div class="notif-panel" id="notifPanelDocs" style="display:none;">
+          <div class="notif-doc-item"><span class="notif-doc-icon"><i class="fas fa-id-card"></i></span><div><strong>Aadhaar Update</strong><br><span class="notif-doc-text">Aadhaar card (original &amp; copy), valid ID proof (Voter ID / Driving License / Passport), recent passport-size photo</span></div></div>
+          <div class="notif-doc-item"><span class="notif-doc-icon"><i class="fas fa-id-card"></i></span><div><strong>PAN Services</strong><br><span class="notif-doc-text">Aadhaar card, PAN card (if re-issue), proof of address, passport-size photo, self-declaration form</span></div></div>
+          <div class="notif-doc-item"><span class="notif-doc-icon"><i class="fas fa-passport"></i></span><div><strong>Passport Services</strong><br><span class="notif-doc-text">Aadhaar card, proof of address (utility bill / bank statement), birth certificate, 10 passport-size photos, annexure forms</span></div></div>
+          <div class="notif-doc-item"><span class="notif-doc-icon"><i class="fas fa-file-alt"></i></span><div><strong>Online Applications</strong><br><span class="notif-doc-text">Aadhaar card, PAN card, recent photo, income certificate / caste certificate (if applicable)</span></div></div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
