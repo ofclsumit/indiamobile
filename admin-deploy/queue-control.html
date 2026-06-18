@@ -120,7 +120,7 @@ body {
 .qc-hero-status.none { background: var(--surface); color: var(--text3); border: 1px solid var(--border); }
 .qc-actions {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   margin-bottom: 32px;
 }
@@ -151,7 +151,7 @@ body {
   color: var(--text);
   transform: translateY(-2px);
 }
-.qc-action-btn.next:hover { border-color: var(--accent); color: var(--accent); }
+.qc-action-btn.next:hover { border-color: var(--green); color: var(--green); }
 .qc-action-btn.complete:hover { border-color: var(--green); color: var(--green); }
 .qc-action-btn.cancel:hover { border-color: var(--red); color: var(--red); }
 .qc-action-btn.sendtolast:hover { border-color: var(--amber); color: var(--amber); }
@@ -266,7 +266,7 @@ body {
   .qc-main { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
-  .qc-actions { grid-template-columns: repeat(2, 1fr); }
+  .qc-actions { grid-template-columns: repeat(3, 1fr); }
   .qc-hero-token { font-size: 64px; }
   .qc-main { padding: 20px 16px; grid-template-columns: 1fr; }
   .qc-right { margin-top: 12px; }
@@ -299,8 +299,7 @@ body {
     </button>
 
     <div class="qc-actions">
-    <button class="qc-action-btn next" onclick="qcCallNext()"><i class="fas fa-forward-step"></i> Next<span class="qc-btn-desc">Call next waiting customer</span></button>
-    <button class="qc-action-btn complete" onclick="qcMarkComplete()"><i class="fas fa-check-circle"></i> Complete<span class="qc-btn-desc">Mark current as done</span></button>
+    <button class="qc-action-btn next" onclick="qcCompleteAndNext()"><i class="fas fa-check-double"></i> Complete &amp; Next<span class="qc-btn-desc">Complete current, call next</span></button>
     <button class="qc-action-btn cancel" onclick="qcCancel()"><i class="fas fa-ban"></i> Cancel<span class="qc-btn-desc">Cancel current token</span></button>
     <button class="qc-action-btn sendtolast" onclick="qcSendToLast()"><i class="fas fa-forward"></i> Send to Last<span class="qc-btn-desc">Move to end of queue</span></button>
   </div>
@@ -333,12 +332,21 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
 }
 function waitForAuth() {
   return new Promise(function(resolve) {
-    var unsubscribe = firebase.auth().onAuthStateChanged(function(user) {
-      unsubscribe();
-      if (user) console.log('[QC] Auth restored for', user.email);
-      else console.log('[QC] No auth — will use API fallback for Firestore writes');
+    var timedOut = false;
+    var timer = setTimeout(function() { timedOut = true; resolve(); }, 3000);
+    try {
+      var unsubscribe = firebase.auth().onAuthStateChanged(function(user) {
+        if (timedOut) return;
+        clearTimeout(timer);
+        unsubscribe();
+        if (user) console.log('[QC] Auth restored for', user.email);
+        else console.log('[QC] No auth — using API fallback');
+        resolve();
+      });
+    } catch(e) {
+      clearTimeout(timer);
       resolve();
-    });
+    }
   });
 }
 </script>
@@ -459,31 +467,27 @@ async function qcStartQueue() {
   refreshQueue();
 }
 
-async function qcCallNext() {
-  const bookings = DBSync.getBookings();
-  const waiting = bookings.filter(b => b.status === 'approved' || b.status === 'pending' || b.status === 'waiting');
-  waiting.sort((a, b) => parseInt(a.token) - parseInt(b.token));
-  if (!waiting.length) { notify('No customers waiting.', 'error'); return; }
-  const next = waiting[0];
-  if (!(await showQCModal('Call next: Token #' + String(next.token).padStart(2, '0') + ' — ' + (next.name || 'Customer') + '?'))) return;
-  next.status = 'processing';
-  DBSync.setBookings(bookings);
-  DBSync.setToken(parseInt(next.token));
-  logQCAction('Called Next', next.token, 'Success');
-  notify('Called #' + String(next.token).padStart(2, '0') + ' — ' + (next.name || 'Customer'), 'success');
-  refreshQueue();
-}
-
-async function qcMarkComplete() {
+async function qcCompleteAndNext() {
   const ct = DBSync.getToken();
   const bookings = DBSync.getBookings();
   const b = bookings.find(x => parseInt(x.token) === ct && (x.status === 'processing' || x.status === 'approved' || x.status === 'waiting'));
   if (!b) { notify('No active token to complete.', 'error'); return; }
-  if (!(await showQCModal('Mark #' + String(ct).padStart(2, '0') + ' (' + (b.name || 'Customer') + ') as completed?'))) return;
+  if (!(await showQCModal('Complete #' + String(ct).padStart(2, '0') + ' (' + (b.name || 'Customer') + ') and call next?'))) return;
   b.status = 'completed';
+  const waiting = bookings.filter(x => x.status === 'approved' || x.status === 'pending' || x.status === 'waiting');
+  waiting.sort((a, x) => parseInt(a.token) - parseInt(x.token));
+  if (waiting.length > 0) {
+    const next = waiting[0];
+    next.status = 'processing';
+    DBSync.setToken(parseInt(next.token));
+    logQCAction('Complete & Next', next.token, 'Success');
+    notify('#' + String(ct).padStart(2, '0') + ' done → Called #' + String(next.token).padStart(2, '0') + ' (' + (next.name || 'Customer') + ')', 'success');
+  } else {
+    DBSync.setToken(0);
+    logQCAction('Complete & Next (end)', ct, 'Success');
+    notify('#' + String(ct).padStart(2, '0') + ' completed. No more customers in queue.', 'success');
+  }
   DBSync.setBookings(bookings);
-  logQCAction('Completed', ct, 'Success');
-  notify('#' + String(ct).padStart(2, '0') + ' completed.', 'success');
   refreshQueue();
 }
 
