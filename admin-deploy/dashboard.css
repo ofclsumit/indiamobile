@@ -159,7 +159,7 @@ select {
   gap: 6px;
   width: 100%;
   padding: 6px 10px;
-  background: var(--db-surface);
+  background: transparent;
   border: 1px solid var(--db-border);
   border-radius: 8px;
   color: var(--db-text);
@@ -552,7 +552,7 @@ select {
 }
 .db-topnav-search input {
   width: 100%;
-  background: var(--db-surface);
+  background: transparent;
   border: 1px solid var(--db-border);
   border-radius: 10px;
   padding: 8px 14px 8px 36px;
@@ -563,7 +563,6 @@ select {
 }
 .db-topnav-search input:focus {
   border-color: var(--db-accent);
-  background: rgba(255,255,255,0.05);
   box-shadow: 0 0 0 3px var(--db-accent-glow);
 }
 .db-topnav-search input::placeholder { color: var(--db-text3); }
@@ -890,7 +889,7 @@ select {
 }
 .db-table-toolbar .search-wrap input {
   width: 100%;
-  background: var(--db-surface);
+  background: transparent;
   border: 1px solid var(--db-border);
   border-radius: var(--db-radius-sm);
   padding: 7px 12px 7px 32px;
@@ -913,7 +912,7 @@ select {
 .db-table-toolbar .custom-select-menu { min-width: 160px; }
 .db-table-toolbar .custom-select-option { padding: 5px 10px; font-size: 11px; }
 .db-table-toolbar select {
-  background: var(--db-surface);
+  background: transparent;
   border: 1px solid var(--db-border);
   border-radius: var(--db-radius-sm);
   padding: 7px 12px;
@@ -1295,7 +1294,7 @@ select {
 .db-settings-row:last-child { border-bottom: none; }
 .db-settings-row label { font-size: 13px; color: var(--db-text2); flex-shrink: 0; }
 .db-settings-row input, .db-settings-row select {
-  background: rgba(255,255,255,0.03);
+  background: transparent;
   border: 1px solid var(--db-border);
   border-radius: 6px;
   padding: 8px 12px;

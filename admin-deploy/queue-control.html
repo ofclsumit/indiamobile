@@ -327,6 +327,8 @@ DBSync.initFirestore().then(ok => {
 
 let queueData = [];
 let _qcAuthorized = false;
+let _qcLastHash = '';
+var _qcRefreshTimer = null;
 
 (function() {
   const params = new URLSearchParams(window.location.search);
@@ -364,36 +366,37 @@ function logQCAction(action, token, result) {
 }
 
 function refreshQueue() {
-  const bookings = DBSync.getBookings();
-  queueData = bookings.filter(b => b.status === 'approved' || b.status === 'pending' || b.status === 'waiting' || b.status === 'processing');
-  queueData.sort((a, b) => parseInt(a.token) - parseInt(b.token));
+  if (_qcRefreshTimer) clearTimeout(_qcRefreshTimer);
+  _qcRefreshTimer = setTimeout(function() {
+    var hash = DBSync.getToken() + '|' + (DBSync.getBookings() || []).length;
+    if (hash === _qcLastHash) return;
+    _qcLastHash = hash;
 
-  const ct = DBSync.getToken();
-  const startBtn = document.getElementById('qcStartBtn');
-  if (startBtn) {
-    if (ct <= 0) {
-      startBtn.classList.add('visible');
+    const bookings = DBSync.getBookings();
+    queueData = bookings.filter(b => b.status === 'approved' || b.status === 'pending' || b.status === 'waiting' || b.status === 'processing');
+    queueData.sort((a, b) => parseInt(a.token) - parseInt(b.token));
+
+    const ct = DBSync.getToken();
+    const startBtn = document.getElementById('qcStartBtn');
+    if (startBtn) startBtn.classList.toggle('visible', ct <= 0);
+
+    const current = queueData.find(b => parseInt(b.token) === ct && (b.status === 'processing' || b.status === 'approved' || b.status === 'waiting' || b.status === 'pending'));
+
+    var tokenEl = document.getElementById('qcCurrentToken');
+    if (tokenEl) tokenEl.textContent = ct > 0 ? String(ct).padStart(2, '0') : '--';
+    var custEl = document.getElementById('qcCurrentCustomer');
+    var statusEl = document.getElementById('qcCurrentStatus');
+    if (current && custEl && statusEl) {
+      custEl.textContent = (current.name || 'Unknown') + ' — ' + (current.service || 'Aadhaar Update');
+      statusEl.textContent = current.status === 'processing' ? 'Processing' : 'Waiting';
+      statusEl.className = 'qc-hero-status ' + (current.status === 'processing' ? 'processing' : 'waiting');
     } else {
-      startBtn.classList.remove('visible');
+      if (custEl) custEl.textContent = ct > 0 ? 'No active booking for this token' : 'No active token';
+      if (statusEl) { statusEl.textContent = 'Idle'; statusEl.className = 'qc-hero-status none'; }
     }
-  }
 
-  const current = queueData.find(b => parseInt(b.token) === ct && (b.status === 'processing' || b.status === 'approved' || b.status === 'waiting' || b.status === 'pending'));
-
-  const tokenEl = document.getElementById('qcCurrentToken');
-  if (tokenEl) tokenEl.textContent = ct > 0 ? String(ct).padStart(2, '0') : '--';
-  const custEl = document.getElementById('qcCurrentCustomer');
-  const statusEl = document.getElementById('qcCurrentStatus');
-  if (current && custEl && statusEl) {
-    custEl.textContent = (current.name || 'Unknown') + ' — ' + (current.service || 'Aadhaar Update');
-    statusEl.textContent = current.status === 'processing' ? 'Processing' : 'Waiting';
-    statusEl.className = 'qc-hero-status ' + (current.status === 'processing' ? 'processing' : 'waiting');
-  } else {
-    if (custEl) custEl.textContent = ct > 0 ? 'No active booking for this token' : 'No active token';
-    if (statusEl) { statusEl.textContent = 'Idle'; statusEl.className = 'qc-hero-status none'; }
-  }
-
-  renderQueueList();
+    renderQueueList();
+  }, 100);
 }
 
 function renderQueueList() {

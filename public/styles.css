@@ -559,7 +559,7 @@ section { padding: 100px 24px; }
 }
 .custom-dropdown-trigger {
   width: 100%;
-  background: rgba(10,14,26,0.8);
+  background: transparent;
   border: 1.5px solid rgba(59,130,246,0.25);
   border-radius: 14px;
   padding: 18px 24px;
@@ -605,12 +605,12 @@ section { padding: 100px 24px; }
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  background: rgba(10,14,26,0.96);
+  background: rgba(10,14,26,0.7);
   border: 1px solid rgba(59,130,246,0.2);
   border-radius: 14px;
   overflow: hidden;
   z-index: 50;
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(24px);
   opacity: 0;
   pointer-events: none;
   transform: translateY(-6px) scale(0.97);
@@ -1067,20 +1067,19 @@ section { padding: 100px 24px; }
 
 .form-input {
   width: 100%;
-  background: rgba(255,255,255,0.03);
+  background: transparent;
   border: 1px solid var(--glass-border);
   border-radius: 10px;
   padding: 13px 16px;
   color: var(--text);
   font-size: 14px;
   font-family: 'Inter', sans-serif;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s;
   outline: none;
 }
 
 .form-input:focus {
   border-color: rgba(59,130,246,0.5);
-  background: rgba(59,130,246,0.04);
 }
 
 .form-input::placeholder { color: var(--text3); }
@@ -1262,7 +1261,7 @@ footer {
   font-size: 24px;
   font-weight: 700;
   font-family: 'Space Grotesk', sans-serif;
-  background: rgba(255,255,255,0.04);
+  background: transparent;
   border: 1.5px solid var(--glass-border);
   border-radius: 12px;
   color: var(--text);
@@ -1271,12 +1270,12 @@ footer {
   caret-color: var(--accent);
 }
 
-.otp-input:focus { border-color: rgba(59,130,246,0.6); background: rgba(59,130,246,0.05); }
+.otp-input:focus { border-color: rgba(59,130,246,0.6); }
 
 /* Select */
 .form-select {
   width: 100%;
-  background: rgba(255,255,255,0.03);
+  background: transparent;
   border: 1px solid var(--glass-border);
   border-radius: 10px;
   padding: 13px 16px;
@@ -1645,7 +1644,7 @@ footer {
 
 .search-input {
   width: 100%;
-  background: var(--glass);
+  background: transparent;
   border: 1px solid var(--glass-border);
   border-radius: 10px;
   padding: 11px 16px 11px 42px;
@@ -2197,7 +2196,9 @@ footer {
   position: fixed;
   inset: 0;
   z-index: 99999;
-  background: var(--bg);
+  background: rgba(10,14,26,0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: none;
   flex-direction: column;
   align-items: center;

@@ -881,7 +881,13 @@ function cancelBooking(bookingId) {
   const b = DB.bookings.find(x => x.bookingId === bookingId);
   if (b) {
     b.status = 'cancelled';
+    b.updatedAt = new Date().toISOString();
     DB.save();
+    if (window.__bookingsRef && b.bookingId) {
+      window.__bookingsRef.doc(b.bookingId).update({ status: 'cancelled', updatedAt: b.updatedAt }).catch(e => {
+        console.warn('[cancelBooking] Firestore sync failed:', e);
+      });
+    }
     archiveBooking(b);
     sessionStorage.removeItem('myBooking');
     updateHeroDisplay();

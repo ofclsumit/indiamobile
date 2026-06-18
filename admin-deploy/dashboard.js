@@ -443,6 +443,7 @@ async function queueCallNext() {
   if (!(await showConfirmModal('Call next token #' + String(next.token).padStart(2, '0') + ' for ' + (next.name || 'Customer') + '?'))) return;
   next.status = 'processing';
   DBSync.setBookings(bookings);
+  syncBookingStatusToFirestore(next);
   DBSync.setToken(parseInt(next.token));
 
   logActivity('Called Next Token', next.token, 'Success');
@@ -461,6 +462,7 @@ async function queueMarkComplete() {
 
   booking.status = 'completed';
   DBSync.setBookings(bookings);
+  syncBookingStatusToFirestore(booking);
 
   logActivity('Marked Completed', currentToken, 'Success');
   notify('Token #' + String(currentToken).padStart(2, '0') + ' marked as completed.', 'success');
@@ -478,6 +480,7 @@ async function queueSkip() {
 
   processing.status = 'approved'; // Put back to waiting
   DBSync.setBookings(bookings);
+  syncBookingStatusToFirestore(processing);
 
   logActivity('Skipped Token', processing.token, 'Success');
   notify('Token #' + processing.token + ' skipped and moved to end of queue.', 'warning');
@@ -495,6 +498,7 @@ async function queueCancel() {
 
   booking.status = 'cancelled';
   DBSync.setBookings(bookings);
+  syncBookingStatusToFirestore(booking);
 
   logActivity('Cancelled Token', currentToken, 'Success');
   notify('Token #' + String(currentToken).padStart(2, '0') + ' cancelled.', 'error');
@@ -519,6 +523,7 @@ async function queueNoShow() {
 
   booking.status = 'cancelled';
   DBSync.setBookings(bookings);
+  syncBookingStatusToFirestore(booking);
 
   logActivity('Marked No-Show', currentToken, 'Success');
   notify('Token #' + String(currentToken).padStart(2, '0') + ' marked as no-show.', 'warning');
@@ -565,6 +570,7 @@ async function quickProcess(bookingId) {
   if (!(await showConfirmModal('Process token #' + String(b.token).padStart(2, '0') + ' (' + (b.name || 'Customer') + ')?'))) return;
   b.status = 'processing';
   DBSync.setBookings(bookings);
+  syncBookingStatusToFirestore(b);
   DBSync.setToken(parseInt(b.token));
   logActivity('Processed Token', b.token, 'Success');
   renderQueueTable();
@@ -579,6 +585,7 @@ async function quickComplete(bookingId) {
   if (!(await showConfirmModal('Mark token #' + String(b.token).padStart(2, '0') + ' (' + (b.name || 'Customer') + ') as completed?'))) return;
   b.status = 'completed';
   DBSync.setBookings(bookings);
+  syncBookingStatusToFirestore(b);
   logActivity('Quick Completed', b.token, 'Success');
   renderQueueTable();
   refreshQueueControl();
@@ -592,10 +599,26 @@ async function quickCancel(bookingId) {
   if (!(await showConfirmModal('Cancel token #' + String(b.token).padStart(2, '0') + ' (' + (b.name || 'Customer') + ')? This cannot be undone.'))) return;
   b.status = 'cancelled';
   DBSync.setBookings(bookings);
+  syncBookingStatusToFirestore(b);
   logActivity('Quick Cancelled', b.token, 'Success');
   renderQueueTable();
   refreshQueueControl();
   refreshDashboard();
+}
+
+// ============================================
+// FIRESTORE SYNC
+// ============================================
+async function syncBookingStatusToFirestore(booking) {
+  if (!window.__bookingsRef || !booking || !booking.bookingId) return;
+  try {
+    await window.__bookingsRef.doc(booking.bookingId).update({
+      status: booking.status,
+      updatedAt: new Date().toISOString()
+    });
+  } catch(e) {
+    console.warn('[Dashboard] Failed to sync status to Firestore:', e);
+  }
 }
 
 // ============================================
@@ -988,7 +1011,7 @@ async function removeAdmin(email) {
   if (!(await showConfirmModal('Remove admin access for ' + email + '? They will be signed out immediately.'))) return;
   if (!window.__adminsRef) { notify('Firestore not available.', 'error'); return; }
   try {
-    await window.__adminsRef.doc(email).delete();
+    await window.__adminsRef.doc(email).update({ active: false, removedAt: new Date().toISOString() });
     logActivity('Removed Admin: ' + email, '--', 'Success');
     notify('Removed ' + email + ' from admin access.', 'warning');
   } catch(e) {

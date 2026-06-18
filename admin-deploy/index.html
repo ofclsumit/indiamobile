@@ -386,7 +386,10 @@
       measurementId: "G-3XVP6GQ9WX"
     });
   }
-  window.__adminsRef = firebase.firestore().collection('admins');
+  var _fs = firebase.firestore();
+  window.__adminsRef = _fs.collection('admins');
+  window.__bookingsRef = _fs.collection('bookings');
+  window.__queueRef = _fs.collection('queue');
 </script>
 <script src="db-sync.js"></script>
 <script>

@@ -195,7 +195,7 @@ body {
 }
 .db-topnav-search input {
   width: 100%;
-  background: var(--db-surface);
+  background: transparent;
   border: 1px solid var(--db-border);
   border-radius: var(--db-radius-sm);
   padding: 8px 14px 8px 36px;
@@ -206,7 +206,6 @@ body {
 }
 .db-topnav-search input:focus {
   border-color: var(--db-accent);
-  background: rgba(255,255,255,0.05);
   box-shadow: 0 0 0 3px var(--db-accent-glow);
 }
 .db-topnav-search input::placeholder { color: var(--db-text3); }
@@ -508,7 +507,7 @@ body {
 }
 .db-table-toolbar .search-wrap input {
   width: 100%;
-  background: var(--db-surface);
+  background: transparent;
   border: 1px solid var(--db-border);
   border-radius: var(--db-radius-sm);
   padding: 7px 12px 7px 32px;
@@ -523,7 +522,7 @@ body {
   color: var(--db-text3); font-size: 12px;
 }
 .db-table-toolbar select {
-  background: var(--db-surface);
+  background: transparent;
   border: 1px solid var(--db-border);
   border-radius: var(--db-radius-sm);
   padding: 7px 12px;
@@ -692,7 +691,7 @@ body {
 }
 .db-calendar-setting-card input, .db-calendar-setting-card select {
   width: 100%;
-  background: rgba(255,255,255,0.03);
+  background: transparent;
   border: 1px solid var(--db-border);
   border-radius: 6px;
   padding: 8px 12px;
