@@ -639,31 +639,26 @@ function renderCheckTokenStep(step) {
 
   if (step === 1) {
     body.innerHTML = `
-      <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">Enter the email you used when booking your token. We'll send a one-time code to verify it's you.</p>
+      <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">Enter the email you used when booking your token. We'll send a verification link to your email.</p>
       <div class="form-group">
         <label class="form-label">Registered Email</label>
         <input type="email" class="form-input" id="checkEmail" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendCheckOTP()">
       </div>
       <div id="checkOTPSection" style="display:none;">
         <div style="height:1px; background:var(--glass-border); margin:4px 0 20px;"></div>
-        <p style="font-size:13px; color:var(--text3); margin-bottom:16px;">Enter the 6-digit code sent to your email</p>
-        <div class="otp-grid">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
-          <input type="text" class="otp-input check-otp" maxlength="1" inputmode="numeric">
+        <div style="text-align:center; padding:20px 0;">
+          <div style="font-size:48px; margin-bottom:16px; opacity:0.6;"><i class="fas fa-envelope-open-text"></i></div>
+          <p style="font-size:15px; color:var(--text); font-weight:500; margin-bottom:8px;">Verification link sent!</p>
+          <p style="font-size:13px; color:var(--text3); line-height:1.5;">Please check your inbox and click the verification link to confirm your email and view your booking.</p>
+          <p style="font-size:12px; color:var(--text3); margin-top:16px;">Didn't receive the email?
+            <a href="#" onclick="resendCheckOTP(); return false;" style="color:var(--accent);">Resend</a>
+            &middot;
+            <a href="#" onclick="document.getElementById('checkOTPSection').style.display='none';document.getElementById('checkSendBtn').style.display='block'; return false;" style="color:var(--text3);">Change email</a>
+          </p>
         </div>
-        <button class="btn-primary btn-full" onclick="verifyCheckOTP()" style="margin-top:12px;">Verify &amp; View Booking</button>
-        <p style="text-align:center; margin-top:12px;">
-          <a href="#" onclick="resendCheckOTP(); return false;" style="color:var(--accent); font-size:13px;">Resend code</a>
-          &middot;
-          <a href="#" onclick="document.getElementById('checkOTPSection').style.display='none';document.getElementById('checkSendBtn').style.display='block'; return false;" style="color:var(--text3); font-size:13px;">Change email</a>
-        </p>
       </div>
       <div id="checkSendBtn">
-        <button class="btn-primary btn-full" id="checkSendOTPBtn" onclick="sendCheckOTP()">Send Code</button>
+        <button class="btn-primary btn-full" id="checkSendOTPBtn" onclick="sendCheckOTP()">Send Verification Link</button>
       </div>
     `;
   } else if (step === 2) {
@@ -756,65 +751,39 @@ async function sendCheckOTP() {
   if (btn) btn.disabled = true;
   verifiedEmailForCheck = email;
 
-  const code = String(Math.floor(100000 + Math.random() * 900000));
-  const expiresAt = Date.now() + 300000;
-
   try {
-    await fetch('/api/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        otps: { [email]: { code, expiresAt } }
-      })
-    });
-  } catch (e) {}
-
-  if (btn) btn.disabled = false;
-  notify('Code sent to ' + email, 'success');
-
-  document.getElementById('checkSendBtn').style.display = 'none';
-  document.getElementById('checkOTPSection').style.display = 'block';
-  setTimeout(() => setupOTPInputs('check'), 100);
-}
-
-async function verifyCheckOTP() {
-  const otp = getOTPValue('check');
-  if (otp.length !== 6) { notify('Enter the complete 6-digit code', 'error'); return; }
-  const btn = document.querySelector('#checkOTPSection .btn-primary');
-  if (btn) btn.disabled = true;
-
-  try {
-    const syncRes = await fetch('/api/sync');
-    const syncData = await syncRes.json();
-    const stored = (syncData.otps || {})[verifiedEmailForCheck];
-
-    if (!stored) {
-      notify('No code found. Please request a new one.', 'error');
-      if (btn) btn.disabled = false;
-      return;
-    }
-    if (Date.now() > stored.expiresAt) {
-      notify('Code has expired. Please request a new one.', 'error');
-      if (btn) btn.disabled = false;
-      return;
-    }
-    if (stored.code !== otp) {
-      notify('Incorrect code. Please try again.', 'error');
-      if (btn) btn.disabled = false;
-      return;
-    }
-
-    notify('Email verified!', 'success');
-    renderCheckTokenStep(2);
+    window.localStorage.setItem('emailForCheck', email);
+    await window.fbSendSignInLink(email);
+    if (btn) btn.disabled = false;
+    notify('Verification link sent to ' + email, 'success');
+    document.getElementById('checkSendBtn').style.display = 'none';
+    document.getElementById('checkOTPSection').style.display = 'block';
   } catch (e) {
-    notify('Verification failed. Please try again.', 'error');
+    window.localStorage.removeItem('emailForCheck');
+    if (btn) btn.disabled = false;
+    notify(e.message || 'Failed to send verification link. Please try again.', 'error');
   }
-  if (btn) btn.disabled = false;
 }
 
 function resendCheckOTP() {
   if (verifiedEmailForCheck) sendCheckOTP();
 }
+
+async function processFirebaseSignIn() {
+  try {
+    const email = await window.fbCompleteSignIn();
+    if (email) {
+      verifiedEmailForCheck = window.localStorage.getItem('emailForCheck') || email;
+      window.localStorage.removeItem('emailForCheck');
+      openCheckToken();
+      renderCheckTokenStep(2);
+    }
+  } catch (e) {
+    console.error('Firebase sign-in error:', e);
+  }
+}
+
+processFirebaseSignIn();
 
 function cancelBooking(bookingId) {
   if (!confirm('Are you sure you want to cancel this booking?')) return;
