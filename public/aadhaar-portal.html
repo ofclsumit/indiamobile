@@ -94,6 +94,9 @@ window.verifyOTP = async (code) => {
       appId: "1:20187455448:web:7f3d3bd09e8407ea389cad",
       measurementId: "G-3XVP6GQ9WX"
     });
+    var _db = firebase.firestore();
+    window.__bookingsRef = _db.collection('bookings');
+    window.__queueRef = _db.collection('queue');
   }
 </script>
 <script src="db-sync.js"></script>
@@ -206,10 +209,71 @@ window.verifyOTP = async (code) => {
 }
 .back-link:hover { color: var(--accent); }
 
+.existing-booking-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(12px);
+  display: none; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.existing-booking-overlay.show { display: flex; }
+.existing-booking-card {
+  background: var(--bg2);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 40px 32px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  animation: fadeScaleIn 0.3s ease;
+}
+@keyframes fadeScaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+.existing-booking-card .warning-icon {
+  width: 72px; height: 72px;
+  margin: 0 auto 20px;
+  background: rgba(245,158,11,0.12);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; color: #fbbf24;
+}
+.existing-booking-card h2 {
+  font-family: 'Space Grotesk',sans-serif;
+  font-size: 22px; font-weight: 700; margin-bottom: 8px;
+}
+.existing-booking-card p { font-size: 15px; color: var(--text2); margin-bottom: 24px; }
+.existing-booking-card .existing-token {
+  font-family: 'Space Grotesk',sans-serif;
+  font-size: 80px; font-weight: 700;
+  color: var(--accent); line-height: 1;
+  text-shadow: 0 0 40px rgba(56,189,248,0.3);
+  margin-bottom: 4px;
+}
+.existing-booking-card .existing-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.25);
+  color: #fbbf24; font-size: 12px; font-weight: 600;
+  padding: 4px 14px; border-radius: 100px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 24px;
+}
+.existing-booking-card .btn-row {
+  display: flex; gap: 12px; margin-top: 8px;
+}
+.existing-booking-card .btn-row .btn-primary,
+.existing-booking-card .btn-row .btn-secondary {
+  flex: 1; justify-content: center;
+}
+
 @media (max-width: 480px) {
   .portal-body { padding: 24px 16px; }
   .form-card { padding: 20px; }
   .aadhaar-group input { font-size: 15px; min-width: 30px; }
+  .existing-booking-card { padding: 28px 20px; }
+  .existing-booking-card .existing-token { font-size: 56px; }
 }
 </style>
 <script>
@@ -433,6 +497,25 @@ resetInactivityTimer();
 <div id="notif" style="display:none;" class="notification"></div>
 <div id="recaptcha-container" style="position:fixed;bottom:0;left:0;width:0;height:0;overflow:hidden;"></div>
 
+<div class="existing-booking-overlay" id="existingBookingOverlay">
+  <div class="existing-booking-card">
+    <div class="warning-icon"><i class="fas fa-exclamation-triangle"></i></div>
+    <h2>Booking Already Exists</h2>
+    <p id="existingBookingMsg">You already have an active booking. What would you like to do?</p>
+    <div id="existingBookingTokenSection" style="display:none;">
+      <div class="existing-token" id="existingBookingToken">--</div>
+      <div class="existing-badge"><i class="fas fa-ticket"></i> Your Token</div>
+    </div>
+    <div class="btn-row" id="existingBookingActions">
+      <button class="btn-primary" onclick="existingBookingShowToken()">Yes, Show My Token</button>
+      <button class="btn-secondary" onclick="existingBookingGoHome()">No, Go to Home</button>
+    </div>
+    <div class="btn-row" id="existingBookingDoneRow" style="display:none;">
+      <button class="btn-secondary" onclick="existingBookingGoHome()"><i class="fas fa-arrow-left"></i> Back to Home</button>
+    </div>
+  </div>
+</div>
+
 <script>
 function setBtnLoading(btn, loading) {
   if (!btn) return;
@@ -547,12 +630,102 @@ function verifyPortalOTP() {
     hidePageLoader();
     if (result.success) {
       notify('Email verified successfully!', 'success');
-      showStep2();
+      checkExistingBooking();
     } else {
       notify(result.message || 'Incorrect OTP. Please try again.', 'error');
     }
   });
 }
+
+function checkExistingBooking() {
+  var email = portalData.email;
+  var aadhaarLast4 = portalData.aadhaarLast4;
+  var found = null;
+
+  function proceed() {
+    if (found) {
+      showExistingBookingOverlay(found);
+    } else {
+      showStep2();
+    }
+  }
+
+  // Query Firestore for active bookings matching email or aadhaarLast4
+  if (window.__bookingsRef) {
+    var allBookings = [];
+    function tryNext() {
+      if (allBookings.length > 0) {
+        found = allBookings[0];
+      }
+      proceed();
+    }
+    // Query by email
+    window.__bookingsRef.where('email', '==', email).get().then(function(snap) {
+      snap.forEach(function(doc) {
+        var d = { id: doc.id, ...doc.data() };
+        if (d.status === 'pending' || d.status === 'approved') allBookings.push(d);
+      });
+      // Then query by aadhaarLast4
+      window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get().then(function(snap2) {
+        snap2.forEach(function(doc) {
+          var d = { id: doc.id, ...doc.data() };
+          if ((d.status === 'pending' || d.status === 'approved') && !allBookings.find(function(b) { return b.id === d.id; })) {
+            allBookings.push(d);
+          }
+        });
+        tryNext();
+      }).catch(function() { tryNext(); });
+    }).catch(function() { tryNext(); });
+  } else {
+    // Fallback: check local DBSync cache
+    try {
+      var local = DBSync.getBookings();
+      found = local.find(function(b) {
+        return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && (b.status === 'pending' || b.status === 'approved');
+      });
+    } catch(e) {}
+    proceed();
+  }
+}
+
+function showExistingBookingOverlay(booking) {
+  var overlay = document.getElementById('existingBookingOverlay');
+  var msg = document.getElementById('existingBookingMsg');
+  var tokenSection = document.getElementById('existingBookingTokenSection');
+  var tokenEl = document.getElementById('existingBookingToken');
+  var actions = document.getElementById('existingBookingActions');
+  var doneRow = document.getElementById('existingBookingDoneRow');
+
+  tokenSection.style.display = 'none';
+  actions.style.display = 'flex';
+  doneRow.style.display = 'none';
+
+  msg.textContent = 'You already have an active booking (Token #' + booking.token + '). Would you like to view it?';
+  window._existingBooking = booking;
+
+  overlay.classList.add('show');
+}
+
+window.existingBookingShowToken = function() {
+  var booking = window._existingBooking;
+  if (!booking) return;
+  var overlay = document.getElementById('existingBookingOverlay');
+  var msg = document.getElementById('existingBookingMsg');
+  var tokenSection = document.getElementById('existingBookingTokenSection');
+  var tokenEl = document.getElementById('existingBookingToken');
+  var actions = document.getElementById('existingBookingActions');
+  var doneRow = document.getElementById('existingBookingDoneRow');
+
+  msg.textContent = 'Here is your existing token:';
+  tokenEl.textContent = booking.token;
+  tokenSection.style.display = 'block';
+  actions.style.display = 'none';
+  doneRow.style.display = 'flex';
+};
+
+window.existingBookingGoHome = function() {
+  window.location.href = 'index.html';
+};
 
 let resendCooldownTimer = null;
 
