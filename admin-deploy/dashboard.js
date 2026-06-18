@@ -431,6 +431,13 @@ function refreshQueueControl() {
 
 
 async function startToken() {
+  const currentToken = DBSync.getToken();
+  if (currentToken > 0) {
+    const key = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    sessionStorage.setItem('qc_auth', key);
+    window.open('queue-control.html?key=' + key, '_blank');
+    return;
+  }
   const bookings = DBSync.getBookings();
   const waiting = bookings.filter(b => b.status === 'approved' || b.status === 'pending' || b.status === 'waiting');
   waiting.sort((a, b) => parseInt(a.token) - parseInt(b.token));
