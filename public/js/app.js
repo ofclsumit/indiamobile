@@ -995,35 +995,6 @@ document.addEventListener('click', function(e) {
 updateQueueDisplay();
 
 // ============================================
-// RECENT UPDATES FROM SARKARIRESULT
-// ============================================
-async function fetchUpdates() {
-  const list = document.getElementById('updatesList');
-  const timeEl = document.getElementById('updatesTime');
-  try {
-    const res = await fetch('/api/updates');
-    if (!res.ok) throw new Error('fetch failed');
-    const data = await res.json();
-    if (!data.updates || data.updates.length === 0) {
-      list.innerHTML = '<div class="updates-loading">No recent updates available.</div>';
-      return;
-    }
-    list.innerHTML = data.updates.map(u => `
-      <a href="${u.url}" target="_blank" rel="noopener" class="updates-link">
-        <span class="updates-link-icon"><i class="fas fa-chevron-right"></i></span>
-        <span class="updates-link-text">${u.title}</span>
-      </a>
-    `).join('');
-    timeEl.textContent = data.fetchedAt || new Date().toLocaleString();
-  } catch (e) {
-    list.innerHTML = '<div class="updates-loading">Could not load updates. <a href="https://www.sarkariresult.com" target="_blank" rel="noopener" style="color:var(--accent);">Visit sarkariresult.com</a></div>';
-  }
-}
-
-document.addEventListener('DOMContentLoaded', fetchUpdates);
-setInterval(fetchUpdates, 300000);
-
-// ============================================
 // BILINGUAL LANGUAGE SYSTEM (HINDI / ENGLISH)
 // ============================================
 const translations = {
