@@ -15,6 +15,7 @@ function nextToken(bookings) {
 const FIRESTORE_PROJECT = 'india-mobile-17134';
 const FIRESTORE_DOC_PATH = 'appData/sync';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
+const BOOKINGS_COLL_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings`;
 
 function firestoreValueToJS(val) {
   if (val.stringValue !== undefined) return val.stringValue;
@@ -114,6 +115,20 @@ async function writeBookingsFallback(req, bookings) {
   });
 }
 
+async function createBookingDocument(booking) {
+  var fields = {};
+  for (var k in booking) {
+    if (booking.hasOwnProperty(k)) {
+      fields[k] = jsToFirestoreValue(booking[k]);
+    }
+  }
+  await fetch(BOOKINGS_COLL_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: fields })
+  });
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -168,7 +183,10 @@ module.exports = async (req, res) => {
 
   bookings.push(booking);
 
-  // Write to Firestore (primary) and sync API (fallback)
+  // Write booking to Firestore /bookings collection (public create allowed by rules)
+  try { await createBookingDocument(booking); } catch(e) {}
+
+  // Write to Firestore appData/sync (primary) and sync API (fallback)
   if (useFirestore) {
     await writeBookingsToFirestore(bookings);
   }

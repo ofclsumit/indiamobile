@@ -205,6 +205,22 @@ function initDBSync() {
         fullRefresh();
       });
     }
+    // Also listen to /bookings collection directly for bookings created via API
+    if (window.__bookingsRef) {
+      window.__bookingsRef.onSnapshot(function(snap) {
+        var all = [];
+        snap.forEach(function(doc) { all.push({ id: doc.id, ...doc.data() }); });
+        if (all.length > 0) {
+          var merged = DBSync.getBookings();
+          all.forEach(function(nb) {
+            var idx = merged.findIndex(function(b) { return b.bookingId === nb.bookingId; });
+            if (idx >= 0) merged[idx] = nb;
+            else merged.push(nb);
+          });
+          DBSync.setBookings(merged);
+        }
+      }, function() {});
+    }
   });
 }
 
