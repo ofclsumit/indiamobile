@@ -59,20 +59,22 @@ DB.load();
 
 function archiveBooking(booking) {
   if (!booking || (booking.status !== 'completed' && booking.status !== 'cancelled')) return;
-  const cache = DBSync.getCache();
-  if (!cache.find(b => b.bookingId === booking.bookingId)) {
-    cache.push({ ...booking, archivedAt: new Date().toISOString() });
-    DBSync.setCache(cache);
-  }
+  try {
+    const cache = typeof DBSync !== 'undefined' ? DBSync.getCache() : [];
+    if (!cache.find(b => b.bookingId === booking.bookingId)) {
+      cache.push({ ...booking, archivedAt: new Date().toISOString() });
+      if (typeof DBSync !== 'undefined') DBSync.setCache(cache);
+    }
+  } catch(e) {}
 }
 
-// Listen for remote data changes (admin actions, other tabs)
-DBSync.subscribe(function(data) {
-  DB.bookings = data.bookings;
-  DB.currentToken = data.token;
-  updateHeroDisplay();
-  updateLiveIndicator();
-});
+// Firestore real-time listener for public data
+if (typeof window.__bookingsRef !== 'undefined') {
+  window.__bookingsRef.onSnapshot(() => {
+    updateHeroDisplay();
+    updateLiveIndicator();
+  }, () => {});
+}
 
 // Flash dot to show live connection
 let liveDot = null;
