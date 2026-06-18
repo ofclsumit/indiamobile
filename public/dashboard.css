@@ -70,6 +70,23 @@ body {
   backdrop-filter: blur(20px);
   transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
 }
+.logo-text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #fff 30%, rgba(56,189,248,0.9));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 40px rgba(56,189,248,0.15);
+}
+.logo-text span {
+  -webkit-text-fill-color: var(--db-accent);
+  color: var(--db-accent);
+  background: none;
+  text-shadow: 0 0 30px rgba(56,189,248,0.3);
+}
 .db-sidebar-brand {
   padding: 20px 20px 16px;
   display: flex;

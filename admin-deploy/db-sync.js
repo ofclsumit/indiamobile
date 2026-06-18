@@ -64,6 +64,12 @@ const DBSync = {
 
       for (const [key, kKey] of Object.entries(fields)) {
         if (server[key] === undefined) continue;
+        if (key === 'bookings' && (!server[key] || server[key].length === 0)) {
+          continue;
+        }
+        if (key === 'token' && (!server[key] || server[key] === 0) && this.getToken() > 0) {
+          continue;
+        }
         const raw = JSON.stringify(server[key]);
         const local = localStorage.getItem(this.KEYS[kKey]);
         if (raw !== local) {
@@ -117,7 +123,9 @@ const DBSync = {
   // --- Write (local + Firestore + API fallback) ---
   setBookings(val) {
     localStorage.setItem(this.KEYS.BOOKINGS, JSON.stringify(val));
-    this._writeToFirestore({ bookings: val });
+    if (val && val.length > 0) {
+      this._writeToFirestore({ bookings: val });
+    }
     this._notify('bookings');
   },
   setCache(val) {
@@ -128,6 +136,10 @@ const DBSync = {
   setToken(val) {
     localStorage.setItem(this.KEYS.TOKEN, val);
     this._writeToFirestore({ token: val });
+    // Also sync token to the queue collection for public live-token page
+    if (this._firestoreReady && this._db) {
+      this._db.collection('queue').doc('current').set({ currentToken: parseInt(val) || 1 }).catch(() => {});
+    }
     this._notify('token');
   },
   setDates(val) {
@@ -148,6 +160,9 @@ const DBSync = {
 
   // --- Firestore write ---
   async _writeToFirestore(data) {
+    if (data.bookings !== undefined && (!data.bookings || data.bookings.length === 0)) {
+      return;
+    }
     if (this._firestoreReady && this._db) {
       try {
         data._lastUpdated = Date.now();
@@ -228,6 +243,7 @@ const DBSync = {
 
     for (const [key, kKey] of Object.entries(fields)) {
       if (server[key] === undefined) continue;
+      if (key === 'bookings' && (!server[key] || server[key].length === 0)) continue;
       const raw = JSON.stringify(server[key]);
       const local = localStorage.getItem(this.KEYS[kKey]);
       if (raw !== local) {
@@ -260,15 +276,17 @@ const DBSync = {
             bookings: 'BOOKINGS', token: 'TOKEN', dates: 'DATES',
             activity: 'ACTIVITY', settings: 'SETTINGS', cache: 'CACHE'
           };
-          for (const [key, kKey] of Object.entries(fields)) {
-            if (server[key] === undefined) continue;
-            const raw = JSON.stringify(server[key]);
-            const local = localStorage.getItem(this.KEYS[kKey]);
-            if (raw !== local) {
-              localStorage.setItem(this.KEYS[kKey], raw);
-              changed = true;
-            }
-          }
+    for (const [key, kKey] of Object.entries(fields)) {
+      if (server[key] === undefined) continue;
+      if (key === 'bookings' && (!server[key] || server[key].length === 0)) continue;
+      if (key === 'token' && (!server[key] || server[key] === 0) && this.getToken() > 0) continue;
+      const raw = JSON.stringify(server[key]);
+      const local = localStorage.getItem(this.KEYS[kKey]);
+      if (raw !== local) {
+        localStorage.setItem(this.KEYS[kKey], raw);
+        changed = true;
+      }
+    }
           if (changed) {
             this._lastHash = this._localHash();
             this._notify('force');
@@ -290,6 +308,8 @@ const DBSync = {
     };
     for (const [key, kKey] of Object.entries(fields)) {
       if (server[key] === undefined) continue;
+      if (key === 'bookings' && (!server[key] || server[key].length === 0)) continue;
+      if (key === 'token' && (!server[key] || server[key] === 0) && this.getToken() > 0) continue;
       const raw = JSON.stringify(server[key]);
       const local = localStorage.getItem(this.KEYS[kKey]);
       if (raw !== local) {

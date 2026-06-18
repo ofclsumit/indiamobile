@@ -223,15 +223,59 @@ resetInactivityTimer();
 </head>
 <body>
 
+<!-- LOADING SCREEN -->
+<div class="loading-overlay" id="pageLoader">
+  <div class="loading-spinner">
+    <div class="loading-spinner-ring"></div>
+    <div class="loading-spinner-ring"></div>
+    <div class="loading-spinner-icon"><i class="fas fa-id-card"></i></div>
+  </div>
+  <div class="loading-text">
+    India Mobile<span style="color:var(--accent)"> Center</span>
+    <span class="loading-dots"><span></span><span></span><span></span></span>
+  </div>
+  <div class="loading-sub">Preparing booking portal...</div>
+</div>
+
+<script>
+(function() {
+  var startTime = Date.now();
+  var ready = false;
+  function hideLoader() {
+    if (ready) return;
+    var elapsed = Date.now() - startTime;
+    if (elapsed < 400) {
+      setTimeout(hideLoader, 400 - elapsed);
+      return;
+    }
+    ready = true;
+    var loader = document.getElementById('pageLoader');
+    if (loader) loader.classList.remove('show');
+  }
+  if (document.readyState === 'complete') {
+    hideLoader();
+  } else {
+    window.addEventListener('load', hideLoader);
+  }
+  setTimeout(function() {
+    if (!ready) { ready = true; var loader = document.getElementById('pageLoader'); if (loader) loader.classList.remove('show'); }
+  }, 2000);
+})();
+</script>
+
 <nav class="portal-nav">
   <div class="portal-nav-left">
     <a href="index.html" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;">
-      <img src="21585.jpg" alt="India Mobile" style="width:auto;height:42px;border-radius:6px;">
       <span class="logo-text">India <span>Mobile</span></span>
     </a>
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
-    <a href="index.html" class="btn-secondary" style="font-size:13px; padding:8px 16px;"><i class="fas fa-arrow-left" style="font-size:12px;"></i> Back to Home</a>
+    <div class="lang-switch" id="langSwitchPortal" onclick="toggleLanguagePortal()" role="button" tabindex="0" aria-label="Toggle language">
+      <div class="lang-switch-slider"></div>
+      <div class="lang-option active" id="langOptHiPortal"><span class="lang-opt-text">HI</span></div>
+      <div class="lang-option" id="langOptEnPortal"><span class="lang-opt-text">EN</span></div>
+    </div>
+    <a href="index.html" class="btn-secondary" style="font-size:13px; padding:8px 16px;"><i class="fas fa-arrow-left" style="font-size:12px;"></i> <span data-t="back_home">Back to Home</span></a>
   </div>
 </nav>
 
@@ -331,6 +375,10 @@ resetInactivityTimer();
           </div>
         </div>
         <p style="font-size:12px;color:var(--text3);margin-top:6px;">Enter your 12-digit Aadhaar number as shown on your card</p>
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:12px;color:#fbbf24;display:flex;align-items:center;gap:8px;">
+          <i class="fas fa-exclamation-triangle" style="font-size:14px;flex-shrink:0;"></i>
+          <span>Please enter your correct Aadhaar number as per your Aadhaar card. Wrong details may lead to rejection at the center.</span>
+        </div>
       </div>
 
       <div id="portalOTPSection" style="display:none; margin-top: 20px;">
@@ -345,6 +393,9 @@ resetInactivityTimer();
           <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
         </div>
         <button class="btn-primary btn-full" onclick="verifyPortalOTP()" style="margin-top:12px;">Verify OTP &amp; Continue</button>
+        <div style="display:flex;justify-content:center;margin-top:12px;">
+          <button id="resendOtpBtn" class="btn-secondary" onclick="resendPortalOTP()" style="font-size:12px;padding:8px 20px;justify-content:center;" disabled>Resend OTP (<span id="resendCountdown">30</span>s)</button>
+        </div>
       </div>
 
       <div id="portalSendBtn">
@@ -369,23 +420,16 @@ resetInactivityTimer();
 
     <!-- FIND MY BOOKING -->
     <div class="form-card" style="margin-top:16px;border:1px solid rgba(59,130,246,0.15);">
-      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('i').classList.toggle('fa-chevron-down');this.querySelector('i').classList.toggle('fa-chevron-up')" style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;">
-        <i class="fas fa-chevron-down" style="font-size:12px;color:var(--text3);transition:transform 0.2s;"></i>
+      <div onclick="toggleFindBooking()" style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;">
+        <i class="fas fa-chevron-down" id="findBookingChevron" style="font-size:12px;color:var(--text3);transition:transform 0.2s;"></i>
         <span style="font-weight:600;font-size:14px;">Already booked? Find your token</span>
       </div>
-      <div style="display:none;margin-top:16px;border-top:1px solid var(--glass-border);padding-top:16px;">
-        <div style="display:flex;gap:10px;margin-bottom:12px;">
-          <div style="flex:1;">
-            <label class="form-label" style="font-size:11px;">Search by Email</label>
-            <input type="email" class="form-input" id="findPhone" placeholder="your@email.com" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none;">
-          </div>
-          <div style="display:flex;align-items:center;padding-top:22px;color:var(--text3);font-size:12px;">OR</div>
-          <div style="flex:1;">
-            <label class="form-label" style="font-size:11px;">Search by Aadhaar</label>
-            <input type="text" class="form-input" id="findAadhaar" placeholder="12-digit Aadhaar" maxlength="12" inputmode="numeric" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none;">
-          </div>
+      <div id="findBookingBody" style="display:none;margin-top:16px;border-top:1px solid var(--glass-border);padding-top:16px;">
+        <p style="font-size:13px;color:var(--text3);margin-bottom:12px;">Enter the last 4 digits of your Aadhaar to find your booking.</p>
+        <div style="display:flex;gap:10px;">
+          <input type="text" id="findAadhaarLast4" placeholder="Last 4 digits" maxlength="4" inputmode="numeric" style="flex:1;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:8px;color:var(--text);font-size:16px;font-family:'Space Grotesk',sans-serif;letter-spacing:0.15em;text-align:center;font-weight:600;outline:none;">
+          <button class="btn-primary" onclick="findMyBooking()" style="padding:10px 20px;flex-shrink:0;justify-content:center;"><i class="fas fa-search" style="font-size:13px;"></i></button>
         </div>
-        <button class="btn-primary btn-full" onclick="findMyBooking()" style="justify-content:center;font-size:13px;padding:10px;"><i class="fas fa-search" style="font-size:12px;"></i> Find My Booking</button>
         <div id="findResult" style="margin-top:12px;display:none;"></div>
       </div>
     </div>
@@ -397,6 +441,25 @@ resetInactivityTimer();
 <div id="recaptcha-container" style="position:fixed;bottom:0;left:0;width:0;height:0;overflow:hidden;"></div>
 
 <script>
+function setBtnLoading(btn, loading) {
+  if (!btn) return;
+  if (loading) {
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+  } else {
+    btn.classList.remove('btn-loading');
+    btn.disabled = false;
+  }
+}
+function showPageLoader() {
+  var loader = document.getElementById('pageLoader');
+  if (loader) loader.classList.add('show');
+}
+function hidePageLoader() {
+  var loader = document.getElementById('pageLoader');
+  if (loader) loader.classList.remove('show');
+}
+
 let portalData = {};
 let portalSelectedDate = null;
 
@@ -462,14 +525,17 @@ function continueToBooking() {
   }
   portalData = { email, name, aadhaarFull: aadhaar, aadhaarLast4: aadhaar.slice(-4), service: 'Aadhaar Update' };
   const btn = document.querySelector('#portalSendBtn button');
-  if (btn) btn.disabled = true;
+  setBtnLoading(btn, true);
+  showPageLoader();
   window.sendOTP(email).then(res => {
-    if (btn) btn.disabled = false;
+    setBtnLoading(btn, false);
+    hidePageLoader();
     if (res.success) {
       notify('OTP sent to ' + email, 'success');
       document.getElementById('portalSendBtn').style.display = 'none';
       document.getElementById('portalOTPSection').style.display = 'block';
       setTimeout(() => setupPortalOTPInputs(), 100);
+      startResendCooldown();
     } else {
       notify(res.message || 'Failed to send OTP', 'error');
     }
@@ -481,15 +547,56 @@ function verifyPortalOTP() {
   const otp = [...inputs].map(i => i.value).join('');
   if (otp.length !== 6) { notify('Enter the complete 6-digit OTP', 'error'); return; }
   const btn = document.querySelector('#portalOTPSection button');
-  if (btn) btn.disabled = true;
+  setBtnLoading(btn, true);
+  showPageLoader();
   window.verifyOTP(otp).then(result => {
-    if (btn) btn.disabled = false;
+    setBtnLoading(btn, false);
+    hidePageLoader();
     if (result.success) {
       notify('Email verified successfully!', 'success');
       showStep2();
     } else {
       notify(result.message || 'Incorrect OTP. Please try again.', 'error');
     }
+  });
+}
+
+let resendCooldownTimer = null;
+
+function startResendCooldown() {
+  const btn = document.getElementById('resendOtpBtn');
+  const span = document.getElementById('resendCountdown');
+  let sec = 30;
+  btn.disabled = true;
+  if (resendCooldownTimer) clearInterval(resendCooldownTimer);
+  resendCooldownTimer = setInterval(() => {
+    sec--;
+    span.textContent = sec;
+    if (sec <= 0) {
+      clearInterval(resendCooldownTimer);
+      resendCooldownTimer = null;
+      btn.disabled = false;
+      span.textContent = '0';
+    }
+  }, 1000);
+}
+
+function resendPortalOTP() {
+  if (!portalData.email) return;
+  const btn = document.getElementById('resendOtpBtn');
+  setBtnLoading(btn, true);
+  btn.textContent = 'Sending...';
+  window.sendOTP(portalData.email).then(res => {
+    setBtnLoading(btn, false);
+    if (res.success) {
+      notify('OTP resent to ' + portalData.email, 'success');
+      document.querySelectorAll('.portal-otp').forEach(i => i.value = '');
+      document.querySelectorAll('.portal-otp')[0].focus();
+    } else {
+      notify(res.message || 'Failed to resend OTP', 'error');
+    }
+    btn.innerHTML = 'Resend OTP (<span id="resendCountdown">30</span>s)';
+    startResendCooldown();
   });
 }
 
@@ -553,7 +660,10 @@ async function portalConfirmBooking() {
   }
   const statusEl = document.getElementById('portalSubmitStatus');
   statusEl.style.display = 'block';
-  statusEl.textContent = 'Submitting...';
+  statusEl.innerHTML = '<span class="btn-loading" style="color:var(--text3);display:inline-block;padding-left:24px;">Submitting</span>';
+  const btn = document.querySelector('#portalStep2 .btn-primary');
+  setBtnLoading(btn, true);
+  showPageLoader();
   try {
     const res = await fetch('/api/book', {
       method: 'POST',
@@ -567,6 +677,8 @@ async function portalConfirmBooking() {
         service: 'Aadhaar Update'
       })
     });
+    setBtnLoading(btn, false);
+    hidePageLoader();
     const result = await res.json();
     if (!result.success) {
       notify(result.message || 'Booking failed', 'error');
@@ -583,6 +695,8 @@ async function portalConfirmBooking() {
       showConfirmation(result.booking);
     }
   } catch(e) {
+    setBtnLoading(btn, false);
+    hidePageLoader();
     notify('Network error. Please try again.', 'error');
     statusEl.style.display = 'none';
   }
@@ -609,23 +723,26 @@ function showConfirmation(booking) {
   }, 100);
 }
 
+function toggleFindBooking() {
+  const body = document.getElementById('findBookingBody');
+  const chevron = document.getElementById('findBookingChevron');
+  const isOpen = body.style.display === 'block';
+  body.style.display = isOpen ? 'none' : 'block';
+  chevron.className = 'fas fa-chevron-' + (isOpen ? 'down' : 'up');
+  if (!isOpen) setTimeout(() => document.getElementById('findAadhaarLast4').focus(), 200);
+}
+
 function findMyBooking() {
-  const query = document.getElementById('findPhone').value.trim();
-  const aadhaar = document.getElementById('findAadhaar').value.trim().replace(/\D/g, '');
+  const input = document.getElementById('findAadhaarLast4');
+  const last4 = input.value.trim().replace(/\D/g, '');
   const resultEl = document.getElementById('findResult');
-  if (!query && !aadhaar) {
+  if (last4.length !== 4) {
     resultEl.style.display = 'block';
-    resultEl.innerHTML = '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px;font-size:13px;color:#ef4444;text-align:center;">Enter email or Aadhaar number to search.</div>';
+    resultEl.innerHTML = '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px;font-size:13px;color:#ef4444;text-align:center;">Please enter the last 4 digits of your Aadhaar.</div>';
     return;
   }
   const bookings = DBSync.getBookings();
-  let found = null;
-  if (query) {
-    found = bookings.find(b => b.email && b.email.toLowerCase() === query.toLowerCase());
-  }
-  if (!found && aadhaar && aadhaar.length >= 4) {
-    found = bookings.find(b => b.aadhaarFull === aadhaar || b.aadhaarLast4 === aadhaar.slice(-4));
-  }
+  const found = bookings.find(b => b.aadhaarLast4 === last4);
   resultEl.style.display = 'block';
   if (found) {
     const d = new Date(found.date + 'T00:00:00');
@@ -633,7 +750,6 @@ function findMyBooking() {
     const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const displayDate = `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
     const statusColor = found.status === 'completed' ? '#22c55e' : found.status === 'cancelled' ? '#ef4444' : '#3b82f6';
-    const contact = found.email || '-';
     resultEl.innerHTML = `
       <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:16px;">
         <div style="text-align:center;margin-bottom:12px;">
@@ -644,13 +760,89 @@ function findMyBooking() {
           <div style="color:var(--text3);">Booking ID:</div><div style="color:var(--text);font-weight:500;">${found.bookingId || '-'}</div>
           <div style="color:var(--text3);">Date:</div><div style="color:var(--text);font-weight:500;">${displayDate}</div>
           <div style="color:var(--text3);">Status:</div><div style="color:${statusColor};font-weight:600;">${found.status.charAt(0).toUpperCase() + found.status.slice(1)}</div>
-          <div style="color:var(--text3);">Contact:</div><div style="color:var(--text);font-weight:500;">${contact}</div>
         </div>
       </div>`;
   } else {
-    resultEl.innerHTML = '<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:12px;font-size:13px;color:#fbbf24;text-align:center;">No booking found with the given information.</div>';
+    resultEl.innerHTML = '<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:12px;font-size:13px;color:#fbbf24;text-align:center;">No booking found with an Aadhaar ending in <strong>' + last4 + '</strong>.</div>';
   }
 }
+</script>
+
+<!-- Language Toggle -->
+<script>
+(function() {
+  const translations = {
+    hi: {
+      portal_title: "आधार अपडेट बुकिंग",
+      portal_desc: "अपना आधार अपडेट अपॉइंटमेंट ऑनलाइन बुक करें। तेज़ और सुरक्षित।",
+      back_home: "होम पर वापस जाएं",
+      step_1: "विवरण",
+      step_2: "तारीख",
+      step_3: "पुष्टि",
+      your_email: "आपका ईमेल",
+      full_name: "पूरा नाम",
+      aadhaar_number: "आधार नंबर",
+      send_otp: "OTP भेजें",
+      verify_continue: "OTP वेरिफाई करें और आगे बढ़ें",
+      select_date: "तारीख चुनें",
+      confirm_booking: "बुकिंग कन्फर्म करें",
+      booking_confirmed: "बुकिंग कन्फर्म हुई",
+      token_number: "आपका टोकन नंबर",
+      find_booking: "अपनी बुकिंग खोजें",
+      enter_aadhaar_last4: "अपने आधार के अंतिम 4 अंक दर्ज करें",
+      resend_otp: "दोबारा OTP भेजें",
+      otp_sent: "OTP भेज दिया गया है",
+      verifying: "वेरिफाई हो रहा है...",
+      processing: "प्रोसेस हो रहा है..."
+    },
+    en: {
+      portal_title: "Aadhaar Update Booking",
+      portal_desc: "Book your Aadhaar update appointment online. Fast and secure.",
+      back_home: "Back to Home",
+      step_1: "Details",
+      step_2: "Date",
+      step_3: "Confirmation",
+      your_email: "Your Email",
+      full_name: "Full Name",
+      aadhaar_number: "Aadhaar Number",
+      send_otp: "Send OTP",
+      verify_continue: "Verify OTP & Continue",
+      select_date: "Select Date",
+      confirm_booking: "Confirm Booking",
+      booking_confirmed: "Booking Confirmed",
+      token_number: "Your Token Number",
+      find_booking: "Find My Booking",
+      enter_aadhaar_last4: "Enter last 4 digits of your Aadhaar",
+      resend_otp: "Resend OTP",
+      otp_sent: "OTP has been sent",
+      verifying: "Verifying...",
+      processing: "Processing..."
+    }
+  };
+  let currentLang = localStorage.getItem('site_lang') || 'hi';
+  function applyLang(lang) {
+    currentLang = lang;
+    localStorage.setItem('site_lang', lang);
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-t]').forEach(function(el) {
+      var key = el.getAttribute('data-t');
+      if (translations[lang] && translations[lang][key]) {
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') { el.placeholder = translations[lang][key]; }
+        else { el.textContent = translations[lang][key]; }
+      }
+    });
+    var wrapper = document.getElementById('langSwitchPortal');
+    if (wrapper) { wrapper.classList.toggle('en', lang === 'en'); }
+    var hiOpt = document.getElementById('langOptHiPortal');
+    var enOpt = document.getElementById('langOptEnPortal');
+    if (hiOpt) hiOpt.classList.toggle('active', lang === 'hi');
+    if (enOpt) enOpt.classList.toggle('active', lang === 'en');
+  }
+  window.toggleLanguagePortal = function() {
+    applyLang(currentLang === 'hi' ? 'en' : 'hi');
+  };
+  applyLang(currentLang);
+})();
 </script>
 
 </body>

@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: true if the requester is a signed-in Firebase user
+    // whose email exists as a doc ID in the /admins collection.
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    }
+
+    // ─────────────────────────────────────────
+    //  COLLECTIONS
+    // ─────────────────────────────────────────
+
+    // bookings — public can create (customer booking), admin can
+    // update/delete (admin management). Public read for status checks.
+    match /bookings/{doc} {
+      allow read: if true;
+      allow create: if true;      // customers book their appointments
+      allow update, delete: if isAdmin();
+    }
+
+    // queue — public read (live-token page), admin write
+    match /queue/{doc} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // appData — admin only (DBSync internal state)
+    match /appData/{doc} {
+      allow read, write: if isAdmin();
+    }
+
+    // admins — any authenticated user can read/list (to check
+    // authorization status). Create allowed for self (bootstrap)
+    // or by existing admins (management). Only admins can delete.
+    match /admins/{docId} {
+      allow read, list: if request.auth != null;
+      allow create: if isAdmin()
+        || (request.auth != null && request.auth.token.email == docId);
+      allow delete: if isAdmin();
+      allow update: if false;
+    }
+
+    // settings — admin only
+    match /settings/{doc} {
+      allow read, write: if isAdmin();
+    }
+
+    // activity_logs — admin only
+    match /activity_logs/{doc} {
+      allow read, write: if isAdmin();
+    }
+
+    // otp — open for public OTP verification flow
+    match /otp/{doc} {
+      allow read, write: if true;
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -13,26 +13,40 @@
 </head>
 <body>
 
-<div class="db-layout">
+<div id="loginScreen" class="login-screen" style="display:flex;">
+  <div class="login-card">
+    <div class="login-glow"></div>
+    <div class="login-logo">India <span>Mobile</span></div>
+    <div class="login-badge">ADMIN</div>
+    <h2 class="login-title">Admin Dashboard</h2>
+    <p class="login-desc">Sign in with your authorized Google account to manage operations.</p>
+    <button class="login-google-btn" onclick="signInWithGoogle()">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Sign in with Google
+    </button>
+    <div id="loginError" class="login-error" style="display:none;"></div>
+  </div>
+</div>
+
+<div id="dashboardApp" class="db-layout" style="display:none;">
   <!-- SIDEBAR OVERLAY (mobile) -->
   <div class="db-sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
   <!-- SIDEBAR -->
   <aside class="db-sidebar" id="sidebar">
     <div class="db-sidebar-brand">
-      <img src="21585.png" alt="India Mobile" style="height:32px;width:auto;border-radius:6px;">
-      <div class="brand-text">India Mobile</div>
+      <span class="logo-text" style="font-size:18px;">India <span>Mobile</span></span>
       <div class="brand-badge">Admin</div>
     </div>
     <nav class="db-sidebar-nav">
       <div class="db-sidebar-section-title">Main</div>
       <a class="db-sidebar-item active" data-section="overview" onclick="switchSection('overview', this)"><i class="fas fa-chart-pie"></i> Dashboard</a>
-      <a class="db-sidebar-item" data-section="queue" onclick="switchSection('queue', this)"><i class="fas fa-list-ol"></i> Today's Queue</a>
       <a class="db-sidebar-item" data-section="bookings" onclick="switchSection('bookings', this)"><i class="fas fa-calendar-check"></i> Bookings</a>
-      <a class="db-sidebar-item" data-section="queuecontrol" onclick="switchSection('queuecontrol', this)"><i class="fas fa-hashtag"></i> Token No</a>
+      <a class="db-sidebar-item" onclick="window.open('https://indiamobileonline.vercel.app/live-token.html','_blank')"><i class="fas fa-hashtag"></i> Token No</a>
       <a class="db-sidebar-item" data-section="calendar" onclick="switchSection('calendar', this)"><i class="fas fa-calendar-days"></i> Calendar</a>
 
       <div class="db-sidebar-section-title">Management</div>
+      <a class="db-sidebar-item" data-section="completed" onclick="switchSection('completed', this)"><i class="fas fa-check-double"></i> Completed</a>
       <a class="db-sidebar-item" data-section="customers" onclick="switchSection('customers', this)"><i class="fas fa-users"></i> Customers</a>
       <a class="db-sidebar-item" data-section="activity" onclick="switchSection('activity', this)"><i class="fas fa-clock-rotate-left"></i> Activity Logs</a>
 
@@ -53,31 +67,31 @@
         <input type="text" id="globalSearch" placeholder="Search bookings, customers, tokens..." oninput="globalSearchHandler(this.value)">
       </div>
       <div class="db-topnav-right">
-        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; line-height:1.2;">
-          <div class="db-topnav-date" id="currentDateDisplay" style="font-weight: 500;"></div>
-          <div id="digitalClockDisplay" style="font-family:'Space Grotesk', sans-serif; font-size:12px; font-weight:600; color:var(--db-text2); letter-spacing:0.5px;">00:00:00 AM</div>
+        <div class="db-topnav-datetime">
+          <span class="db-topnav-date" id="currentDateDisplay"></span>
+          <span class="db-topnav-sep"></span>
+          <span class="db-topnav-clock" id="digitalClockDisplay">00:00:00</span>
         </div>
-        <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:#22c55e;background:rgba(34,197,94,0.1);padding:3px 8px;border-radius:10px;margin-left:4px;text-transform:uppercase;letter-spacing:0.05em;"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#22c55e;animation:pulse-green 2s infinite;"></span>Live</span>
-        <button class="db-topnav-btn" onclick="switchSection('notifications', document.querySelector('[data-section=notifications]'))">
-          <i class="fas fa-bell"></i>
-          <span class="notif-dot"></span>
-        </button>
+        <span class="db-live-badge"><span class="db-live-dot"></span>Live</span>
         <button class="db-topnav-btn" onclick="refreshActiveSection()" title="Refresh Section"><i class="fas fa-rotate"></i></button>
         <div class="db-topnav-admin">
-          <div class="db-topnav-admin-avatar">A</div>
+          <img class="db-topnav-admin-avatar" id="adminAvatar" src="" alt="" style="display:none;">
           <div class="db-topnav-admin-info">
             <div class="name" id="adminNameDisplay">Admin</div>
-            <div class="role" id="adminRoleDisplay">Owner</div>
+            <div class="role" id="adminEmailDisplay">admin@email.com</div>
           </div>
-          <div class="db-topnav-admin-logout">
-            <form method="POST" action="admin.php"><input type="hidden" name="action" value="logout"><button type="submit"><i class="fas fa-sign-out-alt"></i> Logout</button></form>
-          </div>
+          <button class="db-topnav-signout-btn" onclick="signOutAdmin()" title="Sign Out">
+            <i class="fas fa-right-from-bracket"></i>
+          </button>
         </div>
-        <button class="db-quick-action" onclick="switchSection('queuecontrol', document.querySelector('[data-section=queuecontrol]'))">
-          <i class="fas fa-bolt"></i> Quick Action
-        </button>
       </div>
     </header>
+
+    <!-- Floating START TOKEN -->
+    <button class="db-start-token-floating" onclick="startToken()" title="Start Queue">
+      <i class="fas fa-play"></i>
+      <span>START TOKEN</span>
+    </button>
 
     <!-- CONTENT -->
     <main class="db-content">
@@ -89,9 +103,6 @@
             <div class="db-section-title">Dashboard</div>
             <div class="db-section-subtitle">Real-time overview of today's operations</div>
           </div>
-          <div class="db-section-actions">
-            <button class="db-quick-action" onclick="refreshDashboard()"><i class="fas fa-rotate"></i> Refresh</button>
-          </div>
         </div>
         <div class="db-kpi-grid" id="kpiGrid">
           <div class="db-card">
@@ -99,12 +110,6 @@
             <div class="db-card-label">Today's Bookings</div>
             <div class="db-card-value" id="kpiTodayBookings">0</div>
             <div class="db-card-change up"><i class="fas fa-arrow-up"></i> <span id="kpiTodayChange">0</span>% from yesterday</div>
-          </div>
-          <div class="db-card">
-            <div class="db-card-icon green"><i class="fas fa-play-circle"></i></div>
-            <div class="db-card-label">Current Token</div>
-            <div class="db-card-value" id="kpiCurrentToken">--</div>
-            <div class="db-card-change" id="kpiCurrentService" style="color:var(--db-text3);font-size:12px;">No active token</div>
           </div>
           <div class="db-card">
             <div class="db-card-icon yellow"><i class="fas fa-hourglass-half"></i></div>
@@ -124,36 +129,12 @@
             <div class="db-card-value" id="kpiCancelled">0</div>
             <div class="db-card-change down"><i class="fas fa-arrow-down"></i> <span id="kpiCancelledChange">0</span>% of total</div>
           </div>
-      </section>
-
-      <!-- ===== TODAY'S QUEUE ===== -->
-      <section class="db-section" id="section-queue">
-        <div class="db-section-header">
-          <div>
-            <div class="db-section-title">Today's Queue</div>
-            <div class="db-section-subtitle">Manage and monitor today's token queue</div>
+          <div class="db-card">
+            <div class="db-card-icon purple"><i class="fas fa-calendar-week"></i></div>
+            <div class="db-card-label">Next Serving</div>
+            <div class="db-card-value" id="kpiNextServing" style="font-size:16px;">--</div>
+            <div class="db-card-change" style="color:var(--db-text3);font-size:12px;" id="kpiTokenAvail">Check calendar</div>
           </div>
-          <div class="db-section-actions">
-            <button class="db-quick-action" onclick="switchSection('queuecontrol', document.querySelector('[data-section=queuecontrol]'))"><i class="fas fa-sliders"></i> Queue Control</button>
-          </div>
-        </div>
-        <div class="db-kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
-          <div class="db-card"><div class="db-card-label">Total Today</div><div class="db-card-value" id="queueTotalToday" style="font-size:22px;">0</div></div>
-          <div class="db-card"><div class="db-card-label">Waiting</div><div class="db-card-value" id="queueWaiting" style="font-size:22px;color:var(--db-yellow);">0</div></div>
-          <div class="db-card"><div class="db-card-label">In Progress</div><div class="db-card-value" id="queueInProgress" style="font-size:22px;color:var(--db-orange);">0</div></div>
-          <div class="db-card"><div class="db-card-label">Completed</div><div class="db-card-value" id="queueCompleted" style="font-size:22px;color:var(--db-green);">0</div></div>
-        </div>
-        <div class="db-table-wrap">
-          <div class="db-table-toolbar">
-            <div class="search-wrap"><i class="fas fa-search"></i><input type="text" id="queueSearch" placeholder="Search in queue..." oninput="renderQueueTable()"></div>
-            <select id="queueStatusFilter" onchange="renderQueueTable()"><option value="">All Status</option><option value="waiting">Waiting</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select>
-          </div>
-          <table class="db-table"><thead><tr><th onclick="sortQueue('token')">Token <i class="fas fa-sort"></i></th><th onclick="sortQueue('name')">Customer <i class="fas fa-sort"></i></th><th>Service</th><th onclick="sortQueue('time')">Booking Time <i class="fas fa-sort"></i></th><th>Status</th><th>Actions</th></tr></thead><tbody id="queueTableBody"></tbody></table>
-          <div class="db-pagination">
-            <span id="queuePaginationInfo">Showing 0 entries</span>
-            <div class="db-pagination-pages" id="queuePagination"></div>
-          </div>
-        </div>
       </section>
 
       <!-- ===== BOOKINGS ===== -->
@@ -167,9 +148,8 @@
         <div class="db-table-wrap">
           <div class="db-table-toolbar">
             <div class="search-wrap"><i class="fas fa-search"></i><input type="text" id="bookingsSearch" placeholder="Search by name, email, token..." oninput="renderBookingsTable()"></div>
-            <select id="bookingsDateFilter" onchange="renderBookingsTable()"><option value="">All Dates</option></select>
+            <div class="date-wrap"><i class="fas fa-calendar"></i><input type="date" id="bookingsDateFilter" onchange="renderBookingsTable()"></div>
             <select id="bookingsServiceFilter" onchange="renderBookingsTable()"><option value="">All Services</option></select>
-            <select id="bookingsStatusFilter" onchange="renderBookingsTable()"><option value="">All Status</option><option value="approved">Approved</option><option value="pending">Pending</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select>
           </div>
           <table class="db-table"><thead><tr><th onclick="sortBookings('token')">Token <i class="fas fa-sort"></i></th><th onclick="sortBookings('name')">Customer <i class="fas fa-sort"></i></th><th onclick="sortBookings('email')">Email <i class="fas fa-sort"></i></th><th>Service</th><th onclick="sortBookings('date')">Date <i class="fas fa-sort"></i></th><th>Status</th><th>Actions</th></tr></thead><tbody id="bookingsTableBody"></tbody></table>
           <div class="db-pagination">
@@ -215,22 +195,51 @@
           </div>
         </div>
         <div class="db-calendar-grid" id="calGrid"></div>
-        <div class="db-calendar-settings">
-          <div class="db-calendar-setting-card">
-            <label>Maximum Daily Capacity</label>
-            <input type="number" id="calDailyCap" value="50" min="1" onchange="updateCalendarSettings()">
+        <div class="db-calendar-summary">
+          <div class="db-calendar-summary-item" id="calTodayStats">
+            <span class="db-calendar-summary-label">Today</span>
+            <span class="db-calendar-summary-value" id="calTodayDate">—</span>
           </div>
-          <div class="db-calendar-setting-card">
-            <label>Available Slots Today</label>
-            <input type="text" id="calAvailableSlots" readonly style="color:var(--db-green);font-weight:600;">
+          <div class="db-calendar-summary-item">
+            <span class="db-calendar-summary-label">Booked</span>
+            <span class="db-calendar-summary-value db-cs-booked" id="calBookedSlots">0</span>
           </div>
-          <div class="db-calendar-setting-card">
-            <label>Booked Slots Today</label>
-            <input type="text" id="calBookedSlots" readonly style="color:var(--db-yellow);font-weight:600;">
+          <div class="db-calendar-summary-item">
+            <span class="db-calendar-summary-label">Available</span>
+            <span class="db-calendar-summary-value db-cs-avail" id="calAvailableSlots">—</span>
           </div>
-          <div class="db-calendar-setting-card">
-            <label>Remaining Slots</label>
-            <input type="text" id="calRemainingSlots" readonly style="color:var(--db-text);font-weight:600;">
+          <div class="db-calendar-summary-item">
+            <span class="db-calendar-summary-label">Remaining</span>
+            <span class="db-calendar-summary-value db-cs-remain" id="calRemainingSlots">—</span>
+          </div>
+          <div class="db-calendar-summary-item">
+            <span class="db-calendar-summary-label">Capacity</span>
+            <span class="db-calendar-summary-value" id="calDailyCapDisplay">50</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== COMPLETED BOOKINGS ===== -->
+      <section class="db-section" id="section-completed">
+        <div class="db-section-header">
+          <div>
+            <div class="db-section-title">Completed Bookings</div>
+            <div class="db-section-subtitle">All completed bookings history</div>
+          </div>
+          <div class="db-section-actions">
+            <span id="completedCount" style="font-size:13px;color:var(--db-text3);padding:0 8px;"></span>
+          </div>
+        </div>
+        <div class="db-table-wrap">
+          <div class="db-table-toolbar">
+            <div class="search-wrap"><i class="fas fa-search"></i><input type="text" id="completedSearch" placeholder="Search by name, token, aadhaar..." oninput="renderCompletedBookings()"></div>
+            <select id="completedDateFilter" onchange="renderCompletedBookings()"><option value="">All Dates</option></select>
+            <select id="completedServiceFilter" onchange="renderCompletedBookings()"><option value="">All Services</option></select>
+          </div>
+          <table class="db-table"><thead><tr><th onclick="sortCompleted('token')">Token <i class="fas fa-sort"></i></th><th onclick="sortCompleted('name')">Customer <i class="fas fa-sort"></i></th><th>Aadhaar</th><th>Service</th><th>Email</th><th onclick="sortCompleted('date')">Date <i class="fas fa-sort"></i></th></tr></thead><tbody id="completedTableBody"></tbody></table>
+          <div class="db-pagination">
+            <span id="completedPaginationInfo">Showing 0 entries</span>
+            <div class="db-pagination-pages" id="completedPagination"></div>
           </div>
         </div>
       </section>
@@ -263,7 +272,6 @@
         <div class="db-table-wrap">
           <div class="db-table-toolbar">
             <div class="search-wrap"><i class="fas fa-search"></i><input type="text" id="activitySearch" placeholder="Search actions..." oninput="renderActivity()"></div>
-            <select id="activityFilter" onchange="renderActivity()"><option value="">All Actions</option><option value="approved">Approved</option><option value="cancelled">Cancelled</option><option value="completed">Completed</option><option value="queue">Queue Updated</option></select>
           </div>
           <div id="activityList" style="padding:4px 0;"></div>
         </div>
@@ -305,22 +313,11 @@
             <div class="db-settings-row"><label>OTP Expiry (sec)</label><input type="number" id="setOtpExpiry" value="300"></div>
             <div class="db-settings-row"><label>Daily SMS Limit</label><input type="number" id="setDailySmsLimit" value="100"></div>
           </div>
-            <div class="db-settings-group"><h4>SMS Driver</h4>
-            <div class="db-settings-row"><label>SMS Driver</label><select id="setSmsDriver" onchange="toggleSmsFields()">
-              <option value="log">Demo (console only)</option>
-              <option value="adb">ADB (phone via USB)</option>
-              <option value="fast2sms">Fast2SMS API</option>
-              <option value="msg91">MSG91 API</option>
-            </select></div>
-            <div id="fast2smsFields" style="display:none;">
-              <div class="db-settings-row"><label>Fast2SMS API Key</label><input type="password" id="setFast2SmsKey" placeholder="Enter your API key"></div>
-              <div class="db-settings-row"><label>Sender ID</label><input type="text" id="setFast2SmsSender" value="FTWSMS"></div>
-            </div>
-            <div id="msg91Fields" style="display:none;">
-              <div class="db-settings-row"><label>MSG91 Auth Key</label><input type="password" id="setMsg91Key" placeholder="Enter your Auth key"></div>
-              <div class="db-settings-row"><label>Sender ID</label><input type="text" id="setMsg91Sender" value="MSGIND"></div>
-            </div>
-            <div class="db-settings-row"><label>SMS Template</label><textarea id="setSmsTemplate" rows="2" style="width:100%;background:var(--db-card);border:1px solid var(--db-border);border-radius:8px;padding:8px 10px;color:var(--db-text);font-size:13px;font-family:inherit;resize:vertical;">Your OTP for Aadhaar Booking is {otp}. Valid for {expiry} minutes. - India Mobile Center</textarea></div>
+          <div class="db-settings-group"><h4>Calendar Settings</h4>
+            <div class="db-settings-row"><label>Max Daily Capacity</label><input type="number" id="calDailyCap" value="50" min="1" onchange="updateCalendarSettings()"></div>
+            <div class="db-settings-row"><label>Available Slots Today</label><input type="text" id="setCalAvailableSlots" readonly style="color:var(--db-green);font-weight:600;border:none;background:transparent;width:auto;"></div>
+            <div class="db-settings-row"><label>Booked Slots Today</label><input type="text" id="setCalBookedSlots" readonly style="color:var(--db-yellow);font-weight:600;border:none;background:transparent;width:auto;"></div>
+            <div class="db-settings-row"><label>Remaining Slots Today</label><input type="text" id="setCalRemainingSlots" readonly style="color:var(--db-text);font-weight:600;border:none;background:transparent;width:auto;"></div>
           </div>
           <div class="db-settings-group"><h4>Theme</h4>
             <div class="db-settings-row"><label>Theme</label><select id="setTheme"><option value="dark" selected>Dark</option><option value="light">Light</option></select></div>
@@ -337,13 +334,15 @@
         <div class="db-section-header">
           <div>
             <div class="db-section-title">Admin Management</div>
-            <div class="db-section-subtitle">Role-based access control</div>
+            <div class="db-section-subtitle">Manage authorized admin emails (Google sign-in)</div>
           </div>
           <div class="db-section-actions">
-            <button class="db-quick-action" onclick="addAdmin()"><i class="fas fa-plus"></i> Add Admin</button>
+            <button class="db-quick-action" onclick="addAdmin()"><i class="fas fa-plus"></i> Add Admin Email</button>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;" id="adminList"></div>
+        <div class="db-table-wrap">
+          <table class="db-table"><thead><tr><th>Email</th><th>Role</th><th>Added</th><th>Actions</th></tr></thead><tbody id="adminListBody"></tbody></table>
+        </div>
       </section>
 
       <!-- ===== NOTIFICATIONS ===== -->
@@ -366,17 +365,16 @@
   <!-- MOBILE BOTTOM NAV -->
   <nav class="db-mobile-nav">
     <button class="db-mobile-nav-item active" onclick="switchSection('overview', this,'mobile')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></button>
-    <button class="db-mobile-nav-item" onclick="switchSection('queue', this,'mobile')"><i class="fas fa-list-ol"></i><span>Queue</span></button>
-    <button class="db-mobile-nav-item" onclick="switchSection('queuecontrol', this,'mobile')"><i class="fas fa-hashtag"></i><span>Token</span></button>
+    <button class="db-mobile-nav-item" onclick="window.open('https://indiamobileonline.vercel.app/live-token.html','_blank')"><i class="fas fa-hashtag"></i><span>Token</span></button>
     <button class="db-mobile-nav-item" onclick="switchSection('bookings', this,'mobile')"><i class="fas fa-calendar-check"></i><span>Bookings</span></button>
   </nav>
 </div>
 
-<!-- Firebase Compat SDK for Firestore real-time sync -->
+<!-- Firebase Compat SDK for Firestore + Auth -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script>
-  // Initialize Firebase for Firestore
   if (typeof firebase !== 'undefined' && !firebase.apps.length) {
     firebase.initializeApp({
       apiKey: "AIzaSyDgbUt2SMxd4glTjn4Z1S8oAq4bCmSobDQ",
@@ -388,20 +386,95 @@
       measurementId: "G-3XVP6GQ9WX"
     });
   }
+  window.__adminsRef = firebase.firestore().collection('admins');
 </script>
 <script src="db-sync.js"></script>
 <script>
-  // Initialize Firestore and start real-time listener
-  DBSync.initFirestore().then(ok => {
-    if (ok) {
-      DBSync.startRealtimeListener();
-      console.log('[Admin] Firestore real-time sync active');
-    } else {
-      // Fallback: forceFetch then poll
-      DBSync.forceFetch().then(() => DBSync.startPolling(3000));
-    }
-  });
+  // DBSync init moved to after auth (called from dashboard.js)
 </script>
 <script src="dashboard.js"></script>
+<script>
+function initCustomDropdowns() {
+  document.querySelectorAll('select').forEach(select => {
+    if (select.dataset.customDone) return;
+    select.dataset.customDone = '1';
+    select.style.display = 'none';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'custom-select-wrap';
+
+    const trigger = document.createElement('div');
+    trigger.className = 'custom-select-trigger';
+    trigger.innerHTML = `<span class="val">${select.options[select.selectedIndex]?.text || ''}</span><span class="arrow"><i class="fas fa-chevron-down"></i></span>`;
+
+    const menu = document.createElement('div');
+    menu.className = 'custom-select-menu';
+
+    function buildMenu() {
+      menu.innerHTML = '';
+      Array.from(select.options).forEach((opt, i) => {
+        const item = document.createElement('div');
+        item.className = 'custom-select-option' + (opt.selected ? ' selected' : '');
+        item.textContent = opt.text;
+        item.dataset.index = i;
+        item.addEventListener('click', () => {
+          select.selectedIndex = i;
+          trigger.querySelector('.val').textContent = opt.text;
+          menu.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+          item.classList.add('selected');
+          closeAllMenus();
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        menu.appendChild(item);
+      });
+    }
+    buildMenu();
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = menu.classList.contains('open');
+      closeAllMenus();
+      if (!isOpen) {
+        menu.classList.add('open');
+        trigger.classList.add('open');
+      }
+    });
+
+    wrap.appendChild(trigger);
+    wrap.appendChild(menu);
+    select.parentNode.insertBefore(wrap, select.nextSibling);
+
+    select.addEventListener('rebuild', buildMenu);
+  });
+}
+
+function closeAllMenus() {
+  document.querySelectorAll('.custom-select-menu.open').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.custom-select-trigger.open').forEach(t => t.classList.remove('open'));
+}
+document.addEventListener('click', closeAllMenus);
+document.addEventListener('DOMContentLoaded', initCustomDropdowns);
+setTimeout(initCustomDropdowns, 300);
+</script>
+
+<!-- CONFIRMATION MODAL -->
+<div id="confirmModalOverlay" class="modal-overlay" onclick="closeConfirmModal(null, event)">
+  <div class="modal-card" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" onclick="event.stopPropagation()">
+    <div class="modal-glow"></div>
+    <div class="modal-icon-wrap"><div class="modal-icon"><i class="fas fa-exclamation-triangle"></i></div></div>
+    <h3 class="modal-title" id="modalTitle">Confirm Action</h3>
+    <p class="modal-msg" id="modalMsg">Are you sure you want to proceed with this action?</p>
+    <p class="modal-warning"><i class="fas fa-shield-halved"></i> This action may affect customer bookings, queue status, or system data.</p>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-secondary" id="modalCancelBtn" onclick="closeConfirmModal(false)">Cancel</button>
+      <button class="modal-btn modal-btn-primary" id="modalConfirmBtn" onclick="executeConfirmModal()">
+        <span class="modal-btn-text">Yes, Continue</span>
+        <span class="modal-btn-loader"><i class="fas fa-circle-notch fa-spin"></i></span>
+      </button>
+    </div>
+    <button class="modal-close" onclick="closeConfirmModal(false)" aria-label="Close"><i class="fas fa-xmark"></i></button>
+  </div>
+</div>
+
 </body>
 </html>

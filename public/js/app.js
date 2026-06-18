@@ -65,6 +65,78 @@ const DB = {
 
 DB.load();
 
+// ============================================
+// BUTTON LOADING STATE UTILITY
+// ============================================
+function setBtnLoading(btn, loading) {
+  if (!btn) return;
+  if (loading) {
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+  } else {
+    btn.classList.remove('btn-loading');
+    btn.disabled = false;
+  }
+}
+
+function findBtn(el) {
+  if (!el) return null;
+  return el.tagName === 'BUTTON' ? el : el.querySelector('button');
+}
+
+// ============================================
+// SECTION SKELETON LOADERS
+// ============================================
+function showSkeleton(containerId, count, type) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  if (type === 'card') {
+    container.innerHTML = '<div class="skeleton-grid">' + Array(count).fill('<div class="skeleton-card"></div>').join('') + '</div>';
+  } else if (type === 'line') {
+    container.innerHTML = Array(count).fill('<div class="skeleton-line"></div>').join('');
+  } else if (type === 'block') {
+    container.innerHTML = Array(count).fill('<div class="skeleton-block"></div>').join('');
+  }
+}
+
+function hideSkeleton(containerId) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+}
+
+// ============================================
+// PAGE LOADER CONTROL
+// ============================================
+function showPageLoader() {
+  var loader = document.getElementById('pageLoader');
+  if (loader) {
+    loader.classList.add('show');
+  }
+}
+function hidePageLoader() {
+  var loader = document.getElementById('pageLoader');
+  if (loader) {
+    loader.classList.remove('show');
+  }
+}
+
+function withTimeout(promise, ms, label) {
+  var timer;
+  var timeout = new Promise(function(_, reject) {
+    timer = setTimeout(function() {
+      reject(new Error(label + ' timed out after ' + ms + 'ms'));
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).then(function(result) {
+    clearTimeout(timer);
+    return result;
+  }, function(err) {
+    clearTimeout(timer);
+    throw err;
+  });
+}
+
 function archiveBooking(booking) {
   if (!booking || (booking.status !== 'completed' && booking.status !== 'cancelled')) return;
   try {
@@ -82,6 +154,7 @@ function initPublicFirestoreListeners() {
     setTimeout(initPublicFirestoreListeners, 800);
     return;
   }
+  var dataLoaded = 0;
   // Keep local DB in sync with Firestore bookings
   window.__bookingsRef.onSnapshot(snap => {
     DB.bookings = [];
@@ -90,15 +163,17 @@ function initPublicFirestoreListeners() {
     if (document.getElementById('checkTokenModal')?.classList.contains('open')) {
       renderCheckTokenStep(checkTokenStep);
     }
-  }, () => {});
+    dataLoaded++;
+    if (dataLoaded >= 2) hidePageLoader();
+  }, function() { dataLoaded++; if (dataLoaded >= 2) hidePageLoader(); });
 
   // Track current token from queue collection
   window.__queueRef.onSnapshot(snap => {
     snap.forEach(doc => { DB.currentToken = doc.data().currentToken || 1; });
     updateHeroDisplay();
-  }, () => {});
-
-  console.log('[Sync] Public Firestore listeners active');
+    dataLoaded++;
+    if (dataLoaded >= 2) hidePageLoader();
+  }, function() { dataLoaded++; if (dataLoaded >= 2) hidePageLoader(); });
 }
 initPublicFirestoreListeners();
 
@@ -229,20 +304,7 @@ function scrollReviews(dir) {
 // ============================================
 // SERVICE DROPDOWN
 // ============================================
-function handleServiceSelect(val) {
-  const note = document.getElementById('comingSoonNote');
-  if (val === 'aadhaar') {
-    note.style.display = 'none';
-    var vt = sessionStorage.getItem('vt') || '';
-    var r = Math.random().toString(36).slice(2, 8);
-    window.location.href = 'aadhaar-portal.html?vt=' + vt + '&r=' + r;
-  } else if (val && val !== '') {
-    note.style.display = 'block';
-  } else {
-    note.style.display = 'none';
-  }
-}
-
+// ============================================
 // ============================================
 // ACCORDION
 // ============================================
@@ -513,7 +575,12 @@ async function sendBookingOTP() {
   sessionBookingData.email = email;
   sessionBookingData.aadhaarLast4 = aadhaarLast4;
 
+  const btn = document.querySelector('#bookSendOTPBtn button');
+  setBtnLoading(btn, true);
+  showPageLoader();
   const res = await sendOTP(email);
+  setBtnLoading(btn, false);
+  hidePageLoader();
   if (res.success) {
     notify('OTP sent to ' + email, 'success');
     document.getElementById('bookSendOTPBtn').style.display = 'none';
@@ -528,9 +595,9 @@ async function verifyBookingOTP() {
   const otp = getOTPValue('book');
   if (otp.length !== 6) { notify('Enter the complete 6-digit OTP', 'error'); return; }
   const btn = document.querySelector('#bookingModalBody .btn-primary');
-  if (btn) btn.disabled = true;
+  setBtnLoading(btn, true);
   const result = await verifyOTP(otp);
-  if (btn) btn.disabled = false;
+  setBtnLoading(btn, false);
   if (result.success) {
     notify('Email verified successfully!', 'success');
     renderBookingStep(2);
@@ -733,13 +800,19 @@ function renderCheckTokenStep(step) {
 }
 
 function lookupByAadhaar() {
-  const aadhaar = document.getElementById('checkAadhaar').value.trim().replace(/\D/g, '');
+  var aadhaar = document.getElementById('checkAadhaar').value.trim().replace(/\D/g, '');
   if (aadhaar.length !== 4) {
     notify('Please enter the last 4 digits of your Aadhaar', 'error');
     return;
   }
   verifiedAadhaar = aadhaar;
-  renderCheckTokenStep(2);
+  var body = document.getElementById('checkTokenBody');
+  body.setAttribute('aria-busy', 'true');
+  body.innerHTML = '<div class="loader-inline"><div class="spinner-ring"></div><div class="loader-msg">Looking up your booking...</div></div>';
+  setTimeout(function() {
+    renderCheckTokenStep(2);
+    body.setAttribute('aria-busy', 'false');
+  }, 300);
 }
 
 function cancelBooking(bookingId) {
@@ -768,28 +841,41 @@ let adminDates = [];
 let adminUnsubscribers = [];
 
 function adminLogin() {
-  const u = document.getElementById('adminUser').value.trim();
-  const p = document.getElementById('adminPass').value.trim();
+  var u = document.getElementById('adminUser').value.trim();
+  var p = document.getElementById('adminPass').value.trim();
+  var errorEl = document.getElementById('adminLoginError');
+  if (errorEl) errorEl.classList.remove('show');
   if (!u || !p) { notify('Enter username and password', 'error'); return; }
 
+  var btn = document.querySelector('#adminLoginModal .btn-primary');
+  setBtnLoading(btn, true);
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:14px;"></i> Signing in...';
   if (window.__adminsRef) {
-    window.__adminsRef.where('username', '==', u.toLowerCase()).get().then(snap => {
-      if (snap.empty) {
-        notify('Invalid credentials', 'error');
-        return;
-      }
-      let authed = false;
-      snap.forEach(doc => { if (doc.data().password === p) authed = true; });
-      if (authed) {
-        openAdminPanel(u);
-      } else {
-        notify('Invalid credentials', 'error');
-      }
-    }).catch(() => {
-      notify('Firestore unavailable. Check connection.', 'error');
-    });
+    withTimeout(window.__adminsRef.where('username', '==', u.toLowerCase()).get(), 10000, 'Admin login')
+      .then(function(snap) {
+        setBtnLoading(btn, false);
+        btn.innerHTML = 'Login to Dashboard';
+        if (snap.empty) {
+          if (errorEl) { errorEl.textContent = 'Invalid credentials'; errorEl.classList.add('show'); }
+          return;
+        }
+        var authed = false;
+        snap.forEach(function(doc) { if (doc.data().password === p) authed = true; });
+        if (authed) {
+          openAdminPanel(u);
+        } else {
+          if (errorEl) { errorEl.textContent = 'Invalid credentials'; errorEl.classList.add('show'); }
+        }
+      })
+      .catch(function(err) {
+        setBtnLoading(btn, false);
+        btn.innerHTML = 'Login to Dashboard';
+        if (errorEl) { errorEl.textContent = err.message || 'Firestore unavailable. Check connection.'; errorEl.classList.add('show'); }
+      });
   } else {
-    notify('Firestore not initialized', 'error');
+    setBtnLoading(btn, false);
+    btn.innerHTML = 'Login to Dashboard';
+    if (errorEl) { errorEl.textContent = 'Firestore not initialized'; errorEl.classList.add('show'); }
   }
 }
 
@@ -821,43 +907,46 @@ function switchAdminTab(tab, btn) {
 // -- Firestore — start real-time listeners --
 function startAdminListeners() {
   showKpiLoading();
-  const db = window.__db;
+  renderBookingsTable(true);
+  renderActivityLogs(true);
+  renderAdminDates(true);
+  var db = window.__db;
   if (!db) { showKpiError(); return; }
 
-  // 1. Bookings collection
-  const unsubBookings = window.__bookingsRef.onSnapshot(snap => {
+  var sixtyDaysAgo = new Date();
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+  var sixtyDaysAgoStr = sixtyDaysAgo.toISOString();
+
+  var unsubBookings = window.__bookingsRef.where('createdAt', '>=', sixtyDaysAgoStr).onSnapshot(function(snap) {
     adminBookings = [];
-    snap.forEach(doc => { adminBookings.push({ id: doc.id, ...doc.data() }); });
+    snap.forEach(function(doc) { adminBookings.push({ id: doc.id, ...doc.data() }); });
     updateKpiCards();
-    renderBookingsTable();
+    renderBookingsTable(false);
     renderAdminDates();
-  }, err => { showKpiError(); console.error('[Admin] Bookings error:', err); });
+  }, function(err) { showKpiError(); console.error('[Admin] Bookings error:', err); renderBookingsTable(false); });
   adminUnsubscribers.push(unsubBookings);
 
-  // 2. Queue document (single doc in queue collection)
-  const unsubQueue = window.__queueRef.onSnapshot(snap => {
-    snap.forEach(doc => { adminQueueData = { id: doc.id, ...doc.data() }; });
+  var unsubQueue = window.__queueRef.onSnapshot(function(snap) {
+    snap.forEach(function(doc) { adminQueueData = { id: doc.id, ...doc.data() }; });
     if (adminQueueData) {
       document.getElementById('adminTokenDisplay').textContent = String(adminQueueData.currentToken || 1).padStart(2, '0');
     }
     updateKpiCards();
-  }, err => { console.error('[Admin] Queue error:', err); });
+  }, function(err) { console.error('[Admin] Queue error:', err); });
   adminUnsubscribers.push(unsubQueue);
 
-  // 3. Activity logs
-  const unsubActivity = window.__activityRef.orderBy('timestamp', 'desc').limit(100).onSnapshot(snap => {
+  var unsubActivity = window.__activityRef.where('timestamp', '>=', sixtyDaysAgo).orderBy('timestamp', 'desc').limit(100).onSnapshot(function(snap) {
     adminActivityLogs = [];
-    snap.forEach(doc => { adminActivityLogs.push({ id: doc.id, ...doc.data() }); });
-    renderActivityLogs();
-  }, err => { console.error('[Admin] Activity error:', err); });
+    snap.forEach(function(doc) { adminActivityLogs.push({ id: doc.id, ...doc.data() }); });
+    renderActivityLogs(false);
+  }, function(err) { console.error('[Admin] Activity error:', err); renderActivityLogs(false); });
   adminUnsubscribers.push(unsubActivity);
 
-  // 4. Dates collection (if used)
-  const unsubDates = window.__bookingsRef.where('__type', '==', 'date_config').onSnapshot(snap => {
+  var unsubDates = window.__bookingsRef.where('__type', '==', 'date_config').onSnapshot(function(snap) {
     adminDates = [];
-    snap.forEach(doc => { adminDates.push({ id: doc.id, ...doc.data() }); });
+    snap.forEach(function(doc) { adminDates.push({ id: doc.id, ...doc.data() }); });
     renderAdminDates();
-  }, err => { /* optional */ });
+  }, function() {});
   adminUnsubscribers.push(unsubDates);
 }
 
@@ -922,52 +1011,41 @@ function setKpiVal(id, val) {
 }
 
 // -- Bookings Table --
-function renderBookingsTable() {
-  const tbody = document.getElementById('bookingsTableBody');
+function renderBookingsTable(loading) {
+  var tbody = document.getElementById('bookingsTableBody');
   if (!tbody) return;
-  const q = (document.getElementById('adminSearch')?.value || '').toLowerCase();
-  const status = document.getElementById('adminStatusFilter')?.value || '';
+  if (loading) {
+    tbody.setAttribute('aria-busy', 'true');
+    tbody.innerHTML = Array(5).fill('<tr class="skeleton-table-row" aria-hidden="true"><td><div class="skeleton-cell circle"></div></td><td><div class="skeleton-cell"></div></td><td><div class="skeleton-cell"></div></td><td><div class="skeleton-cell"></div></td><td><div class="skeleton-cell"></div></td><td><div class="skeleton-cell"></div></td><td><div class="skeleton-cell"></div></td><td><div class="skeleton-cell"></div></td></tr>').join('');
+    return;
+  }
+  tbody.setAttribute('aria-busy', 'false');
+  var q = (document.getElementById('adminSearch')?.value || '').toLowerCase();
+  var status = document.getElementById('adminStatusFilter')?.value || '';
 
-  let filtered = adminBookings;
-  if (status) filtered = filtered.filter(b => b.status === status);
-  if (q) filtered = filtered.filter(b =>
-    (b.name || '').toLowerCase().includes(q) ||
-    (b.email || '').toLowerCase().includes(q) ||
-    (b.bookingId || '').toLowerCase().includes(q) ||
-    (b.aadhaarLast4 || '').includes(q)
-  );
+  var filtered = adminBookings;
+  if (status) filtered = filtered.filter(function(b) { return b.status === status; });
+  if (q) filtered = filtered.filter(function(b) {
+    return (b.name || '').toLowerCase().includes(q) ||
+      (b.email || '').toLowerCase().includes(q) ||
+      (b.bookingId || '').toLowerCase().includes(q) ||
+      (b.aadhaarLast4 || '').includes(q);
+  });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--text3);" data-translate="admin_no_bookings">No bookings available</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--text3);">No bookings available</td></tr>';
     return;
   }
 
-  tbody.innerHTML = filtered.map(b => {
-    const d = b.date ? new Date(b.date + 'T00:00:00') : null;
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const displayDate = d ? `${d.getDate()} ${months[d.getMonth()]}` : '--';
-    const token = b.token || b.tokens || '--';
-    const bid = b.bookingId || b.id || '--';
-    const name = b.name || b.fullName || '--';
-    const email = b.email || b.mobile || '--';
-    return `
-      <tr>
-        <td><span class="token-badge">${token}</span></td>
-        <td style="font-size:12px; color:var(--text3);">${bid}</td>
-        <td style="font-weight:500;">${name}</td>
-        <td>${email}</td>
-        <td style="font-size:13px;">${b.service || 'Aadhaar Update'}</td>
-        <td style="font-size:13px;">${displayDate}</td>
-        <td><span class="status-pill ${b.status}">${(b.status || 'pending').charAt(0).toUpperCase()+(b.status||'pending').slice(1)}</span></td>
-        <td>
-          <div class="action-btns">
-            ${b.status !== 'completed' && b.status !== 'cancelled' ? `<button class="action-btn success" onclick="updateBookingStatus('${b.id}','completed')">Complete</button>` : ''}
-            ${b.status === 'pending' ? `<button class="action-btn" onclick="updateBookingStatus('${b.id}','approved')">Approve</button>` : ''}
-            ${b.status !== 'cancelled' && b.status !== 'completed' ? `<button class="action-btn danger" onclick="updateBookingStatus('${b.id}','cancelled')">Cancel</button>` : ''}
-          </div>
-        </td>
-      </tr>
-    `;
+  tbody.innerHTML = filtered.map(function(b) {
+    var d = b.date ? new Date(b.date + 'T00:00:00') : null;
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var displayDate = d ? d.getDate() + ' ' + months[d.getMonth()] : '--';
+    var token = b.token || b.tokens || '--';
+    var bid = b.bookingId || b.id || '--';
+    var name = b.name || b.fullName || '--';
+    var email = b.email || b.mobile || '--';
+    return '<tr><td><span class="token-badge">' + token + '</span></td><td style="font-size:12px; color:var(--text3);">' + bid + '</td><td style="font-weight:500;">' + name + '</td><td>' + email + '</td><td style="font-size:13px;">' + (b.service || 'Aadhaar Update') + '</td><td style="font-size:13px;">' + displayDate + '</td><td><span class="status-pill ' + (b.status || 'pending') + '">' + (b.status || 'pending').charAt(0).toUpperCase() + (b.status || 'pending').slice(1) + '</span></td><td><div class="action-btns">' + (b.status !== 'completed' && b.status !== 'cancelled' ? '<button class="action-btn success" onclick="updateBookingStatus(\'' + b.id + '\',\'completed\')">Complete</button>' : '') + (b.status === 'pending' ? '<button class="action-btn" onclick="updateBookingStatus(\'' + b.id + '\',\'approved\')">Approve</button>' : '') + (b.status !== 'cancelled' && b.status !== 'completed' ? '<button class="action-btn danger" onclick="updateBookingStatus(\'' + b.id + '\',\'cancelled\')">Cancel</button>' : '') + '</div></td></tr>';
   }).join('');
 }
 
@@ -984,6 +1062,28 @@ function updateBookingStatus(docId, status) {
 }
 
 // -- Queue Control --
+function startToken() {
+  if (!window.__queueRef) return;
+  const today = new Date().toISOString().split('T')[0];
+  window.__bookingsRef.where('date', '==', today).where('status', 'in', ['approved','pending','waiting']).get().then(snap => {
+    if (snap.empty) { notify('No bookings today to start the queue.', 'error'); return; }
+    let minToken = Infinity;
+    snap.forEach(doc => { const t = parseInt(doc.data().token); if (t < minToken) minToken = t; });
+    if (!isFinite(minToken)) { notify('No valid tokens found.', 'error'); return; }
+    window.__queueRef.get().then(qsnap => {
+      let docId = null;
+      qsnap.forEach(doc => { docId = doc.id; });
+      if (docId) {
+        window.__queueRef.doc(docId).update({ currentToken: minToken });
+      } else {
+        window.__queueRef.add({ currentToken: minToken });
+      }
+    });
+    logAdminAction(getAdminUser(), 'Started Queue', String(minToken).padStart(2,'0'), 'success');
+    notify('Queue started at Token #' + String(minToken).padStart(2,'0'), 'success');
+  }).catch(err => { notify('Error starting queue: ' + err.message, 'error'); });
+}
+
 function changeToken(delta) {
   if (!window.__queueRef) return;
   window.__queueRef.get().then(snap => {
@@ -1065,42 +1165,45 @@ function logAdminAction(admin, action, detail, type) {
   }).catch(() => {});
 }
 
-function renderActivityLogs() {
-  const list = document.getElementById('activityList');
-  const empty = document.getElementById('activityEmpty');
-  const loading = document.getElementById('activityLoading');
+function renderActivityLogs(loading) {
+  var list = document.getElementById('activityList');
+  var empty = document.getElementById('activityEmpty');
+  var loadingEl = document.getElementById('activityLoading');
   if (!list) return;
+  if (loading) {
+    if (list) list.style.display = 'none';
+    if (empty) empty.style.display = 'none';
+    if (loadingEl) { loadingEl.style.display = 'flex'; loadingEl.innerHTML = '<div class="spinner-ring" style="width:28px;height:28px;border-width:2px;margin-bottom:8px;"></div><div style="font-size:13px;color:var(--text3);">Loading activity logs...</div>'; }
+    return;
+  }
   if (!adminActivityLogs.length) {
     if (list) list.style.display = 'none';
     if (empty) empty.style.display = 'block';
-    if (loading) loading.style.display = 'none';
+    if (loadingEl) loadingEl.style.display = 'none';
     return;
   }
   if (list) list.style.display = 'flex';
   if (empty) empty.style.display = 'none';
-  if (loading) loading.style.display = 'none';
+  if (loadingEl) loadingEl.style.display = 'none';
 
-  list.innerHTML = adminActivityLogs.map(a => {
-    const icons = { success: 'fa-check-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle', error: 'fa-times-circle' };
-    const icon = icons[a.type] || 'fa-info-circle';
-    const ts = a.timestamp ? (a.timestamp.toDate ? a.timestamp.toDate().toLocaleString() : new Date(a.timestamp).toLocaleString()) : '--';
-    return `
-      <div class="activity-item">
-        <div class="activity-item-icon ${a.type || 'info'}"><i class="fas ${icon}"></i></div>
-        <div class="activity-item-text">
-          <strong>${a.admin || 'Admin'}</strong> ${a.action || ''}
-          ${a.detail ? '<span style="color:var(--text3)">— ' + a.detail + '</span>' : ''}
-        </div>
-        <div class="activity-item-time">${ts}</div>
-      </div>
-    `;
+  list.innerHTML = adminActivityLogs.map(function(a) {
+    var icons = { success: 'fa-check-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle', error: 'fa-times-circle' };
+    var icon = icons[a.type] || 'fa-info-circle';
+    var ts = a.timestamp ? (a.timestamp.toDate ? a.timestamp.toDate().toLocaleString() : new Date(a.timestamp).toLocaleString()) : '--';
+    return '<div class="activity-item"><div class="activity-item-icon ' + (a.type || 'info') + '"><i class="fas ' + icon + '"></i></div><div class="activity-item-text"><strong>' + (a.admin || 'Admin') + '</strong> ' + (a.action || '') + (a.detail ? '<span style="color:var(--text3)"> — ' + a.detail + '</span>' : '') + '</div><div class="activity-item-time">' + ts + '</div></div>';
   }).join('');
 }
 
 // -- Dates --
-function renderAdminDates() {
+function renderAdminDates(loading) {
   const grid = document.getElementById('adminDateGrid');
   if (!grid) return;
+  if (loading) {
+    grid.setAttribute('aria-busy', 'true');
+    grid.innerHTML = Array(8).fill('<div class="date-manage-item" style="opacity:0.5;pointer-events:none;"><div class="skeleton-line" style="height:12px;width:30px;margin:0 auto 6px;"></div><div class="skeleton-line" style="height:24px;width:24px;border-radius:6px;margin:0 auto 6px;"></div><div class="skeleton-line" style="height:10px;width:40px;margin:0 auto 8px;"></div><div class="skeleton-line" style="height:10px;width:50px;margin:0 auto;"></div></div>').join('');
+    return;
+  }
+  grid.setAttribute('aria-busy', 'false');
   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -1162,7 +1265,7 @@ document.addEventListener('keydown', function(e) {
 let logoClickCount = 0;
 let logoTimer = null;
 document.addEventListener('click', function(e) {
-  const logo = e.target.closest('.logo-icon, .nav-logo');
+  const logo = e.target.closest('.logo-text, .nav-logo');
   if (logo) {
     logoClickCount++;
     if (logoTimer) clearTimeout(logoTimer);
@@ -1178,25 +1281,34 @@ document.addEventListener('click', function(e) {
 // CONTACT FORM
 // ============================================
 function submitContactForm() {
-  const name = document.getElementById('contactName').value.trim();
-  const phone = document.getElementById('contactPhone').value.trim();
-  const msg = document.getElementById('contactMessage').value.trim();
+  var name = document.getElementById('contactName').value.trim();
+  var phone = document.getElementById('contactPhone').value.trim();
+  var msg = document.getElementById('contactMessage').value.trim();
   if (!name || !phone || !msg) {
     notify('Please fill in all required fields', 'error');
     return;
   }
-  if (window.__activityRef) {
-    window.__activityRef.add({
-      type: 'contact',
-      name, phone, msg,
-      timestamp: serverTS()
-    }).catch(() => {});
-  }
-  notify('Message sent! We will get back to you soon.', 'success');
-  document.getElementById('contactName').value = '';
-  document.getElementById('contactPhone').value = '';
-  document.getElementById('contactEmail').value = '';
-  document.getElementById('contactMessage').value = '';
+  var btn = document.querySelector('#contact .btn-primary');
+  setBtnLoading(btn, true);
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:14px;"></i> Sending...';
+  var p = window.__activityRef ? window.__activityRef.add({
+    type: 'contact', name: name, phone: phone, msg: msg, timestamp: serverTS()
+  }) : Promise.resolve();
+  withTimeout(p, 10000, 'Contact form')
+    .then(function() {
+      setBtnLoading(btn, false);
+      btn.innerHTML = 'Send Message';
+      notify('Message sent! We will get back to you soon.', 'success');
+      document.getElementById('contactName').value = '';
+      document.getElementById('contactPhone').value = '';
+      document.getElementById('contactEmail').value = '';
+      document.getElementById('contactMessage').value = '';
+    })
+    .catch(function(err) {
+      setBtnLoading(btn, false);
+      btn.innerHTML = 'Send Message';
+      notify(err.message || 'Failed to send message. Please try again.', 'error');
+    });
 }
 
 updateHeroDisplay();
@@ -1308,17 +1420,17 @@ const translations = {
     form_send: "मैसेज भेजें",
     guidelines_header: "डॉक्यूमेंट गाइडलाइन",
     guide_aadhaar_title: "आधार अपडेट",
-    guide_aadhaar_text: "असली आधार कार्ड + सेल्फ-अटेस्टेड कॉपी, वैलिड फोटो आईडी (वोटर आईडी / ड्राइविंग लाइसेंस / पासपोर्ट), 2 हालिया पासपोर्ट साइज़ फोटो, और अगर बदलाव है तो सपोर्टिंग डॉक्यूमेंट (शादी का सर्टिफिकेट, पता प्रूफ, वगैरह)।",
+    guide_aadhaar_text: "असली आधार कार्ड + सेल्फ-अटेस्टेड कॉपी|वैलिड फोटो आईडी (वोटर आईडी / ड्राइविंग लाइसेंस / पासपोर्ट)|2 हालिया पासपोर्ट साइज़ फोटो|बदलाव के लिए सपोर्टिंग डॉक्यूमेंट (शादी का सर्टिफिकेट, पता प्रूफ, वगैरह)",
     guide_pan_title: "पैन सर्विस",
-    guide_pan_text: "आधार कार्ड, पुराना पैन कार्ड (दोबारा जारी/सुधार के लिए), पते का प्रमाण (बिजली बिल / बैंक स्टेटमेंट / किराया समझौता), 2 पासपोर्ट साइज़ फोटो, और सेल्फ-डिक्लेरेशन फॉर्म।",
+    guide_pan_text: "आधार कार्ड|पुराना पैन कार्ड (दोबारा जारी/सुधार के लिए)|पते का प्रमाण (बिजली बिल / बैंक स्टेटमेंट / किराया समझौता)|2 पासपोर्ट साइज़ फोटो|सेल्फ-डिक्लेरेशन फॉर्म",
     guide_passport_title: "पासपोर्ट सर्विस",
-    guide_passport_text: "आधार कार्ड, पते का प्रमाण (बिजली बिल / आधार / बैंक स्टेटमेंट), जन्म सर्टिफिकेट या 10वीं की मार्कशीट, 10 पासपोर्ट साइज़ फोटो, और भरे हुए अनुलग्नक फॉर्म (Annexure A / E / F जो लागू हो)।",
+    guide_passport_text: "आधार कार्ड|पते का प्रमाण (बिजली बिल / आधार / बैंक स्टेटमेंट)|जन्म सर्टिफिकेट या 10वीं की मार्कशीट|10 पासपोर्ट साइज़ फोटो|भरे हुए अनुलग्नक फॉर्म (Annexure A / E / F जो लागू हो)",
     guide_online_title: "ऑनलाइन अप्लीकेशन",
-    guide_online_text: "आधार कार्ड, पैन कार्ड, हालिया पासपोर्ट साइज़ फोटो, आय और जाति सर्टिफिकेट (अगर ज़रूरी हो), PDF/JPEG में सारे डॉक्यूमेंट की स्कैन कॉपी, और OTP वेरिफिकेशन के लिए एक वैलिड मोबाइल नंबर।",
+    guide_online_text: "आधार कार्ड|पैन कार्ड|हालिया पासपोर्ट साइज़ फोटो|आय और जाति सर्टिफिकेट (अगर ज़रूरी हो)|PDF/JPEG में डॉक्यूमेंट की स्कैन कॉपी|OTP वेरिफिकेशन के लिए मोबाइल नंबर",
     guide_ticket_title: "टिकट बुकिंग",
-    guide_ticket_text: "सरकारी फोटो आईडी (आधार / वोटर आईडी / ड्राइविंग लाइसेंस / पासपोर्ट), कन्फर्मेशन के लिए मोबाइल नंबर, और पेमेंट (कैश / UPI / कार्ड)।",
+    guide_ticket_text: "सरकारी फोटो आईडी (आधार / वोटर आईडी / ड्राइविंग लाइसेंस / पासपोर्ट)|कन्फर्मेशन के लिए मोबाइल नंबर|पेमेंट (कैश / UPI / कार्ड)",
     guide_tips_title: "आम सुझाव",
-    guide_tips_text: "असली डॉक्यूमेंट + हर एक की कम से कम 2 सेल्फ-अटेस्टेड कॉपी लेकर आएं। फोटो सफेद बैकग्राउंड पर, हालिया (6 महीने अंदर) हो। 15 मिनट पहले पहुंचें। किसी भी सुधार के लिए सपोर्टिंग सर्टिफिकेट लाएं।",
+    guide_tips_text: "असली डॉक्यूमेंट + हर एक की कम से कम 2 सेल्फ-अटेस्टेड कॉपी लेकर आएं|फोटो सफेद बैकग्राउंड पर, हालिया (6 महीने अंदर) हो|15 मिनट पहले पहुंचें|सुधार के लिए सपोर्टिंग सर्टिफिकेट लाएं",
     footer_desc: "आधार और डिजिटल सरकारी सर्विस के लिए आपका भरोसेमंद पार्टनर। सबके लिए तेज़, सिक्योर और प्रोफेशनल मदद।",
     footer_quicklinks: "त्वरित लिंक",
     footer_home: "होम",
@@ -1545,17 +1657,17 @@ const translations = {
     form_send: "Send Message",
     guidelines_header: "Document Guidelines",
     guide_aadhaar_title: "Aadhaar Update",
-    guide_aadhaar_text: "Original Aadhaar card + self-attested copy, valid photo ID (Voter ID / Driving License / Passport), 2 recent passport-size photographs, and any supporting document for change (marriage certificate, address proof, etc.) if applicable.",
+    guide_aadhaar_text: "Original Aadhaar card + self-attested copy|Valid photo ID (Voter ID / Driving License / Passport)|2 recent passport-size photographs|Supporting document for change (marriage certificate, address proof, etc.) if applicable",
     guide_pan_title: "PAN Services",
-    guide_pan_text: "Aadhaar card, existing PAN card (for re-issue/correction), proof of address (utility bill / bank statement / rent agreement), 2 passport-size photos, and self-declaration form.",
+    guide_pan_text: "Aadhaar card|Existing PAN card (for re-issue/correction)|Proof of address (utility bill / bank statement / rent agreement)|2 passport-size photos|Self-declaration form",
     guide_passport_title: "Passport Services",
-    guide_passport_text: "Aadhaar card, proof of address (utility bill / Aadhaar / bank statement), birth certificate or class 10 mark sheet, 10 passport-size photos, and filled annexure forms (Annexure A / E / F as applicable).",
+    guide_passport_text: "Aadhaar card|Proof of address (utility bill / Aadhaar / bank statement)|Birth certificate or class 10 mark sheet|10 passport-size photos|Filled annexure forms (Annexure A / E / F as applicable)",
     guide_online_title: "Online Applications",
-    guide_online_text: "Aadhaar card, PAN card, recent passport-size photo, income certificate & caste certificate (if required), scanned copies of all relevant documents in PDF/JPEG format, and a valid mobile number for OTP verification.",
+    guide_online_text: "Aadhaar card|PAN card|Recent passport-size photo|Income certificate & caste certificate (if required)|Scanned copies of documents in PDF/JPEG format|Valid mobile number for OTP verification",
     guide_ticket_title: "Ticket Booking",
-    guide_ticket_text: "Valid government-issued photo ID (Aadhaar / Voter ID / Driving License / Passport), mobile number for confirmation, and payment method (cash / UPI / card).",
+    guide_ticket_text: "Valid government-issued photo ID (Aadhaar / Voter ID / Driving License / Passport)|Mobile number for confirmation|Payment method (cash / UPI / card)",
     guide_tips_title: "General Tips",
-    guide_tips_text: "Carry original documents + at least 2 self-attested copies of each. Photos should be white background, recent (within 6 months). Reach 15 minutes early. For any correction/change, bring relevant supporting certificate.",
+    guide_tips_text: "Carry original documents + at least 2 self-attested copies of each|Photos should be white background, recent (within 6 months)|Reach 15 minutes early|For any correction/change, bring relevant supporting certificate",
     footer_desc: "Your trusted partner for Aadhaar and digital government services. Fast, secure, and professional assistance for everyone.",
     footer_quicklinks: "Quick Links",
     footer_home: "Home",
@@ -1695,6 +1807,10 @@ window.setLanguage = function(lang) {
     if (translations[lang] && translations[lang][key]) {
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
         el.placeholder = translations[lang][key];
+      } else if (el.tagName === 'UL') {
+        const parts = translations[lang][key].split('|');
+        const items = el.querySelectorAll('li');
+        items.forEach((li, i) => { if (parts[i]) li.textContent = parts[i]; });
       } else {
         el.textContent = translations[lang][key];
       }
@@ -1705,6 +1821,17 @@ window.setLanguage = function(lang) {
     const key = opt.getAttribute('data-translate-opt');
     if (translations[lang] && translations[lang][key]) {
       opt.textContent = translations[lang][key];
+    }
+  });
+
+  document.querySelectorAll('[data-translate-opt]').forEach(el => {
+    const key = el.getAttribute('data-translate-opt');
+    if (translations[lang] && translations[lang][key]) {
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+        el.placeholder = translations[lang][key];
+      } else {
+        el.textContent = translations[lang][key];
+      }
     }
   });
 

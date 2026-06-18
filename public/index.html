@@ -85,11 +85,60 @@ window.verifyOTP = async (code) => {
 </head>
 <body>
 
+<!-- LOADING SCREEN -->
+<div class="loading-overlay" id="pageLoader">
+  <div class="loading-spinner">
+    <div class="loading-spinner-ring"></div>
+    <div class="loading-spinner-ring"></div>
+    <div class="loading-spinner-icon"><i class="fas fa-id-card"></i></div>
+  </div>
+  <div class="loading-text">
+    India Mobile<span style="color:var(--accent)"> Center</span>
+    <span class="loading-dots"><span></span><span></span><span></span></span>
+  </div>
+  <div class="loading-sub">Loading your experience...</div>
+</div>
+
+<script>
+(function() {
+  var startTime = Date.now();
+  var ready = false;
+  function hideLoader() {
+    if (ready) return;
+    var elapsed = Date.now() - startTime;
+    if (elapsed < 400) {
+      setTimeout(hideLoader, 400 - elapsed);
+      return;
+    }
+    ready = true;
+    var loader = document.getElementById('pageLoader');
+    if (loader) loader.classList.remove('show');
+  }
+  if (document.readyState === 'complete') {
+    hideLoader();
+  } else {
+    window.addEventListener('load', hideLoader);
+  }
+  setTimeout(function() {
+    if (!ready) { ready = true; var loader = document.getElementById('pageLoader'); if (loader) loader.classList.remove('show'); }
+  }, 2000);
+})();
+
+window.showPageLoader = function() {
+  var loader = document.getElementById('pageLoader');
+  if (loader) loader.classList.add('show');
+};
+window.hidePageLoader = function() {
+  var loader = document.getElementById('pageLoader');
+  if (loader) loader.classList.remove('show');
+};
+</script>
+
 <!-- NAVIGATION -->
 <nav id="mainNav">
   <div class="nav-inner">
     <a href="index.html" class="nav-logo" style="display:flex;align-items:center;text-decoration:none;color:inherit;">
-      <img src="21585.jpg" alt="India Mobile" style="width:auto;height:46px;border-radius:6px;">
+      <span class="logo-text">India <span>Mobile</span></span>
     </a>
     <ul class="nav-links">
       <li><a href="#services" data-translate="nav_services">Services</a></li>
@@ -129,19 +178,8 @@ window.verifyOTP = async (code) => {
       <div class="section-tag" data-translate="services_tag">Services</div>
       <h2 class="section-title" data-translate="services_title">What Can We Help You With?</h2>
       <p class="section-subtitle" data-translate="services_subtitle">We provide a range of government and digital services. Select a service below to get started with your booking.</p>
-      <div class="services-dropdown-wrap">
-        <p class="services-select-label" data-translate="services_select_lbl">Select a Service to Book</p>
-        <select class="services-select" id="serviceDropdown" onchange="handleServiceSelect(this.value)" data-translate-options>
-          <option value="" data-translate-opt="service_choose">-- Choose a Service --</option>
-          <option value="aadhaar" data-translate-opt="service_aadhaar">Aadhaar Update</option>
-          <option value="pan" disabled data-translate-opt="service_pan">PAN Services (Coming Soon)</option>
-          <option value="passport" disabled data-translate-opt="service_passport">Passport Services (Coming Soon)</option>
-          <option value="online" disabled data-translate-opt="service_online">Online Applications (Coming Soon)</option>
-          <option value="ticket" disabled data-translate-opt="service_ticket">Ticket Booking (Coming Soon)</option>
-        </select>
-        <div class="service-coming-soon" id="comingSoonNote" data-translate="coming_soon_note">
-          This service is coming soon. Please check back later or contact us for assistance.
-        </div>
+      <div class="promo-text-link" onclick="openCheckToken()">
+        <i class="fas fa-search" style="font-size:14px;"></i> ALREADY BOOKED? <strong>FIND YOUR TOKEN</strong>
       </div>
       <div class="promo-buttons-row">
         <div class="promo-btn promo-btn-check" onclick="openCheckToken()">
@@ -160,27 +198,60 @@ window.verifyOTP = async (code) => {
         </div>
         <div class="guidelines-item">
           <div class="guidelines-item-title"><i class="fas fa-id-card"></i> <span data-translate="guide_aadhaar_title">Aadhaar Update</span></div>
-          <div class="guidelines-item-text" data-translate="guide_aadhaar_text">Original Aadhaar card + self-attested copy, valid photo ID (Voter ID / Driving License / Passport), 2 recent passport-size photographs, and any supporting document for change (marriage certificate, address proof, etc.) if applicable.</div>
+          <ul class="guidelines-list" data-translate="guide_aadhaar_text">
+            <li>Original Aadhaar card + self-attested copy</li>
+            <li>Valid photo ID (Voter ID / Driving License / Passport)</li>
+            <li>2 recent passport-size photographs</li>
+            <li>Supporting document for change (marriage certificate, address proof, etc.) if applicable</li>
+          </ul>
         </div>
         <div class="guidelines-item">
           <div class="guidelines-item-title"><i class="fas fa-credit-card"></i> <span data-translate="guide_pan_title">PAN Services</span></div>
-          <div class="guidelines-item-text" data-translate="guide_pan_text">Aadhaar card, existing PAN card (for re-issue/correction), proof of address (utility bill / bank statement / rent agreement), 2 passport-size photos, and self-declaration form.</div>
+          <ul class="guidelines-list" data-translate="guide_pan_text">
+            <li>Aadhaar card</li>
+            <li>Existing PAN card (for re-issue/correction)</li>
+            <li>Proof of address (utility bill / bank statement / rent agreement)</li>
+            <li>2 passport-size photos</li>
+            <li>Self-declaration form</li>
+          </ul>
         </div>
         <div class="guidelines-item">
           <div class="guidelines-item-title"><i class="fas fa-passport"></i> <span data-translate="guide_passport_title">Passport Services</span></div>
-          <div class="guidelines-item-text" data-translate="guide_passport_text">Aadhaar card, proof of address (utility bill / Aadhaar / bank statement), birth certificate or class 10 mark sheet, 10 passport-size photos, and filled annexure forms (Annexure A / E / F as applicable).</div>
+          <ul class="guidelines-list" data-translate="guide_passport_text">
+            <li>Aadhaar card</li>
+            <li>Proof of address (utility bill / Aadhaar / bank statement)</li>
+            <li>Birth certificate or class 10 mark sheet</li>
+            <li>10 passport-size photos</li>
+            <li>Filled annexure forms (Annexure A / E / F as applicable)</li>
+          </ul>
         </div>
         <div class="guidelines-item">
           <div class="guidelines-item-title"><i class="fas fa-file-invoice"></i> <span data-translate="guide_online_title">Online Applications</span></div>
-          <div class="guidelines-item-text" data-translate="guide_online_text">Aadhaar card, PAN card, recent passport-size photo, income certificate &amp; caste certificate (if required), scanned copies of all relevant documents in PDF/JPEG format, and a valid mobile number for OTP verification.</div>
+          <ul class="guidelines-list" data-translate="guide_online_text">
+            <li>Aadhaar card</li>
+            <li>PAN card</li>
+            <li>Recent passport-size photo</li>
+            <li>Income certificate &amp; caste certificate (if required)</li>
+            <li>Scanned copies of documents in PDF/JPEG format</li>
+            <li>Valid mobile number for OTP verification</li>
+          </ul>
         </div>
         <div class="guidelines-item">
           <div class="guidelines-item-title"><i class="fas fa-ticket-alt"></i> <span data-translate="guide_ticket_title">Ticket Booking</span></div>
-          <div class="guidelines-item-text" data-translate="guide_ticket_text">Valid government-issued photo ID (Aadhaar / Voter ID / Driving License / Passport), mobile number for confirmation, and payment method (cash / UPI / card).</div>
+          <ul class="guidelines-list" data-translate="guide_ticket_text">
+            <li>Valid government-issued photo ID (Aadhaar / Voter ID / Driving License / Passport)</li>
+            <li>Mobile number for confirmation</li>
+            <li>Payment method (cash / UPI / card)</li>
+          </ul>
         </div>
         <div class="guidelines-item">
           <div class="guidelines-item-title"><i class="fas fa-info-circle"></i> <span data-translate="guide_tips_title">General Tips</span></div>
-          <div class="guidelines-item-text" data-translate="guide_tips_text">Carry original documents + at least 2 self-attested copies of each. Photos should be white background, recent (within 6 months). Reach 15 minutes early. For any correction/change, bring relevant supporting certificate.</div>
+          <ul class="guidelines-list" data-translate="guide_tips_text">
+            <li>Carry original documents + at least 2 self-attested copies of each</li>
+            <li>Photos should be white background, recent (within 6 months)</li>
+            <li>Reach 15 minutes early</li>
+            <li>For any correction/change, bring relevant supporting certificate</li>
+          </ul>
         </div>
       </div>
     </div>
@@ -547,7 +618,6 @@ window.verifyOTP = async (code) => {
     <div class="footer-grid">
       <div class="footer-brand">
       <a href="index.html" class="nav-logo" style="display:flex;align-items:center;gap:10px;margin-bottom:0;text-decoration:none;color:inherit;">
-        <img src="21585.jpg" alt="India Mobile" style="width:auto;height:36px;border-radius:6px;">
         <span class="logo-text">India <span>Mobile</span></span>
       </a>
         <p data-translate="footer_desc">Your trusted partner for Aadhaar and digital government services. Fast, secure, and professional assistance for everyone.</p>
@@ -639,16 +709,17 @@ window.verifyOTP = async (code) => {
         <label class="form-label" data-translate="admin_pass_label">Password</label>
         <input type="password" class="form-input" id="adminPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()" data-translate="admin_pass_placeholder">
       </div>
-      <button class="btn-primary btn-full" onclick="adminLogin()" style="margin-top:8px;" data-translate="admin_login_btn">Login to Dashboard</button>
+      <div class="error-inline" id="adminLoginError"></div>
+      <button class="btn-primary btn-full" onclick="adminLogin()" style="margin-top:12px;" data-translate="admin_login_btn">Login to Dashboard</button>
+      </div>
     </div>
   </div>
-</div>
 
 <!-- ADMIN PANEL -->
 <div class="admin-panel" id="adminPanel">
   <div class="admin-nav">
     <div style="display:flex;align-items:center;gap:12px;">
-      <img src="21585.jpg" alt="India Mobile" style="width:auto;height:32px;border-radius:6px;">
+      <span class="logo-text" style="font-size:18px;">India <span>Mobile</span></span>
       <span class="admin-nav-title" data-translate="admin_nav_title">India Mobile Admin</span>
       <span style="font-size:12px;color:var(--text3); padding:4px 10px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); border-radius:100px; color:#34d399;" data-translate="admin_dashboard_label">Dashboard</span>
     </div>
@@ -753,6 +824,7 @@ window.verifyOTP = async (code) => {
         <div style="padding:20px; background:var(--bg3); border:1px solid var(--glass-border); border-radius:14px;">
           <div style="font-size:13px; color:var(--text3); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:600;" data-translate="admin_quick_actions">Quick Actions</div>
           <div style="display:flex; flex-direction:column; gap:10px;">
+            <button class="btn-primary w-full" style="justify-content:center; font-size:13px; background:linear-gradient(135deg,#059669,#10b981);border:none;" onclick="startToken()"><i class="fas fa-play" style="font-size:12px;"></i> START TOKEN</button>
             <button class="btn-secondary w-full" style="justify-content:center; font-size:13px;" onclick="markNextComplete()" data-translate="admin_mark_complete">Mark Current Token Complete</button>
             <button class="btn-secondary w-full" style="justify-content:center; font-size:13px;" onclick="advanceToken()" data-translate="admin_advance_token">Advance to Next Token</button>
             <button class="btn-secondary w-full" style="justify-content:center; font-size:13px; color:var(--danger);" onclick="skipToken()" data-translate="admin_skip_token">Skip Current Token</button>

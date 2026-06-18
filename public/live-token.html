@@ -37,7 +37,7 @@ body { display: flex; flex-direction: column; }
   text-transform: uppercase;
   margin-bottom: 32px;
 }
-.live-badge-dot { width: 7px; height: 7px; background: #ef4444; border-radius: 50%; }
+
 .live-token-number {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 120px;
@@ -112,12 +112,22 @@ body { display: flex; flex-direction: column; }
 }
 .live-header-logo {
   font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  font-size: 18px;
-  color: var(--text);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: 0.04em;
   text-decoration: none;
+  background: linear-gradient(135deg, #fff 30%, rgba(56,189,248,0.9));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 40px rgba(56,189,248,0.15);
 }
-.live-header-logo span { color: var(--accent); }
+.live-header-logo span {
+  -webkit-text-fill-color: var(--accent);
+  color: var(--accent);
+  background: none;
+  text-shadow: 0 0 30px rgba(56,189,248,0.3);
+}
 .live-header-back {
   font-size: 14px;
   color: var(--text2);
@@ -144,18 +154,65 @@ body { display: flex; flex-direction: column; }
 </head>
 <body>
 
+<!-- LOADING SCREEN -->
+<div class="loading-overlay" id="pageLoader">
+  <div class="loading-spinner">
+    <div class="loading-spinner-ring"></div>
+    <div class="loading-spinner-ring"></div>
+    <div class="loading-spinner-icon"><i class="fas fa-broadcast-tower"></i></div>
+  </div>
+  <div class="loading-text">
+    India Mobile<span style="color:var(--accent)"> Center</span>
+    <span class="loading-dots"><span></span><span></span><span></span></span>
+  </div>
+  <div class="loading-sub">Connecting to live feed...</div>
+</div>
+
+<script>
+(function() {
+  var startTime = Date.now();
+  var ready = false;
+  function hideLoader() {
+    if (ready) return;
+    var elapsed = Date.now() - startTime;
+    if (elapsed < 400) {
+      setTimeout(hideLoader, 400 - elapsed);
+      return;
+    }
+    ready = true;
+    var loader = document.getElementById('pageLoader');
+    if (loader) loader.classList.remove('show');
+  }
+  if (document.readyState === 'complete') {
+    hideLoader();
+  } else {
+    window.addEventListener('load', hideLoader);
+  }
+  setTimeout(function() {
+    if (!ready) { ready = true; var loader = document.getElementById('pageLoader'); if (loader) loader.classList.remove('show'); }
+  }, 2000);
+})();
+</script>
+
 <div class="live-header">
-  <a href="index.html" class="live-header-logo">India<span>Mobile</span>Center</a>
-  <a href="index.html" class="live-header-back"><i class="fas fa-arrow-left"></i> Home</a>
+  <a href="index.html" class="live-header-logo">India <span>Mobile</span></a>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="lang-switch" id="langSwitchLive" onclick="toggleLanguageLive()" role="button" tabindex="0" aria-label="Toggle language">
+      <div class="lang-switch-slider"></div>
+      <div class="lang-option active" id="langOptHiLive"><span class="lang-opt-text">HI</span></div>
+      <div class="lang-option" id="langOptEnLive"><span class="lang-opt-text">EN</span></div>
+    </div>
+    <a href="index.html" class="live-header-back"><i class="fas fa-arrow-left"></i> Home</a>
+  </div>
 </div>
 
 <main class="live-page-main">
   <div class="live-card">
     <div class="live-badge">
-      <span class="live-badge-dot"></span> LIVE
+      <span class="live-dot"></span> LIVE
     </div>
 
-    <div class="live-token-number live-pulse-ring" id="ltToken">--</div>
+    <div class="live-token-number" id="ltToken" style="font-size:48px;transition:all 0.5s ease;">Connecting to queue...</div>
     <div class="live-token-label">Current Serving Token</div>
 
     <div class="live-divider"></div>
@@ -181,10 +238,20 @@ body { display: flex; flex-direction: column; }
   </div>
 </main>
 
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-init.js"></script>
 <script src="db-sync.js"></script>
 <script>
+function showPageLoader() {
+  var loader = document.getElementById('pageLoader');
+  if (loader) loader.classList.add('show');
+}
+function hidePageLoader() {
+  var loader = document.getElementById('pageLoader');
+  if (loader) loader.classList.remove('show');
+}
+
 // ---- Date & Time Clock ----
 function updateClock() {
   const now = new Date();
@@ -204,21 +271,79 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 
-// ---- Token from Firestore ----
-function updateToken() {
-  var el = document.getElementById('ltToken');
-  if (typeof DB !== 'undefined' && DB.currentToken !== undefined) {
-    el.textContent = String(DB.currentToken).padStart(2, '0');
+// ---- Token: real-time from Firestore queue/current doc ----
+(function initLiveToken() {
+  function setTokenDisplay(val) {
+    var el = document.getElementById('ltToken');
+    if (val > 0) {
+      el.style.fontSize = '';
+      el.textContent = String(val).padStart(2, '0');
+      el.classList.add('live-pulse-ring');
+      hidePageLoader();
+    }
   }
-}
 
-var dbCheckInterval = setInterval(function() {
-  if (typeof DB !== 'undefined' && typeof DB.currentToken !== 'undefined') {
-    updateToken();
-    setInterval(updateToken, 5000);
-    clearInterval(dbCheckInterval);
+  function tryListen() {
+    if (window.__queueRef) {
+      window.__queueRef.doc('current').onSnapshot(function(snap) {
+        if (snap.exists) {
+          var t = snap.data().currentToken;
+          if (t) setTokenDisplay(t);
+        }
+        hidePageLoader();
+      }, function() { pollFallback(); hidePageLoader(); });
+    } else if (typeof DBSync !== 'undefined') {
+      DBSync.initFirestore().then(function(ok) {
+        if (ok && window.__queueRef) {
+          window.__queueRef.doc('current').onSnapshot(function(snap) {
+            if (snap.exists) { var t = snap.data().currentToken; if (t) setTokenDisplay(t); }
+            hidePageLoader();
+          }, function() { pollFallback(); hidePageLoader(); });
+        } else { pollFallback(); }
+      });
+    } else {
+      setTimeout(tryListen, 500);
+    }
   }
-}, 500);
+
+  function pollFallback() {
+    var t = DBSync.getToken();
+    if (t > 0) setTokenDisplay(t);
+    setInterval(function() {
+      var t2 = DBSync.getToken();
+      if (t2 > 0) setTokenDisplay(t2);
+    }, 3000);
+  }
+
+  document.addEventListener('db-sync', function(e) {
+    if (e.detail && e.detail.token > 0) setTokenDisplay(e.detail.token);
+  });
+
+  tryListen();
+})();
 </script>
+
+<!-- Language Toggle -->
+<script>
+(function() {
+  var currentLang = localStorage.getItem('site_lang') || 'hi';
+  function applyLang(lang) {
+    currentLang = lang;
+    localStorage.setItem('site_lang', lang);
+    document.documentElement.lang = lang;
+    var wrapper = document.getElementById('langSwitchLive');
+    if (wrapper) wrapper.classList.toggle('en', lang === 'en');
+    var hiOpt = document.getElementById('langOptHiLive');
+    var enOpt = document.getElementById('langOptEnLive');
+    if (hiOpt) hiOpt.classList.toggle('active', lang === 'hi');
+    if (enOpt) enOpt.classList.toggle('active', lang === 'en');
+  }
+  window.toggleLanguageLive = function() {
+    applyLang(currentLang === 'hi' ? 'en' : 'hi');
+  };
+  applyLang(currentLang);
+})();
+</script>
+
 </body>
 </html>

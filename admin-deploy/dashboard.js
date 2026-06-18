@@ -5,12 +5,12 @@
 // ============================================
 // STATE
 // ============================================
-let queueSortField = 'token';
-let queueSortDir = 'asc';
 let bookingsSortField = 'token';
 let bookingsSortDir = 'asc';
-let queuePage = 1;
 let bookingsPage = 1;
+let completedSortField = 'date';
+let completedSortDir = 'desc';
+let completedPage = 1;
 const PAGE_SIZE = 10;
 
 let calViewDate = new Date();
@@ -57,85 +57,194 @@ function startDigitalClock() {
 async function refreshActiveSection() {
   const refreshBtn = document.querySelector('.db-topnav-btn i.fa-rotate');
   if (refreshBtn) refreshBtn.classList.add('fa-spin');
-  
-  await DBSync.forceFetch();
-  
-  if (_activeSection === 'overview') refreshDashboard();
-  else if (_activeSection === 'queue') renderQueueTable();
-  else if (_activeSection === 'bookings') renderBookingsTable();
-  else if (_activeSection === 'queuecontrol') refreshQueueControl();
-  else if (_activeSection === 'calendar') renderCalendar();
-  else if (_activeSection === 'customers') renderCustomers();
-  else if (_activeSection === 'activity') renderActivity();
-  else if (_activeSection === 'admins') renderAdmins();
-  else if (_activeSection === 'notifications') renderNotifications();
+  try {
+    if (_activeSection === 'overview') refreshDashboard();
+    else if (_activeSection === 'bookings') renderBookingsTable();
+    else if (_activeSection === 'completed') renderCompletedBookings();
+    else if (_activeSection === 'queuecontrol') refreshQueueControl();
+    else if (_activeSection === 'calendar') renderCalendar();
+    else if (_activeSection === 'customers') renderCustomers();
+    else if (_activeSection === 'activity') renderActivity();
+    else if (_activeSection === 'admins') renderAdmins();
+  } catch(e) {
+    console.warn('[Refresh] Error:', e);
+  } finally {
+    if (refreshBtn) {
+      setTimeout(() => refreshBtn.classList.remove('fa-spin'), 200);
+    }
+  }
+}
 
-  setTimeout(() => {
-    if (refreshBtn) refreshBtn.classList.remove('fa-spin');
-  }, 500);
+// ============================================
+// AUTH STATE
+// ============================================
+let currentAdmin = null;
+
+function signInWithGoogle() {
+  var provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  firebase.auth().signInWithPopup(provider).catch(function(error) {
+    var el = document.getElementById('loginError');
+    if (!el) return;
+    el.style.display = 'block';
+    if (error.code === 'auth/unauthorized-domain') {
+      el.textContent = 'This domain is not authorized. Go to Firebase Console → Authentication → Settings → Authorized domains, and add "' + window.location.hostname + '".';
+    } else if (error.code === 'auth/popup-blocked') {
+      el.textContent = 'Popup was blocked. Please allow popups for this site and try again.';
+    } else if (error.code === 'auth/popup-closed-by-user') {
+      el.textContent = '';
+      el.style.display = 'none';
+      return;
+    } else {
+      el.textContent = 'Sign-in failed: ' + error.message;
+    }
+  });
+}
+
+function signOutAdmin() {
+  if (currentAdmin) logActivity('Admin Logout: ' + (currentAdmin.displayName || currentAdmin.email), '--', 'Info');
+  firebase.auth().signOut().catch(function() {});
+}
+
+function handleAuthState(user) {
+  var loginEl = document.getElementById('loginScreen');
+  var dashEl = document.getElementById('dashboardApp');
+  var errEl = document.getElementById('loginError');
+  if (!loginEl || !dashEl) return;
+
+  if (user) {
+    var email = user.email;
+    if (!email) {
+      firebase.auth().signOut();
+      return;
+    }
+
+    var db = firebase.firestore();
+    var adminsRef = db.collection('admins');
+
+    adminsRef.doc(email).get().then(function(doc) {
+      if (doc.exists) {
+        currentAdmin = user;
+        if (errEl) errEl.style.display = 'none';
+        loginEl.style.display = 'none';
+        dashEl.style.display = null;
+        document.getElementById('adminNameDisplay').textContent = user.displayName || email;
+        document.getElementById('adminEmailDisplay').textContent = email;
+        var avatar = document.getElementById('adminAvatar');
+        if (avatar && user.photoURL) { avatar.src = user.photoURL; avatar.style.display = 'inline'; }
+        var dAvatar = document.getElementById('dropdownAvatar');
+        if (dAvatar) { dAvatar.src = user.photoURL || ''; }
+        var dName = document.getElementById('dropdownUserName');
+        if (dName) dName.textContent = user.displayName || email;
+        var dEmail = document.getElementById('dropdownUserEmail');
+        if (dEmail) dEmail.textContent = email;
+        renderAdmins();
+        initDBSync();
+        fullRefresh();
+        logActivity('Admin Login: ' + (user.displayName || email), '--', 'Info');
+      } else {
+        // Not in admins list — check if this could be the first admin bootstrap
+        adminsRef.limit(1).get().then(function(snap) {
+          if (snap.empty) {
+            // First admin — auto-bootstrap
+            adminsRef.doc(email).set({ role: 'owner', added: new Date().toISOString() }).then(function() {
+              currentAdmin = user;
+              if (errEl) errEl.style.display = 'none';
+              loginEl.style.display = 'none';
+              dashEl.style.display = null;
+              document.getElementById('adminNameDisplay').textContent = user.displayName || email;
+              document.getElementById('adminEmailDisplay').textContent = email;
+              var avatar2 = document.getElementById('adminAvatar');
+              if (avatar2 && user.photoURL) { avatar2.src = user.photoURL; avatar2.style.display = 'inline'; }
+              var dAvatar2 = document.getElementById('dropdownAvatar');
+              if (dAvatar2) { dAvatar2.src = user.photoURL || ''; }
+              var dName2 = document.getElementById('dropdownUserName');
+              if (dName2) dName2.textContent = user.displayName || email;
+              var dEmail2 = document.getElementById('dropdownUserEmail');
+              if (dEmail2) dEmail2.textContent = email;
+              renderAdmins();
+              initDBSync();
+              fullRefresh();
+              logActivity('Admin Login (first admin): ' + (user.displayName || email), '--', 'Info');
+              notify('You have been auto-authorized as the first admin (owner).', 'success');
+            }).catch(function(err) {
+              console.error('[Auth] Bootstrap set failed:', err);
+              firebase.auth().signOut();
+              if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Could not create admin record: ' + (err.message || 'Firestore write denied. Check your Firestore security rules.'); }
+            });
+          } else {
+            firebase.auth().signOut();
+            if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'This Google account is not authorized for admin access.'; }
+          }
+        }).catch(function(err) {
+          console.error('[Auth] Bootstrap list check failed:', err);
+          firebase.auth().signOut();
+          if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Could not check admin list: ' + (err.message || 'Firestore list denied. Check your Firestore security rules.'); }
+        });
+      }
+    }).catch(function(err) {
+      console.error('[Auth] Admin doc read failed:', err);
+      if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Could not verify admin access: ' + (err.message || 'Firestore error. Check your Firestore security rules in the Firebase Console → Firestore → Rules tab.'); }
+    });
+  } else {
+    currentAdmin = null;
+    loginEl.style.display = 'flex';
+    dashEl.style.display = 'none';
+  }
+}
+
+function initDBSync() {
+  DBSync.subscribe(function(data) { debouncedRefresh(data); });
+  DBSync.initFirestore().then(function(ok) {
+    if (ok) {
+      DBSync.startRealtimeListener();
+      DBSync.forceFetch().then(function() { fullRefresh(); });
+    } else {
+      DBSync.forceFetch().then(function() {
+        DBSync.startPolling(3000);
+        fullRefresh();
+      });
+    }
+  });
 }
 
 // ============================================
 // INIT
 // ============================================
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('currentDateDisplay').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   startDigitalClock();
   loadActivityLog();
+  loadNotifications();
+  _prevBookingCount = DBSync.getBookings().length;
 
-  // Subscribe to real-time changes
-  DBSync.subscribe((data) => {
-    debouncedRefresh(data);
+  if (window.innerWidth <= 768) document.getElementById('menuBtn').style.display = 'flex';
+  window.addEventListener('resize', function() {
+    document.getElementById('menuBtn').style.display = window.innerWidth <= 768 ? 'flex' : 'none';
   });
 
-  await DBSync.forceFetch();
-  fullRefresh();
-
-  // Polling/Firestore listener is started by the inline script in index.html
-
-  // Responsive menu button
-  if (window.innerWidth <= 768) document.getElementById('menuBtn').style.display = 'flex';
-  window.addEventListener('resize', () => {
-    document.getElementById('menuBtn').style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(function() {
+    firebase.auth().onAuthStateChanged(handleAuthState);
+  }).catch(function() {
+    firebase.auth().onAuthStateChanged(handleAuthState);
   });
 });
 
 async function fullRefresh() {
   await DBSync.forceFetch();
   refreshDashboard();
-  renderQueueTable();
   renderBookingsTable();
+  renderCompletedBookings();
   renderCalendar();
   renderCustomers();
   renderActivity();
   renderAdmins();
   renderNotifications();
   refreshQueueControl();
-  loadSmsConfig();
 }
 
-function toggleSmsFields() {
-  const driver = document.getElementById('setSmsDriver').value;
-  document.getElementById('fast2smsFields').style.display = driver === 'fast2sms' ? 'block' : 'none';
-  document.getElementById('msg91Fields').style.display = driver === 'msg91' ? 'block' : 'none';
-}
-
-function loadSmsConfig() {
-  Promise.all([
-    fetch('api/otp?action=status').then(r => r.json()).catch(() => ({})),
-    fetch('api/otp?action=get_config').then(r => r.json()).catch(() => ({}))
-  ]).then(([status, cfgData]) => {
-    const cfg = cfgData.config || {};
-    if (document.getElementById('setOtpLength')) document.getElementById('setOtpLength').value = status.otp_length || cfg.otp_length || 6;
-    if (document.getElementById('setOtpExpiry')) document.getElementById('setOtpExpiry').value = status.otp_expiry || cfg.otp_expiry || 300;
-    if (document.getElementById('setDailySmsLimit')) document.getElementById('setDailySmsLimit').value = status.limit || cfg.daily_limit || 100;
-    if (document.getElementById('setSmsDriver')) document.getElementById('setSmsDriver').value = cfg.driver || 'log';
-    if (document.getElementById('setFast2SmsSender')) document.getElementById('setFast2SmsSender').value = cfg.fast2sms_sender_id || 'FTWSMS';
-    if (document.getElementById('setMsg91Sender')) document.getElementById('setMsg91Sender').value = cfg.msg91_sender_id || 'MSGIND';
-    if (document.getElementById('setSmsTemplate')) document.getElementById('setSmsTemplate').value = cfg.sms_template || '';
-    toggleSmsFields();
-  }).catch(() => {});
-}
+let _prevBookingCount = 0;
+let _tokenAvailability = { available: 0, remaining: 0, nextDate: '' };
 
 function debouncedRefresh(data) {
   if (_refreshTimer) { clearTimeout(_refreshTimer); _refreshTimer = null; }
@@ -146,17 +255,27 @@ function debouncedRefresh(data) {
       await DBSync.forceFetch();
     }
 
-    // Always refresh queue data for live counting
+    const bookings = DBSync.getBookings();
+
+    if (_prevBookingCount > 0 && bookings.length > _prevBookingCount) {
+      const newCount = bookings.length - _prevBookingCount;
+      notifications.unshift({ id: Date.now(), text: newCount + ' new booking(s) received', time: new Date().toLocaleString(), type: 'info', read: false });
+      if (notifications.length > 100) notifications = notifications.slice(0, 100);
+      saveNotifications();
+      updateNotifBadge();
+      if (document.getElementById('section-notifications')?.classList.contains('active')) renderNotifications();
+    }
+    _prevBookingCount = bookings.length;
+
     refreshQueueControl();
-    // Refresh visible sections
     if (document.getElementById('section-overview')?.classList.contains('active')) refreshDashboard();
-    if (document.getElementById('section-queue')?.classList.contains('active')) renderQueueTable();
     if (document.getElementById('section-bookings')?.classList.contains('active')) renderBookingsTable();
+    if (document.getElementById('section-completed')?.classList.contains('active')) renderCompletedBookings();
     if (document.getElementById('section-queuecontrol')?.classList.contains('active')) refreshQueueControl();
     if (document.getElementById('section-calendar')?.classList.contains('active')) renderCalendar();
     if (document.getElementById('section-customers')?.classList.contains('active')) renderCustomers();
     if (document.getElementById('section-activity')?.classList.contains('active')) renderActivity();
-  }, 200);
+  }, 100);
 }
 
 // ============================================
@@ -169,14 +288,15 @@ async function switchSection(id, el, type) {
   document.querySelectorAll('.db-sidebar-item').forEach(i => i.classList.remove('active'));
   document.querySelectorAll('.db-mobile-nav-item').forEach(i => i.classList.remove('active'));
 
+  if (el) el.classList.add('active');
+
   _activeSection = id;
 
   await DBSync.forceFetch();
 
-  // Refresh section data
   if (id === 'overview') refreshDashboard();
-  if (id === 'queue') renderQueueTable();
   if (id === 'bookings') renderBookingsTable();
+  if (id === 'completed') renderCompletedBookings();
   if (id === 'queuecontrol') refreshQueueControl();
   if (id === 'calendar') renderCalendar();
   if (id === 'customers') renderCustomers();
@@ -214,20 +334,18 @@ function globalSearchHandler(q) {
   }
 }
 
-// ============================================
-// KPI DASHBOARD
-// ============================================
+function getToday() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
 function refreshDashboard() {
   const bookings = DBSync.getBookings();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getToday();
   const todayBookings = bookings.filter(b => b.date === today);
-  const currentToken = DBSync.getToken();
 
   document.getElementById('kpiTodayBookings').textContent = todayBookings.length;
-  document.getElementById('kpiCurrentToken').textContent = currentToken > 0 ? String(currentToken).padStart(2, '0') : '--';
 
-  const active = todayBookings.filter(b => b.status === 'approved' || b.status === 'pending');
-  const pending = todayBookings.filter(b => b.status === 'pending');
+  const pending = todayBookings.filter(b => b.status === 'pending' || b.status === 'approved' || b.status === 'processing');
   const completed = todayBookings.filter(b => b.status === 'completed');
   const cancelled = todayBookings.filter(b => b.status === 'cancelled');
 
@@ -235,115 +353,55 @@ function refreshDashboard() {
   document.getElementById('kpiCompleted').textContent = completed.length;
   document.getElementById('kpiCancelled').textContent = cancelled.length;
 
-  if (active.length > 0) {
-    const next = active.find(b => parseInt(b.token) > currentToken);
-    if (next) {
-      document.getElementById('kpiCurrentService').textContent = next.service + ' (Token ' + next.token + ')';
-      document.getElementById('kpiCurrentService').style.color = 'var(--db-text2)';
-    }
-  }
-
-  animateCounter('kpiTodayBookings', todayBookings.length);
-
-  // Live update pulse on cards
   document.querySelectorAll('.db-card').forEach(c => { c.classList.remove('live-update'); void c.offsetWidth; c.classList.add('live-update'); });
+
+  // Update token availability
+  const av = calcTokenAvailability();
+  if (av.nextDate) {
+    document.getElementById('kpiNextServing').textContent = av.nextLabel;
+    document.getElementById('kpiTokenAvail').textContent = av.remaining + '/' + av.available + ' remaining';
+  } else {
+    document.getElementById('kpiNextServing').textContent = '--';
+    document.getElementById('kpiTokenAvail').textContent = 'No upcoming serving day';
+  }
 }
 
-function animateCounter(id, target) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const current = parseInt(el.textContent) || 0;
-  if (current === target) return;
-  let start = current;
-  const dur = 600;
-  const startTime = performance.now();
-  function step(now) {
-    const p = Math.min((now - startTime) / dur, 1);
-    el.textContent = Math.floor(start + (target - start) * p);
-    if (p < 1) requestAnimationFrame(step);
+function calcTokenAvailability() {
+  const bookings = DBSync.getBookings();
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const targetDays = [2, 5];
+  const dailyCap = parseInt(document.getElementById('calDailyCap')?.value) || 50;
+  const todayStr = getToday();
+
+  let nextDate = null;
+  for (let i = 0; i <= 14; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    if (targetDays.includes(d.getDay())) { nextDate = d; break; }
   }
-  requestAnimationFrame(step);
+
+  if (!nextDate) return { available: 0, remaining: 0, nextDate: '', nextLabel: '' };
+
+  const nextStr = nextDate.getFullYear() + '-' + String(nextDate.getMonth()+1).padStart(2,'0') + '-' + String(nextDate.getDate()).padStart(2,'0');
+  const booked = bookings.filter(b => b.date === nextStr && b.status !== 'cancelled').length;
+  const remaining = Math.max(0, dailyCap - booked);
+  const nextLabel = nextDate.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+
+  return { available: dailyCap, remaining, nextDate: nextStr, nextLabel, booked };
 }
 
 // ============================================
 // QUEUE TABLE
 // ============================================
-function renderQueueTable() {
-  const bookings = DBSync.getBookings();
-  const today = new Date().toISOString().split('T')[0];
-  let queue = bookings.filter(b => b.date === today && (b.status === 'approved' || b.status === 'pending' || b.status === 'waiting' || b.status === 'processing'));
-
-  const search = (document.getElementById('queueSearch')?.value || '').toLowerCase();
-  const statusFilter = document.getElementById('queueStatusFilter')?.value || '';
-
-  if (search) queue = queue.filter(b => b.name?.toLowerCase().includes(search) || b.email?.toLowerCase().includes(search) || b.token?.includes(search));
-  if (statusFilter) queue = queue.filter(b => b.status === statusFilter);
-
-  queue.sort((a, b) => {
-    let va = parseInt(a[queueSortField]) || a[queueSortField] || '';
-    let vb = parseInt(b[queueSortField]) || b[queueSortField] || '';
-    if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb || '').toLowerCase(); }
-    return queueSortDir === 'asc' ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
-  });
-
-  const total = queue.length;
-  const pages = Math.ceil(total / PAGE_SIZE);
-  queuePage = Math.min(queuePage, pages) || 1;
-  const start = (queuePage - 1) * PAGE_SIZE;
-  const page = queue.slice(start, start + PAGE_SIZE);
-
-  const tbody = document.getElementById('queueTableBody');
-  tbody.innerHTML = page.map(b => {
-    const statusClass = b.status === 'approved' || b.status === 'waiting' ? 'waiting' : b.status;
-    const statusLabel = b.status === 'approved' ? 'Waiting' : b.status.charAt(0).toUpperCase() + b.status.slice(1);
-    return `<tr>
-      <td class="token-cell">${String(b.token).padStart(2, '0')}</td>
-      <td class="name-cell">${b.name || 'N/A'}</td>
-      <td>${b.service || 'N/A'}</td>
-      <td>${b.createdAt ? new Date(b.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--'}</td>
-      <td><span class="db-badge ${statusClass}">${statusLabel}</span></td>
-      <td><div class="db-table-actions">
-        <button onclick="quickProcess('${b.bookingId}')" title="Process"><i class="fas fa-play"></i></button>
-        <button onclick="quickComplete('${b.bookingId}')" title="Complete"><i class="fas fa-check"></i></button>
-        <button onclick="quickCancel('${b.bookingId}')" title="Cancel"><i class="fas fa-ban"></i></button>
-      </div></td>
-    </tr>`;
-  }).join('');
-
-  document.getElementById('queuePaginationInfo').textContent = `Showing ${start + 1}-${Math.min(start + PAGE_SIZE, total)} of ${total} entries`;
-  renderPagination('queuePagination', pages, queuePage, (p) => { queuePage = p; renderQueueTable(); });
-
-  // Queue stats
-  document.getElementById('queueTotalToday').textContent = bookings.filter(b => b.date === today).length;
-  document.getElementById('queueWaiting').textContent = bookings.filter(b => b.date === today && (b.status === 'approved' || b.status === 'pending' || b.status === 'waiting')).length;
-  document.getElementById('queueInProgress').textContent = bookings.filter(b => b.date === today && b.status === 'processing').length;
-  document.getElementById('queueCompleted').textContent = bookings.filter(b => b.date === today && b.status === 'completed').length;
-}
-
-function sortQueue(field) {
-  if (queueSortField === field) queueSortDir = queueSortDir === 'asc' ? 'desc' : 'asc';
-  else { queueSortField = field; queueSortDir = 'asc'; }
-  renderQueueTable();
-}
-
-function renderPagination(id, pages, current, callback) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (pages <= 1) { el.innerHTML = ''; return; }
-  let html = '';
-  for (let i = 1; i <= pages; i++) {
-    html += `<button class="${i === current ? 'active' : ''}" onclick="(${callback})(this.dataset.p)" data-p="${i}">${i}</button>`;
-  }
-  el.innerHTML = html;
-  el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => callback(parseInt(b.dataset.p))));
-}
-
+// ============================================
+// QUEUE CONTROL
 // ============================================
 // QUEUE CONTROL
 // ============================================
 function refreshQueueControl() {
   const bookings = DBSync.getBookings();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getToday();
   const currentToken = DBSync.getToken();
 
   const currentBooking = bookings.find(b => parseInt(b.token) === currentToken);
@@ -354,40 +412,35 @@ function refreshQueueControl() {
     : 'No active token';
 }
 
-function renderQCQueueTable() {
+
+
+async function startToken() {
   const bookings = DBSync.getBookings();
-  const today = new Date().toISOString().split('T')[0];
-  const queue = bookings.filter(b => b.date === today && (b.status === 'approved' || b.status === 'pending' || b.status === 'waiting' || b.status === 'processing'));
-  queue.sort((a, b) => parseInt(a.token) - parseInt(b.token));
-
-  document.getElementById('qcActiveCount').textContent = queue.length + ' active tokens';
-
-  const tbody = document.getElementById('qcTableBody');
-  tbody.innerHTML = queue.map(b => {
-    const statusClass = b.status === 'approved' || b.status === 'waiting' ? 'waiting' : b.status === 'processing' ? 'processing' : b.status;
-    const statusLabel = b.status === 'approved' ? 'Waiting' : b.status.charAt(0).toUpperCase() + b.status.slice(1);
-    return `<tr>
-      <td class="token-cell">${String(b.token).padStart(2, '0')}</td>
-      <td class="name-cell">${b.name || 'N/A'}</td>
-      <td>${b.service || 'N/A'}</td>
-      <td><span class="db-badge ${statusClass}">${statusLabel}</span></td>
-      <td><div class="db-table-actions">
-        <button onclick="quickComplete('${b.bookingId}')" title="Complete"><i class="fas fa-check"></i></button>
-        <button onclick="quickCancel('${b.bookingId}')" title="Cancel"><i class="fas fa-ban"></i></button>
-      </div></td>
-    </tr>`;
-  }).join('');
+  const waiting = bookings.filter(b => b.status === 'approved' || b.status === 'pending' || b.status === 'waiting');
+  waiting.sort((a, b) => parseInt(a.token) - parseInt(b.token));
+  if (waiting.length === 0) { notify('No bookings waiting to start the queue.', 'error'); return; }
+  const first = waiting[0];
+  if (!(await showConfirmModal('Start queue at Token #' + String(first.token).padStart(2, '0') + ' (' + (first.name || 'Customer') + ')?'))) return;
+  DBSync.setToken(parseInt(first.token));
+  logActivity('Started Queue', first.token, 'Success');
+  notify('Queue started at Token #' + String(first.token).padStart(2, '0'), 'success');
+  refreshQueueControl();
+  refreshDashboard();
+  const key = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  sessionStorage.setItem('qc_auth', key);
+  const qcWin = window.open('queue-control.html?key=' + key, '_blank');
 }
 
-function queueCallNext() {
+async function queueCallNext() {
   const bookings = DBSync.getBookings();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getToday();
   const waiting = bookings.filter(b => b.date === today && (b.status === 'approved' || b.status === 'pending' || b.status === 'waiting'));
   waiting.sort((a, b) => parseInt(a.token) - parseInt(b.token));
 
   if (waiting.length === 0) { notify('No customers waiting in queue.', 'error'); return; }
 
   const next = waiting[0];
+  if (!(await showConfirmModal('Call next token #' + String(next.token).padStart(2, '0') + ' for ' + (next.name || 'Customer') + '?'))) return;
   next.status = 'processing';
   DBSync.setBookings(bookings);
   DBSync.setToken(parseInt(next.token));
@@ -396,15 +449,15 @@ function queueCallNext() {
   notify('Called Token #' + next.token + ' — ' + (next.name || 'Customer'), 'success');
   refreshQueueControl();
   refreshDashboard();
-  renderQueueTable();
 }
 
-function queueMarkComplete() {
+async function queueMarkComplete() {
   const bookings = DBSync.getBookings();
   const currentToken = DBSync.getToken();
   const booking = bookings.find(b => parseInt(b.token) === currentToken && (b.status === 'processing' || b.status === 'approved' || b.status === 'waiting'));
 
   if (!booking) { notify('No active token to mark as completed.', 'error'); return; }
+  if (!(await showConfirmModal('Mark token #' + String(currentToken).padStart(2, '0') + ' (' + (booking.name || 'Customer') + ') as completed?'))) return;
 
   booking.status = 'completed';
   DBSync.setBookings(bookings);
@@ -413,15 +466,15 @@ function queueMarkComplete() {
   notify('Token #' + String(currentToken).padStart(2, '0') + ' marked as completed.', 'success');
   refreshQueueControl();
   refreshDashboard();
-  renderQueueTable();
 }
 
-function queueSkip() {
+async function queueSkip() {
   const bookings = DBSync.getBookings();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getToday();
   const processing = bookings.find(b => b.date === today && b.status === 'processing');
 
   if (!processing) { notify('No customer currently being served.', 'error'); return; }
+  if (!(await showConfirmModal('Skip token #' + String(processing.token).padStart(2, '0') + ' (' + (processing.name || 'Customer') + ')? They will be moved to end of queue.'))) return;
 
   processing.status = 'approved'; // Put back to waiting
   DBSync.setBookings(bookings);
@@ -432,12 +485,13 @@ function queueSkip() {
   renderQueueTable();
 }
 
-function queueCancel() {
+async function queueCancel() {
   const currentToken = DBSync.getToken();
   const bookings = DBSync.getBookings();
   const booking = bookings.find(b => parseInt(b.token) === currentToken && (b.status === 'processing' || b.status === 'approved' || b.status === 'waiting' || b.status === 'pending'));
 
   if (!booking) { notify('No active token to cancel.', 'error'); return; }
+  if (!(await showConfirmModal('Cancel token #' + String(currentToken).padStart(2, '0') + ' (' + (booking.name || 'Customer') + ')? This cannot be undone.'))) return;
 
   booking.status = 'cancelled';
   DBSync.setBookings(bookings);
@@ -446,20 +500,22 @@ function queueCancel() {
   notify('Token #' + String(currentToken).padStart(2, '0') + ' cancelled.', 'error');
   refreshQueueControl();
   refreshDashboard();
-  renderQueueTable();
 }
 
-function queueRecall() {
-  notify('Recall announced: Token #' + String(DBSync.getToken()).padStart(2, '0') + ', please proceed to counter.', 'info');
-  logActivity('Recalled Token', DBSync.getToken(), 'Success');
+async function queueRecall() {
+  const ct = DBSync.getToken();
+  if (!(await showConfirmModal('Recall token #' + String(ct).padStart(2, '0') + '? Announcement will be made.'))) return;
+  notify('Recall announced: Token #' + String(ct).padStart(2, '0') + ', please proceed to counter.', 'info');
+  logActivity('Recalled Token', ct, 'Success');
 }
 
-function queueNoShow() {
+async function queueNoShow() {
   const currentToken = DBSync.getToken();
   const bookings = DBSync.getBookings();
   const booking = bookings.find(b => parseInt(b.token) === currentToken && (b.status === 'processing' || b.status === 'approved' || b.status === 'waiting'));
 
   if (!booking) { notify('No active token to mark as no-show.', 'error'); return; }
+  if (!(await showConfirmModal('Mark token #' + String(currentToken).padStart(2, '0') + ' (' + (booking.name || 'Customer') + ') as no-show? Status will be set to cancelled.'))) return;
 
   booking.status = 'cancelled';
   DBSync.setBookings(bookings);
@@ -468,7 +524,6 @@ function queueNoShow() {
   notify('Token #' + String(currentToken).padStart(2, '0') + ' marked as no-show.', 'warning');
   refreshQueueControl();
   refreshDashboard();
-  renderQueueTable();
 }
 
 function queueTogglePause() {
@@ -481,19 +536,21 @@ function queueTogglePause() {
   logActivity(queuePaused ? 'Paused Queue' : 'Resumed Queue', '--', 'Success');
 }
 
-function queueUpdateToken() {
+async function queueUpdateToken() {
   const val = prompt('Enter token number to set as current:');
   if (val && !isNaN(val) && val > 0) {
+    if (!(await showConfirmModal('Update current token to #' + String(val).padStart(2, '0') + '?'))) return;
     DBSync.setToken(parseInt(val));
     notify('Current token updated to #' + String(val).padStart(2, '0'), 'success');
     logActivity('Updated Token', val, 'Success');
-    refreshQueueControl();
-    refreshDashboard();
-  }
+  refreshQueueControl();
+  refreshDashboard();
+  window.open('queue-control.html', '_blank');
+}
 }
 
-function queueResetToken() {
-  if (!confirm('Reset current token to 00? This will start the queue from the beginning.')) return;
+async function queueResetToken() {
+  if (!(await showConfirmModal('Reset current token to 00? This will start the queue from the beginning.'))) return;
   DBSync.setToken(0);
   notify('Token counter reset to 00. Queue will restart from the beginning.', 'info');
   logActivity('Reset Token', '00', 'Success');
@@ -501,10 +558,11 @@ function queueResetToken() {
   refreshDashboard();
 }
 
-function quickProcess(bookingId) {
+async function quickProcess(bookingId) {
   const bookings = DBSync.getBookings();
   const b = bookings.find(x => x.bookingId === bookingId);
   if (!b) return;
+  if (!(await showConfirmModal('Process token #' + String(b.token).padStart(2, '0') + ' (' + (b.name || 'Customer') + ')?'))) return;
   b.status = 'processing';
   DBSync.setBookings(bookings);
   DBSync.setToken(parseInt(b.token));
@@ -514,10 +572,11 @@ function quickProcess(bookingId) {
   refreshDashboard();
 }
 
-function quickComplete(bookingId) {
+async function quickComplete(bookingId) {
   const bookings = DBSync.getBookings();
   const b = bookings.find(x => x.bookingId === bookingId);
   if (!b) return;
+  if (!(await showConfirmModal('Mark token #' + String(b.token).padStart(2, '0') + ' (' + (b.name || 'Customer') + ') as completed?'))) return;
   b.status = 'completed';
   DBSync.setBookings(bookings);
   logActivity('Quick Completed', b.token, 'Success');
@@ -526,10 +585,11 @@ function quickComplete(bookingId) {
   refreshDashboard();
 }
 
-function quickCancel(bookingId) {
+async function quickCancel(bookingId) {
   const bookings = DBSync.getBookings();
   const b = bookings.find(x => x.bookingId === bookingId);
   if (!b) return;
+  if (!(await showConfirmModal('Cancel token #' + String(b.token).padStart(2, '0') + ' (' + (b.name || 'Customer') + ')? This cannot be undone.'))) return;
   b.status = 'cancelled';
   DBSync.setBookings(bookings);
   logActivity('Quick Cancelled', b.token, 'Success');
@@ -546,12 +606,11 @@ function renderBookingsTable() {
   const search = (document.getElementById('bookingsSearch')?.value || '').toLowerCase();
   const dateFilter = document.getElementById('bookingsDateFilter')?.value || '';
   const serviceFilter = document.getElementById('bookingsServiceFilter')?.value || '';
-  const statusFilter = document.getElementById('bookingsStatusFilter')?.value || '';
 
   if (search) bookings = bookings.filter(b => b.name?.toLowerCase().includes(search) || b.email?.toLowerCase().includes(search) || b.token?.includes(search) || b.bookingId?.toLowerCase().includes(search));
   if (dateFilter) bookings = bookings.filter(b => b.date === dateFilter);
   if (serviceFilter) bookings = bookings.filter(b => b.service === serviceFilter);
-  if (statusFilter) bookings = bookings.filter(b => b.status === statusFilter);
+  bookings = bookings.filter(b => b.status === 'pending' || b.status === 'approved' || b.status === 'processing');
 
   bookings.sort((a, b) => {
     let va = a[bookingsSortField] || '';
@@ -596,21 +655,101 @@ function renderBookingsTable() {
 
 function populateFilterOptions() {
   const bookings = DBSync.getBookings();
-  const dates = [...new Set(bookings.map(b => b.date).filter(Boolean))].sort().reverse();
-  const dateSel = document.getElementById('bookingsDateFilter');
-  const curVal = dateSel.value;
-  dateSel.innerHTML = '<option value="">All Dates</option>' + dates.map(d => `<option value="${d}" ${d === curVal ? 'selected' : ''}>${new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</option>`).join('');
-
   const services = [...new Set(bookings.map(b => b.service).filter(Boolean))];
   const svcSel = document.getElementById('bookingsServiceFilter');
   const curSvc = svcSel.value;
   svcSel.innerHTML = '<option value="">All Services</option>' + services.map(s => `<option value="${s}" ${s === curSvc ? 'selected' : ''}>${s}</option>`).join('');
+
+  populateCompletedFilters();
 }
 
 function sortBookings(field) {
   if (bookingsSortField === field) bookingsSortDir = bookingsSortDir === 'asc' ? 'desc' : 'asc';
   else { bookingsSortField = field; bookingsSortDir = 'asc'; }
   renderBookingsTable();
+}
+
+// ============================================
+// COMPLETED BOOKINGS
+// ============================================
+function populateCompletedFilters() {
+  const bookings = DBSync.getBookings();
+  const compDates = [...new Set(bookings.filter(b => b.status === 'completed').map(b => b.date).filter(Boolean))].sort().reverse();
+  const dateSel = document.getElementById('completedDateFilter');
+  if (!dateSel) return;
+  const curVal = dateSel.value;
+  dateSel.innerHTML = '<option value="">All Dates</option>' + compDates.map(d => `<option value="${d}" ${d === curVal ? 'selected' : ''}>${new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</option>`).join('');
+
+  const services = [...new Set(bookings.filter(b => b.status === 'completed').map(b => b.service).filter(Boolean))];
+  const svcSel = document.getElementById('completedServiceFilter');
+  const curSvc = svcSel.value;
+  svcSel.innerHTML = '<option value="">All Services</option>' + services.map(s => `<option value="${s}" ${s === curSvc ? 'selected' : ''}>${s}</option>`).join('');
+}
+
+function renderCompletedBookings() {
+  let bookings = DBSync.getBookings().filter(b => b.status === 'completed');
+  const search = (document.getElementById('completedSearch')?.value || '').toLowerCase();
+  const dateFilter = document.getElementById('completedDateFilter')?.value || '';
+  const serviceFilter = document.getElementById('completedServiceFilter')?.value || '';
+
+  if (search) bookings = bookings.filter(b => b.name?.toLowerCase().includes(search) || b.email?.toLowerCase().includes(search) || b.token?.includes(search) || b.aadhaarLast4?.includes(search));
+  if (dateFilter) bookings = bookings.filter(b => b.date === dateFilter);
+  if (serviceFilter) bookings = bookings.filter(b => b.service === serviceFilter);
+
+  bookings.sort((a, b) => {
+    let va = a[completedSortField] || '';
+    let vb = b[completedSortField] || '';
+    if (completedSortField === 'token' || completedSortField === 'date') { va = va.toString(); vb = vb.toString(); }
+    va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase();
+    return completedSortDir === 'asc' ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+  });
+
+  const total = bookings.length;
+  const pages = Math.ceil(total / PAGE_SIZE);
+  completedPage = Math.min(completedPage, pages) || 1;
+  const start = (completedPage - 1) * PAGE_SIZE;
+  const page = bookings.slice(start, start + PAGE_SIZE);
+
+  const tbody = document.getElementById('completedTableBody');
+  tbody.innerHTML = page.map(b => {
+    const d = b.date ? new Date(b.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '--';
+    return `<tr>
+      <td class="token-cell">${String(b.token).padStart(2, '0')}</td>
+      <td class="name-cell">${b.name || 'N/A'}</td>
+      <td style="font-family:'Space Grotesk',sans-serif;letter-spacing:0.05em;">xxxx xxxx ${b.aadhaarLast4 || '----'}</td>
+      <td>${b.service || 'N/A'}</td>
+      <td>${b.email || '--'}</td>
+      <td>${d}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('completedPaginationInfo').textContent = `Showing ${start + 1}-${Math.min(start + PAGE_SIZE, total)} of ${total} completed entries`;
+  renderPagination('completedPagination', pages, completedPage, (p) => { completedPage = p; renderCompletedBookings(); });
+  document.getElementById('completedCount').textContent = total + ' total';
+}
+
+function sortCompleted(field) {
+  if (completedSortField === field) completedSortDir = completedSortDir === 'asc' ? 'desc' : 'asc';
+  else { completedSortField = field; completedSortDir = 'asc'; }
+  renderCompletedBookings();
+}
+
+function renderPagination(id, pages, current, callback) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || Math.abs(i - current) <= 2) {
+      html += `<button class="${i === current ? 'active' : ''}" data-p="${i}">${i}</button>`;
+    } else if (html.endsWith('...</span>') === false) {
+      html += '<span style="padding:0 6px;color:var(--db-text3);">...</span>';
+    }
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => callback(parseInt(btn.dataset.p)));
+  });
 }
 
 // ============================================
@@ -625,7 +764,7 @@ function renderCalendar() {
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getToday();
 
   const bookings = DBSync.getBookings();
   const dailyCap = parseInt(document.getElementById('calDailyCap')?.value) || 50;
@@ -663,9 +802,21 @@ function renderCalendar() {
 
   // Today's stats
   const todayBookings = bookings.filter(b => b.date === today);
-  document.getElementById('calAvailableSlots').value = dailyCap + ' max';
-  document.getElementById('calBookedSlots').value = todayBookings.length + ' booked';
-  document.getElementById('calRemainingSlots').value = Math.max(0, dailyCap - todayBookings.length) + ' remaining';
+  const dailyCapStr = dailyCap + ' max';
+  const bookedStr = todayBookings.length + ' booked';
+  const remainStr = Math.max(0, dailyCap - todayBookings.length) + ' remaining';
+  document.getElementById('calAvailableSlots').textContent = dailyCapStr;
+  document.getElementById('calBookedSlots').textContent = todayBookings.length;
+  document.getElementById('calRemainingSlots').textContent = remainStr;
+  document.getElementById('calDailyCapDisplay').textContent = dailyCap;
+  document.getElementById('calTodayDate').textContent = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  // Also update settings section fields if visible
+  var sAvail = document.getElementById('setCalAvailableSlots');
+  if (sAvail) sAvail.value = dailyCapStr;
+  var sBooked = document.getElementById('setCalBookedSlots');
+  if (sBooked) sBooked.value = bookedStr;
+  var sRemain = document.getElementById('setCalRemainingSlots');
+  if (sRemain) sRemain.value = remainStr;
 }
 
 function calNavigate(dir) {
@@ -675,7 +826,12 @@ function calNavigate(dir) {
 }
 
 function toggleCalendarDate(dateStr) {
-  notify('Date: ' + new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' — Click settings to adjust capacity.', 'info');
+  const bookings = DBSync.getBookings().filter(b => b.date === dateStr);
+  const dailyCap = parseInt(document.getElementById('calDailyCap')?.value) || 50;
+  const total = bookings.length;
+  const remaining = Math.max(0, dailyCap - total);
+  const dateLabel = new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  notify(dateLabel + ' — ' + total + ' booked, ' + remaining + ' remaining', total >= dailyCap ? 'error' : 'info');
 }
 
 function updateCalendarSettings() {
@@ -734,20 +890,18 @@ function saveActivityLog() {
 function logActivity(action, token, result) {
   const now = new Date();
   activityLog.unshift({ timestamp: now.toISOString(), admin: 'Admin', action, token: token || '--', result });
-  if (activityLog.length > 200) activityLog = activityLog.slice(0, 200);
+  if (activityLog.length > 5000) activityLog = activityLog.slice(0, 5000);
   saveActivityLog();
 }
 
 function renderActivity() {
   const search = (document.getElementById('activitySearch')?.value || '').toLowerCase();
-  const filter = document.getElementById('activityFilter')?.value || '';
   let logs = [...activityLog];
 
   if (search) logs = logs.filter(l => l.action.toLowerCase().includes(search) || l.token?.includes(search) || l.admin?.toLowerCase().includes(search));
-  if (filter) logs = logs.filter(l => l.action.toLowerCase().includes(filter) || l.result.toLowerCase() === filter);
 
   const el = document.getElementById('activityList');
-  el.innerHTML = logs.slice(0, 50).map(l => {
+  el.innerHTML = logs.slice(0, 100).map(l => {
     const d = new Date(l.timestamp);
     const timeStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     const resultClass = l.result === 'Success' ? 'success' : 'error';
@@ -777,39 +931,68 @@ function exportReport(type) {
 // ADMIN MANAGEMENT
 // ============================================
 let admins = [];
+let _adminsUnsub = null;
 
 function renderAdmins() {
-  const el = document.getElementById('adminList');
-  if (!el) return;
-  if (!admins.length) {
-    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--db-text3);">No admins configured.</div>';
-    return;
-  }
-  el.innerHTML = admins.map(a => {
-    const roleLabel = a.role ? a.role.charAt(0).toUpperCase() + a.role.slice(1) : 'Staff';
-    return `<div class="db-role-card">
-      <div class="db-role-header">
-        <div><div class="db-role-name">${a.name || 'Unknown'}</div><div style="font-size:12px;color:var(--db-text3);margin-top:2px;">${a.email || '--'}</div></div>
-        <span class="db-role-badge ${a.role || 'staff'}">${roleLabel}</span>
-      </div>
-    </div>`;
-  }).join('');
+  if (!window.__adminsRef) return;
+  if (_adminsUnsub) { _adminsUnsub(); _adminsUnsub = null; }
+  _adminsUnsub = window.__adminsRef.onSnapshot(function(snap) {
+    admins = [];
+    snap.forEach(function(doc) { admins.push({ email: doc.id, ...doc.data() }); });
+    var el = document.getElementById('adminListBody');
+    if (!el) return;
+    if (!admins.length) {
+      el.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--db-text3);">No admins configured. Add the first admin email to get started.</td></tr>';
+      return;
+    }
+    el.innerHTML = admins.map(function(a) {
+      var roleLabel = a.role ? a.role.charAt(0).toUpperCase() + a.role.slice(1) : 'Staff';
+      var d = a.added ? new Date(a.added).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '--';
+      var isSelf = currentAdmin && currentAdmin.email === a.email;
+      return '<tr>' +
+        '<td class="name-cell">' + (a.email || '--') + (isSelf ? ' <span class="db-badge approved" style="font-size:10px;">You</span>' : '') + '</td>' +
+        '<td><span class="db-role-badge ' + (a.role || 'staff') + '">' + roleLabel + '</span></td>' +
+        '<td style="color:var(--db-text3);font-size:13px;">' + d + '</td>' +
+        '<td><button class="db-quick-action" style="background:rgba(239,68,68,0.1);color:#ef4444;border-color:rgba(239,68,68,0.2);" onclick="removeAdmin(\'' + a.email.replace(/'/g, "\\'") + '\')"><i class="fas fa-trash"></i></button></td>' +
+        '</tr>';
+    }).join('');
+  }, function() {
+    var el = document.getElementById('adminListBody');
+    if (el) el.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--db-text3);">Could not load admins.</td></tr>';
+  });
 }
 
-function addAdmin() {
-  const name = prompt('Enter admin name:');
-  if (!name) return;
-  const email = prompt('Enter email:');
-  if (!email) return;
-  const role = prompt('Enter role (owner/manager/staff):');
-  if (!['owner', 'manager', 'staff'].includes(role)) { notify('Invalid role.', 'error'); return; }
-  if (window.__adminsRef) {
-    window.__adminsRef.add({ name, email, role, added: new Date().toISOString() }).then(() => {
-      logActivity('Added Admin: ' + name, '--', 'Success');
-      notify('Admin ' + name + ' added.', 'success');
-    });
-  } else {
-    notify('Firestore not available.', 'error');
+async function addAdmin() {
+  var email = prompt('Enter the Google email address to authorize:');
+  if (!email || !email.includes('@')) { notify('Enter a valid email address.', 'error'); return; }
+  email = email.trim().toLowerCase();
+  var role = prompt('Enter role (owner / manager / staff):', 'staff');
+  if (!role || !['owner', 'manager', 'staff'].includes(role.toLowerCase())) { notify('Invalid role. Choose: owner, manager, or staff.', 'error'); return; }
+  role = role.toLowerCase();
+  if (!(await showConfirmModal('Authorize ' + email + ' as ' + role + '?'))) return;
+  if (!window.__adminsRef) { notify('Firestore not available.', 'error'); return; }
+  try {
+    await window.__adminsRef.doc(email).set({ role: role, added: new Date().toISOString() });
+    logActivity('Added Admin: ' + email, '--', 'Success');
+    notify('Authorized ' + email + ' as ' + role + '.', 'success');
+  } catch(e) {
+    notify('Failed to add admin: ' + e.message, 'error');
+  }
+}
+
+async function removeAdmin(email) {
+  if (currentAdmin && currentAdmin.email === email) {
+    notify('You cannot remove yourself.', 'error');
+    return;
+  }
+  if (!(await showConfirmModal('Remove admin access for ' + email + '? They will be signed out immediately.'))) return;
+  if (!window.__adminsRef) { notify('Firestore not available.', 'error'); return; }
+  try {
+    await window.__adminsRef.doc(email).delete();
+    logActivity('Removed Admin: ' + email, '--', 'Success');
+    notify('Removed ' + email + ' from admin access.', 'warning');
+  } catch(e) {
+    notify('Failed to remove admin: ' + e.message, 'error');
   }
 }
 
@@ -817,6 +1000,14 @@ function addAdmin() {
 // NOTIFICATIONS
 // ============================================
 let notifications = [];
+
+function loadNotifications() {
+  try { const d = localStorage.getItem('ds_notifications'); if (d) notifications = JSON.parse(d); } catch(e) {}
+  updateNotifBadge();
+}
+function saveNotifications() {
+  try { localStorage.setItem('ds_notifications', JSON.stringify(notifications.slice(0, 100))); } catch(e) {}
+}
 
 function renderNotifications() {
   const el = document.getElementById('notifList');
@@ -837,14 +1028,14 @@ function renderNotifications() {
 
 function markNotifRead(el) {
   el.style.opacity = '0.6';
-}
   const idx = Array.from(el.parentNode.children).indexOf(el);
-  if (notifications[idx]) notifications[idx].read = true;
+  if (notifications[idx]) { notifications[idx].read = true; saveNotifications(); }
   updateNotifBadge();
 }
 
 function markAllNotifRead() {
   notifications.forEach(n => n.read = true);
+  saveNotifications();
   renderNotifications();
   updateNotifBadge();
   notify('All notifications marked as read.', 'success');
@@ -859,38 +1050,91 @@ function updateNotifBadge() {
 // ============================================
 // SETTINGS
 // ============================================
-function saveSettings() {
-  const settings = {
-    centerName: document.getElementById('setCenterName')?.value,
-    address: document.getElementById('setAddress')?.value,
-    contact: document.getElementById('setContact')?.value,
-    workingDays: document.getElementById('setWorkingDays')?.value,
-    maxDaily: document.getElementById('setMaxDaily')?.value,
-  };
-  localStorage.setItem('ds_settings', JSON.stringify(settings));
+async function saveSettings() {
+  if (!(await showConfirmModal('Save all settings? This may affect system behavior.'))) return;
+  const fields = [
+    { id:'setCenterName', label:'Center Name', key:'centerName' },
+    { id:'setAddress', label:'Address', key:'address' },
+    { id:'setContact', label:'Contact', key:'contact' },
+    { id:'setOpen', label:'Opening Time', key:'open' },
+    { id:'setClose', label:'Closing Time', key:'close' },
+    { id:'setBreakStart', label:'Break Start', key:'breakStart' },
+    { id:'setBreakEnd', label:'Break End', key:'breakEnd' },
+    { id:'setWorkingDays', label:'Working Days', key:'workingDays' },
+    { id:'setMaxDaily', label:'Max Daily', key:'maxDaily' },
+    { id:'setMinAdvance', label:'Min Advance', key:'minAdvance' },
+    { id:'setMaxAdvance', label:'Max Advance', key:'maxAdvance' },
+    { id:'setTokenPrefix', label:'Token Prefix', key:'tokenPrefix' },
+    { id:'setTokenFormat', label:'Token Format', key:'tokenFormat' },
+    { id:'setAutoReset', label:'Auto Reset', key:'autoReset' },
+    { id:'setOtpLength', label:'OTP Length', key:'otp_length' },
+    { id:'setOtpExpiry', label:'OTP Expiry', key:'otp_expiry' },
+    { id:'setDailySmsLimit', label:'Daily SMS Limit', key:'daily_limit' },
+    { id:'setTheme', label:'Theme', key:'theme' },
+    { id:'setAccent', label:'Accent Color', key:'accent' },
+  ];
+  const oldSettings = JSON.parse(localStorage.getItem('ds_settings') || '{}');
+  const changes = [];
+  const newVals = {};
+  fields.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (!el) return;
+    const val = el.value;
+    newVals[f.key] = val;
+    if (String(oldSettings[f.key] ?? '') !== String(val)) {
+      changes.push(f.label + ': ' + (oldSettings[f.key] || '(empty)') + ' → ' + (val || '(empty)'));
+    }
+  });
+  localStorage.setItem('ds_settings', JSON.stringify(newVals));
 
-  const smsConfig = {
-    driver: document.getElementById('setSmsDriver')?.value || 'log',
-    fast2sms_api_key: document.getElementById('setFast2SmsKey')?.value || '',
-    fast2sms_sender_id: document.getElementById('setFast2SmsSender')?.value || 'FTWSMS',
-    msg91_auth_key: document.getElementById('setMsg91Key')?.value || '',
-    msg91_sender_id: document.getElementById('setMsg91Sender')?.value || 'MSGIND',
-    otp_length: parseInt(document.getElementById('setOtpLength')?.value) || 6,
-    otp_expiry: parseInt(document.getElementById('setOtpExpiry')?.value) || 300,
-    daily_limit: parseInt(document.getElementById('setDailySmsLimit')?.value) || 100,
-    sms_template: document.getElementById('setSmsTemplate')?.value || '',
-  };
-
-  fetch('api/otp?action=status', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ _saveConfig: true, config: smsConfig })
-  }).catch(() => {});
-
-  localStorage.setItem('ds_sms_config', JSON.stringify(smsConfig));
-  notify('Settings saved successfully.', 'success');
-  logActivity('Updated Settings', '--', 'Success');
+  if (changes.length) {
+    changes.forEach(c => logActivity('Updated Settings: ' + c, '--', 'Success'));
+  }
+  notify(changes.length + ' setting(s) saved successfully.', 'success');
 }
+
+// ============================================
+// CONFIRMATION MODAL
+// ============================================
+let _modalResolve = null;
+
+function showConfirmModal(msg) {
+  return new Promise(resolve => {
+    _modalResolve = resolve;
+    document.getElementById('modalMsg').textContent = msg;
+    document.getElementById('confirmModalOverlay').classList.add('open');
+    document.getElementById('modalConfirmBtn').classList.remove('loading');
+    document.getElementById('modalConfirmBtn').querySelector('.modal-btn-text').textContent = 'Yes, Continue';
+    setTimeout(() => document.getElementById('modalConfirmBtn').focus(), 100);
+  });
+}
+
+function closeConfirmModal(result, event) {
+  if (event && event.target !== event.currentTarget) return;
+  document.getElementById('confirmModalOverlay').classList.remove('open');
+  if (_modalResolve) {
+    _modalResolve(result);
+    _modalResolve = null;
+  }
+}
+
+function executeConfirmModal() {
+  const btn = document.getElementById('modalConfirmBtn');
+  btn.classList.add('loading');
+  setTimeout(() => {
+    document.getElementById('confirmModalOverlay').classList.remove('open');
+    if (_modalResolve) {
+      _modalResolve(true);
+      _modalResolve = null;
+    }
+  }, 300);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('confirmModalOverlay').classList.contains('open')) {
+    closeConfirmModal(false);
+  }
+});
 
 // ============================================
 // NOTIFICATION HELPER
@@ -900,7 +1144,7 @@ function notify(msg, type) {
   if (!n) {
     n = document.createElement('div');
     n.id = '_dbNotif';
-    n.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;font-family:Inter,sans-serif;max-width:380px;transition:all 0.3s;transform:translateY(20px);opacity:0;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
+    n.style.cssText = 'position:fixed;z-index:9999;padding:14px 24px;border-radius:12px;font-size:13px;font-weight:500;font-family:Inter,sans-serif;max-width:460px;transition:all 0.35s cubic-bezier(0.4,0,0.2,1);opacity:0;box-shadow:0 8px 32px rgba(0,0,0,0.4);pointer-events:none;';
     document.body.appendChild(n);
   }
 
@@ -912,16 +1156,41 @@ function notify(msg, type) {
   };
   const c = colors[type] || colors.info;
 
+  if (type === 'error') {
+    n.style.bottom = '24px'; n.style.left = '50%';
+    n.style.top = 'auto'; n.style.right = 'auto';
+    n.style.transform = 'translateX(-50%) translateY(20px)';
+    n.style.maxWidth = '500px';
+    n.style.textAlign = 'center';
+    n.style.padding = '20px 32px';
+    n.style.fontSize = '14px';
+    n.style.fontWeight = '600';
+  } else {
+    n.style.bottom = '24px'; n.style.right = '24px';
+    n.style.top = 'auto'; n.style.left = 'auto';
+    n.style.transform = 'translateY(20px)';
+    n.style.textAlign = 'left';
+    n.style.padding = '14px 24px';
+  }
+
   n.textContent = msg;
   n.style.background = c.bg;
   n.style.border = c.border;
   n.style.color = c.color;
-  n.style.transform = 'translateY(0)';
   n.style.opacity = '1';
+  if (type === 'error') {
+    n.style.transform = 'translateX(-50%) translateY(0)';
+  } else {
+    n.style.transform = 'translateY(0)';
+  }
 
   clearTimeout(n._t);
   n._t = setTimeout(() => {
-    n.style.transform = 'translateY(20px)';
     n.style.opacity = '0';
-  }, 3000);
+    if (type === 'error') {
+      n.style.transform = 'translateX(-50%) translateY(20px)';
+    } else {
+      n.style.transform = 'translateY(20px)';
+    }
+  }, 3500);
 }
