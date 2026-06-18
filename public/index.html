@@ -35,7 +35,6 @@
 </script>
 <script type="module">
 import { initializeApp } from "firebase/app";
-import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDgbUt2SMxd4glTjn4Z1S8oAq4bCmSobDQ",
@@ -48,31 +47,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-window.fbAuth = auth;
-
-window.fbSendSignInLink = async (email) => {
-  const actionCodeSettings = {
-    url: window.location.origin + '/',
-    handleCodeInApp: true
-  };
-  await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-  window.localStorage.setItem('emailForSignIn', email);
-};
-
-window.fbCompleteSignIn = async () => {
-  if (isSignInWithEmailLink(auth, window.location.href)) {
-    let email = window.localStorage.getItem('emailForSignIn');
-    if (!email) {
-      email = window.prompt('Please provide your email for confirmation');
-    }
-    await signInWithEmailLink(auth, email, window.location.href);
-    window.localStorage.removeItem('emailForSignIn');
-    return email;
-  }
-  return null;
-};
 
 window.sessionEmail = null;
 
