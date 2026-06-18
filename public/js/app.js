@@ -110,6 +110,8 @@ function updateLiveIndicator() {
 // ============================================
 let sessionBookingData = {};
 let currentBookingStep = 1;
+let bookingStep = 1;
+let checkTokenStep = 1;
 let verifiedAadhaar = null;
 let selectedDate = null;
 
@@ -265,7 +267,7 @@ function updateQueueDisplay() {
         return t > ct && t < myToken && (b.status === 'approved' || b.status === 'pending');
       }).length;
       document.getElementById('livePeopleAhead').textContent = ahead;
-      document.getElementById('liveWaitTime').textContent = (ahead + 1) * 15 + 'm';
+      document.getElementById('liveWaitTime').textContent = (ahead + 1) * 15 + t('wait_min');
       document.getElementById('liveLoginPrompt').style.display = 'none';
     } catch(e) {}
   }
@@ -343,19 +345,19 @@ function renderBookingStep(step) {
   if (step === 1) {
     // Step 1: Service selection + Phone + Aadhaar last 4 — all on same page
     const savedService = sessionBookingData.service || '';
-    document.getElementById('bookingModalTitle').textContent = 'Book Your Token';
+    document.getElementById('bookingModalTitle').textContent = t('book_title');
     body.innerHTML = stepIndicator + `
       <!-- Service Selection -->
       <div class="form-group">
-        <label class="form-label">Select Service</label>
+        <label class="form-label">${t('select_service')}</label>
         <select class="form-select" id="bookService">
-          <option value="">-- Choose a Service --</option>
-          <option value="Mobile Number Update" ${savedService === 'Mobile Number Update' ? 'selected' : ''}>Mobile Number Update</option>
-          <option value="Address Update" ${savedService === 'Address Update' ? 'selected' : ''}>Address Update</option>
-          <option value="Name Correction" ${savedService === 'Name Correction' ? 'selected' : ''}>Name Correction</option>
-          <option value="Date of Birth Update" ${savedService === 'Date of Birth Update' ? 'selected' : ''}>Date of Birth Update</option>
-          <option value="Biometric Update" ${savedService === 'Biometric Update' ? 'selected' : ''}>Biometric Update</option>
-          <option value="Other Aadhaar Services" ${savedService === 'Other Aadhaar Services' ? 'selected' : ''}>Other Aadhaar Services</option>
+          <option value="">${t('booking_service_choose')}</option>
+          <option value="Mobile Number Update" ${savedService === 'Mobile Number Update' ? 'selected' : ''}>${t('mobile_update')}</option>
+          <option value="Address Update" ${savedService === 'Address Update' ? 'selected' : ''}>${t('addr_update')}</option>
+          <option value="Name Correction" ${savedService === 'Name Correction' ? 'selected' : ''}>${t('name_correction')}</option>
+          <option value="Date of Birth Update" ${savedService === 'Date of Birth Update' ? 'selected' : ''}>${t('dob_update')}</option>
+          <option value="Biometric Update" ${savedService === 'Biometric Update' ? 'selected' : ''}>${t('bio_update')}</option>
+          <option value="Other Aadhaar Services" ${savedService === 'Other Aadhaar Services' ? 'selected' : ''}>${t('other_aadhaar')}</option>
         </select>
       </div>
 
@@ -363,8 +365,8 @@ function renderBookingStep(step) {
 
       <!-- Email -->
       <div class="form-group">
-        <label class="form-label">Email Address</label>
-        <input type="email" class="form-input" id="bookEmail" placeholder="your@email.com"
+        <label class="form-label">${t('email_label')}</label>
+        <input type="email" class="form-input" id="bookEmail" placeholder="${t('email_plc')}"
           value="${sessionBookingData.email || ''}"
           style="width:100%;padding:13px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s;"
           onfocus="this.style.borderColor='rgba(59,130,246,0.5)'"
@@ -373,7 +375,7 @@ function renderBookingStep(step) {
 
       <!-- Aadhaar Number — last 4 digits -->
       <div class="form-group">
-        <label class="form-label">Aadhaar Number</label>
+        <label class="form-label">${t('aadhaar_label')}</label>
         <div style="position:relative;">
           <div style="display:flex; align-items:center; gap:0; background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); border-radius:10px; overflow:hidden; transition:border-color 0.2s;" id="aadhaarFieldWrap">
             <span style="padding:13px 14px; font-size:14px; color:var(--text3); letter-spacing:0.1em; font-family:'Space Grotesk',sans-serif; border-right:1px solid var(--glass-border); background:rgba(255,255,255,0.02); user-select:none; flex-shrink:0;">xxxx xxxx</span>
@@ -384,14 +386,14 @@ function renderBookingStep(step) {
               onblur="document.getElementById('aadhaarFieldWrap').style.borderColor='var(--glass-border)'"
             >
           </div>
-          <p style="font-size:12px; color:var(--text3); margin-top:6px;">Enter only the last 4 digits of your Aadhaar</p>
+          <p style="font-size:12px; color:var(--text3); margin-top:6px;">${t('aadhaar_hint')}</p>
         </div>
       </div>
 
       <!-- OTP section (hidden until Send OTP is clicked) -->
       <div id="bookOTPSection" style="display:none;">
         <div style="height:1px; background:var(--glass-border); margin:4px 0 20px;"></div>
-        <p style="font-size:13px; color:var(--text3); margin-bottom:16px;">Enter the 6-digit OTP sent to your email</p>
+        <p style="font-size:13px; color:var(--text3); margin-bottom:16px;">${t('otp_hint')}</p>
         <div class="otp-grid">
           <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
           <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
@@ -400,14 +402,14 @@ function renderBookingStep(step) {
           <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
           <input type="text" class="otp-input book-otp" maxlength="1" inputmode="numeric">
         </div>
-        <button class="btn-primary btn-full" onclick="verifyBookingOTP()" style="margin-top:12px;">Verify OTP &amp; Continue</button>
+        <button class="btn-primary btn-full" onclick="verifyBookingOTP()" style="margin-top:12px;">${t('verify_otp_btn')}</button>
         <p style="text-align:center; margin-top:12px;">
-          <a href="#" onclick="resendOTP(); return false;" style="color:var(--accent); font-size:13px;">Resend OTP</a>
+          <a href="#" onclick="resendOTP(); return false;" style="color:var(--accent); font-size:13px;">${t('resend_otp')}</a>
         </p>
       </div>
 
       <div id="bookSendOTPBtn" style="margin-top:8px;">
-        <button class="btn-primary btn-full" onclick="sendBookingOTP()">Send OTP</button>
+        <button class="btn-primary btn-full" onclick="sendBookingOTP()">${t('send_otp_btn')}</button>
       </div>
     `;
 
@@ -415,7 +417,7 @@ function renderBookingStep(step) {
     // Step 2: Date picker
     const dates = DB.getEnabledDates();
     const dateOptions = dates.length === 0
-      ? '<p style="color:var(--text3); font-size:14px; text-align:center; padding:20px;">No dates available at the moment. Please contact us directly.</p>'
+      ? '<p style="color:var(--text3); font-size:14px; text-align:center; padding:20px;">' + t('no_dates') + '</p>'
       : dates.map(d => {
           const date = new Date(d.date + 'T00:00:00');
           const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -428,20 +430,20 @@ function renderBookingStep(step) {
           </div>`;
         }).join('');
 
-    document.getElementById('bookingModalTitle').textContent = 'Choose Date';
+    document.getElementById('bookingModalTitle').textContent = t('choose_date_title');
     body.innerHTML = stepIndicator + `
-      <p style="font-size:14px; color:var(--text2); margin-bottom:20px;">Select your preferred appointment date. Only available dates are shown.</p>
+      <p style="font-size:14px; color:var(--text2); margin-bottom:20px;">${t('select_date_hint')}</p>
       <div class="date-grid">${dateOptions}</div>
       <div style="display:flex; gap:12px; margin-top:24px;">
-        <button class="btn-secondary" onclick="renderBookingStep(1)" style="flex:1; justify-content:center;">Back</button>
-        <button class="btn-primary" onclick="submitBookingStep2()" style="flex:2; justify-content:center;">Confirm Booking</button>
+        <button class="btn-secondary" onclick="renderBookingStep(1)" style="flex:1; justify-content:center;">${t('back_btn')}</button>
+        <button class="btn-primary" onclick="submitBookingStep2()" style="flex:2; justify-content:center;">${t('confirm_booking')}</button>
       </div>
     `;
 
   } else if (step === 3) {
     // Step 3: Confirmation
     const booking = sessionBookingData.confirmedBooking;
-    document.getElementById('bookingModalTitle').textContent = 'Booking Confirmed';
+    document.getElementById('bookingModalTitle').textContent = t('confirmed_title');
 
     const d = new Date(booking.date + 'T00:00:00');
     const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -457,42 +459,42 @@ function renderBookingStep(step) {
             <path d="M24 42l12 12 22-24" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="56" stroke-dashoffset="56" class="anim-check"/>
           </svg>
         </div>
-        <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;">Booking Confirmed</h3>
-        <p style="font-size:14px;color:var(--text2);margin-bottom:24px;">Your Aadhaar appointment is booked successfully.</p>
+        <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;">${t('booking_confirmed')}</h3>
+        <p style="font-size:14px;color:var(--text2);margin-bottom:24px;">${t('booking_success')}</p>
 
         <div style="text-align:center; margin-bottom:24px;">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">Your Token Number</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">${t('your_token_label')}</div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:72px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 30px rgba(56,189,248,0.3);">${booking.token}</div>
         </div>
 
-        <div class="booking-id-badge">Booking ID: ${booking.bookingId}</div>
+        <div class="booking-id-badge">${t('booking_id_label')}: ${booking.bookingId}</div>
 
         <div class="booking-detail-grid">
           <div class="booking-detail-row">
-            <span class="booking-detail-key">Service</span>
+            <span class="booking-detail-key">${t('service_label')}</span>
             <span class="booking-detail-val">${booking.service}</span>
           </div>
           <div class="booking-detail-row">
-            <span class="booking-detail-key">Aadhaar</span>
+            <span class="booking-detail-key">${t('aadhaar_detail')}</span>
             <span class="booking-detail-val" style="font-family:'Space Grotesk',sans-serif; letter-spacing:0.1em;">xxxx xxxx ${booking.aadhaarLast4}</span>
           </div>
           <div class="booking-detail-row">
-            <span class="booking-detail-key">Appointment Date</span>
+            <span class="booking-detail-key">${t('appt_date')}</span>
             <span class="booking-detail-val">${displayDate}</span>
           </div>
           <div class="booking-detail-row">
-            <span class="booking-detail-key">Status</span>
-            <span class="booking-detail-val text-success">Approved</span>
+            <span class="booking-detail-key">${t('status_label')}</span>
+            <span class="booking-detail-val text-success">${t('approved')}</span>
           </div>
         </div>
 
         <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px 16px;margin-top:16px;font-size:13px;color:#fbbf24;text-align:left;">
-          Please bring your Aadhaar card and supporting documents. Arrive 10 minutes before your token is called.
+          ${t('booking_info')}
         </div>
 
         <div style="display:flex;gap:10px;margin-top:24px;">
-          <button class="btn-primary btn-full" onclick="closeBooking()" style="flex:1;justify-content:center;">Done</button>
-          <button class="btn-primary btn-full" onclick="window.print()" style="flex:1;justify-content:center;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);">Print</button>
+          <button class="btn-primary btn-full" onclick="closeBooking()" style="flex:1;justify-content:center;">${t('done_btn')}</button>
+          <button class="btn-primary btn-full" onclick="window.print()" style="flex:1;justify-content:center;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);">${t('print_btn')}</button>
         </div>
       </div>
     `;
@@ -643,9 +645,9 @@ function renderCheckTokenStep(step) {
 
   if (step === 1) {
     body.innerHTML = `
-      <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">Enter the last 4 digits of the Aadhaar number used at the time of booking.</p>
+      <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">${t('check_aadhaar_hint')}</p>
       <div class="form-group">
-        <label class="form-label">Aadhaar Number (Last 4 Digits)</label>
+        <label class="form-label">${t('check_aadhaar_label')}</label>
         <div style="position:relative;">
           <div style="display:flex; align-items:center; gap:0; background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); border-radius:10px; overflow:hidden;">
             <span style="padding:13px 14px; font-size:14px; color:var(--text3); letter-spacing:0.1em; font-family:'Space Grotesk',sans-serif; border-right:1px solid var(--glass-border); background:rgba(255,255,255,0.02); user-select:none; flex-shrink:0;">xxxx xxxx</span>
@@ -655,7 +657,7 @@ function renderCheckTokenStep(step) {
           </div>
         </div>
       </div>
-      <button class="btn-primary btn-full" onclick="lookupByAadhaar()">Check My Token</button>
+      <button class="btn-primary btn-full" onclick="lookupByAadhaar()">${t('check_btn')}</button>
     `;
   } else if (step === 2) {
     const bookings = DB.getByAadhaar(verifiedAadhaar);
@@ -665,10 +667,10 @@ function renderCheckTokenStep(step) {
       body.innerHTML = `
         <div style="text-align:center; padding:32px 0;">
           <div style="font-size:48px; margin-bottom:16px; opacity:0.4;"><i class="fas fa-clipboard-list"></i></div>
-          <h3 style="font-size:18px; font-weight:600; margin-bottom:8px;">No Bookings Found</h3>
-          <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">We could not find any bookings for Aadhaar ending with <strong>${verifiedAadhaar}</strong>.</p>
-          <button class="btn-primary" onclick="closeCheckToken(); openBooking();">Book a Token Now</button>
-          <button class="btn-secondary" onclick="renderCheckTokenStep(1)" style="margin-top:8px; justify-content:center;">Try Again</button>
+          <h3 style="font-size:18px; font-weight:600; margin-bottom:8px;">${t('no_bookings_title')}</h3>
+          <p style="font-size:14px; color:var(--text2); margin-bottom:24px;">${t('no_bookings_text')} <strong>${verifiedAadhaar}</strong>.</p>
+          <button class="btn-primary" onclick="closeCheckToken(); openBooking();">${t('book_now')}</button>
+          <button class="btn-secondary" onclick="renderCheckTokenStep(1)" style="margin-top:8px; justify-content:center;">${t('try_again')}</button>
         </div>
       `;
       return;
@@ -694,45 +696,45 @@ function renderCheckTokenStep(step) {
         <div style="background:var(--glass); border:1px solid var(--glass-border); border-radius:14px; padding:20px; margin-bottom:16px;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
             <div>
-              <div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em;">Token Number</div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em;">${t('token_num')}</div>
               <div style="font-family:'Space Grotesk',sans-serif;font-size:42px;font-weight:700;color:var(--accent);line-height:1;">${b.token}</div>
             </div>
             <div class="status-pill ${statusClass}">${statusLabel}</div>
           </div>
           <div style="display:grid; gap:8px;">
             <div style="display:flex; justify-content:space-between; font-size:13px;">
-              <span style="color:var(--text3);">Booking ID</span>
+              <span style="color:var(--text3);">${t('booking_id_label')}</span>
               <span style="font-weight:600;">${b.bookingId}</span>
             </div>
             <div style="display:flex; justify-content:space-between; font-size:13px;">
-              <span style="color:var(--text3);">Service</span>
+              <span style="color:var(--text3);">${t('service_label')}</span>
               <span style="font-weight:600;">${b.service}</span>
             </div>
             <div style="display:flex; justify-content:space-between; font-size:13px;">
-              <span style="color:var(--text3);">Date</span>
+              <span style="color:var(--text3);">${t('appt_date')}</span>
               <span style="font-weight:600;">${displayDate}</span>
             </div>
             ${ahead !== null ? `
             <div style="display:flex; justify-content:space-between; font-size:13px;">
-              <span style="color:var(--text3);">People Ahead</span>
+              <span style="color:var(--text3);">${t('people_ahead')}</span>
               <span style="font-weight:600;">${ahead}</span>
             </div>
             <div style="display:flex; justify-content:space-between; font-size:13px;">
-              <span style="color:var(--text3);">Est. Wait</span>
-              <span style="font-weight:600;">${(ahead + 1) * 15} min</span>
+              <span style="color:var(--text3);">${t('est_wait')}</span>
+              <span style="font-weight:600;">${(ahead + 1) * 15} ${t('wait_min')}</span>
             </div>` : ''}
           </div>
           ${b.status === 'approved' || b.status === 'pending' ? `
-            <button class="btn-secondary w-full" style="margin-top:16px; justify-content:center; font-size:13px; color:var(--danger);" onclick="cancelBooking('${b.bookingId}')">Cancel Booking</button>
+            <button class="btn-secondary w-full" style="margin-top:16px; justify-content:center; font-size:13px; color:var(--danger);" onclick="cancelBooking('${b.bookingId}')">${t('cancel_booking')}</button>
           ` : ''}
         </div>
       `;
     }).join('');
 
     body.innerHTML = `
-      <p style="font-size:14px; color:var(--text2); margin-bottom:20px;">Found ${bookings.length} booking(s) for Aadhaar ending with <strong>${verifiedAadhaar}</strong>.</p>
+      <p style="font-size:14px; color:var(--text2); margin-bottom:20px;">${bookings.length} ${t('no_bookings_text')} <strong>${verifiedAadhaar}</strong>.</p>
       ${bookingCards}
-      <button class="btn-secondary btn-full" style="justify-content:center; margin-top:8px;" onclick="renderCheckTokenStep(1)">Check Another</button>
+      <button class="btn-secondary btn-full" style="justify-content:center; margin-top:8px;" onclick="renderCheckTokenStep(1)">${t('check_another')}</button>
     `;
   }
 }
@@ -999,191 +1001,241 @@ updateQueueDisplay();
 // ============================================
 const translations = {
   hi: {
-    nav_services: "सेवाएं",
+    nav_services: "सर्विस",
     nav_about: "हमारे बारे में",
     nav_queue: "लाइव कतार",
-    nav_location: "स्थान",
-    nav_contact: "संपर्क",
-    btn_check_token: "टोकन जांचें",
-    check_token_sub: "अपनी बुकिंग स्थिति, कतार स्थान और अनुमानित प्रतीक्षा समय देखें।",
-    services_tag: "सेवाएं",
-    services_title: "हम आपकी क्या सहायता कर सकते हैं?",
-    services_subtitle: "हम विभिन्न सरकारी और डिजिटल सेवाएं प्रदान करते हैं। अपनी बुकिंग शुरू करने के लिए नीचे एक सेवा चुनें।",
-    services_select_lbl: "बुक करने के लिए सेवा चुनें",
-    service_choose: "-- सेवा चुनें --",
+    nav_location: "लोकेशन",
+    nav_contact: "कॉन्टैक्ट",
+    btn_check_token: "टोकन चेक करें",
+    check_token_sub: "अपनी बुकिंग स्टेटस, कतार पोजीशन और वेटिंग टाइम देखें।",
+    services_tag: "सर्विस",
+    services_title: "हम आपकी क्या मदद कर सकते हैं?",
+    services_subtitle: "हम कई सरकारी और डिजिटल सर्विस देते हैं। बुकिंग शुरू करने के लिए नीचे सर्विस चुनें।",
+    services_select_lbl: "बुक करने के लिए सर्विस चुनें",
+    service_choose: "-- सर्विस चुनें --",
     service_aadhaar: "आधार अपडेट",
-    service_pan: "पैन सेवाएं (जल्द ही आ रहा है)",
-    service_passport: "पासपोर्ट सेवाएं (जल्द ही आ रहा है)",
-    service_online: "ऑनलाइन आवेदन (जल्द ही आ रहा है)",
-    service_ticket: "टिकट बुकिंग (जल्द ही आ रहा है)",
-    coming_soon_note: "यह सेवा जल्द ही आ रही है। कृपया बाद में पुनः देखें या सहायता के लिए हमसे संपर्क करें।",
+    service_pan: "पैन सर्विस (जल्द आ रहा है)",
+    service_passport: "पासपोर्ट सर्विस (जल्द आ रहा है)",
+    service_online: "ऑनलाइन अप्लाई (जल्द आ रहा है)",
+    service_ticket: "टिकट बुकिंग (जल्द आ रहा है)",
+    coming_soon_note: "यह सर्विस जल्द आ रही है। कृपया बाद में देखें या हमसे कॉन्टैक्ट करें।",
     about_tag: "स्थापना 2018",
-    about_title: "आपका विश्वसनीय डिजिटल सेवा भागीदार",
-    about_subtitle: "इंडिया मोबाइल सेंटर की स्थापना सरकारी सेवाओं को सभी के लिए सरल और सुलभ बनाने के लिए की गई थी। चाहे आपको अपना आधार अपडेट करना हो, दस्तावेजों के लिए आवेदन करना हो, या डिजिटल फॉर्म भरने में मदद चाहिए हो, हम यहां आपकी सहायता के लिए हैं।",
-    about_desc: "हम समझते हैं कि सरकारी प्रक्रियाएं जटिल लग सकती हैं। हमारा प्रशिक्षित स्टाफ हर कदम पर आपका मार्गदर्शन करता है, हर बार एक सहज और सफल अनुभव सुनिश्चित करता है।",
-    highlight_years: "सेवा के वर्ष",
+    about_title: "आपका भरोसेमंद डिजिटल सर्विस पार्टनर",
+    about_subtitle: "इंडिया मोबाइल सेंटर सरकारी सर्विस को सरल और आसान बनाने के लिए बना है। चाहे आधार अपडेट हो, डॉक्यूमेंट अप्लाई करना हो या फॉर्म भरना हो, हम आपकी हर कदम पर मदद करते हैं।",
+    about_desc: "हम जानते हैं कि सरकारी प्रोसेस थोड़ा मुश्किल लग सकता है। हमारा ट्रेंड स्टाफ हर स्टेप पर आपको गाइड करता है, हर बार एक आसान और सफल एक्सपीरियंस देता है।",
+    highlight_years: "सर्विस के वर्ष",
     highlight_customers: "खुश ग्राहक",
     highlight_success: "सफलता दर",
     highlight_fast: "तेज़ प्रोसेसिंग",
-    why_tag: "हमें क्यों चुनें",
-    why_title: "आपकी सुविधा के लिए निर्मित",
-    why_subtitle: "हम जो कुछ भी करते हैं वह आपकी यात्रा को आसान, तेज़ और तनाव मुक्त बनाने के लिए डिज़ाइन किया गया है।",
-    feat1_title: "तेज़ सेवा",
-    feat1_desc: "हम अपने टोकन-आधारित कतार सिस्टम के साथ प्रतीक्षा समय को कम रखते हैं। ऑनलाइन बुक करें और समय पर पहुंचें — कोई अनावश्यक प्रतीक्षा नहीं।",
-    feat2_title: "सुरक्षित प्रक्रिया",
-    feat2_desc: "आपकी व्यक्तिगत जानकारी को सख्त गोपनीयता के साथ संभाला जाता है। हम सभी सरकारी सुरक्षा दिशानिर्देशों का पालन करते हैं।",
+    why_tag: "हमें क्यों चुनें?",
+    why_title: "आपकी सुविधा के लिए बनाया गया",
+    why_subtitle: "हमारी पूरी कोशिश है कि आपका अनुभव आसान, तेज़ और तनाव-मुक्त हो।",
+    feat1_title: "तेज़ सर्विस",
+    feat1_desc: "हम टोकन-बेस्ड कतार सिस्टम से वेटिंग टाइम कम रखते हैं। ऑनलाइन बुक करें और समय पर आएं — कोई फालतू इंतज़ार नहीं।",
+    feat2_title: "सिक्योर प्रोसेस",
+    feat2_desc: "आपकी जानकारी पूरी तरह कॉन्फिडेंशियल रखी जाती है। हम सभी सरकारी सिक्योरिटी गाइडलाइन फॉलो करते हैं।",
     feat3_title: "डिजिटल बुकिंग",
-    feat3_desc: "किसी भी समय, अपने फोन से अपॉइंटमेंट बुक करें। ओटीपी सत्यापन सुनिश्चित करता है कि आपकी बुकिंग सुरक्षित है।",
+    feat3_desc: "कभी भी, अपने फोन से अपॉइंटमेंट बुक करें। OTP वेरिफिकेशन से आपकी बुकिंग प्रोटेक्ट रहती है।",
     feat4_title: "कतार ट्रैकिंग",
-    feat4_desc: "वास्तविक समय में अपने टोकन की स्थिति और लाइव कतार की स्थिति की जांच करें। आपको हमेशा पता रहेगा कि आपकी बारी कब आ रही है।",
-    feat5_title: "विश्वसनीय सहायता",
-    feat5_desc: "हमारा अनुभवी स्टाफ हर कदम पर आपकी सहायता के लिए तैयार है। हम आपकी भाषा बोलते हैं और आपकी आवश्यकताओं को समझते हैं।",
-    feat6_title: "व्यावसायिक सहायता",
-    feat6_desc: "फॉर्म भरने से लेकर दस्तावेज सत्यापन तक, हम यह सुनिश्चित करते हैं कि आपका आवेदन पहली बार में ही पूरा और सही हो।",
+    feat4_desc: "रियल टाइम में अपने टोकन की पोजीशन और लाइव कतार देखें। आपको हमेशा पता रहेगा कि आपकी बारी कब आ रही है।",
+    feat5_title: "भरोसेमंद सपोर्ट",
+    feat5_desc: "हमारा एक्सपीरियंस्ड स्टाफ हर स्टेप पर आपकी मदद के लिए तैयार है। हम आपकी भाषा समझते हैं और आपकी ज़रूरतों को जानते हैं।",
+    feat6_title: "प्रोफेशनल मदद",
+    feat6_desc: "फॉर्म भरने से लेकर डॉक्यूमेंट वेरिफिकेशन तक, हम पक्का करते हैं कि आपका अप्लीकेशन पहली बार में ही सही और पूरा हो।",
     stats_tag: "आंकड़े",
     stats_title: "हमारा ट्रैक रिकॉर्ड",
-    stat_served: "सेवा किए गए ग्राहक",
-    stat_completed: "आधार अपडेट पूर्ण",
+    stat_served: "ग्राहक सेवा",
+    stat_completed: "आधार अपडेट पूरे",
     stat_years: "अनुभव के वर्ष",
     stat_satisfaction: "ग्राहक संतुष्टि %",
     queue_tag: "लाइव कतार",
-    queue_title: "वास्तविक समय टोकन स्थिति",
-    queue_subtitle: "वर्तमान कतार देखें और अपनी स्थिति को लाइव ट्रैक करें।",
+    queue_title: "रियल-टाइम टोकन स्टेटस",
+    queue_subtitle: "अभी की कतार देखें और अपनी पोजीशन लाइव ट्रैक करें।",
     queue_live: "लाइव कतार",
-    current_token_lbl: "वर्तमान टोकन",
+    current_token_lbl: "अभी का टोकन",
     your_token_lbl: "आपका टोकन",
-    people_ahead_lbl: "आपके आगे लोग",
-    est_wait_lbl: "अनुमानित प्रतीक्षा",
-    refresh_info: "हर 30 सेकंड में स्वतः ताज़ा होता है",
-    reviews_tag: "ग्राहक समीक्षाएं",
+    people_ahead_lbl: "आपसे आगे लोग",
+    est_wait_lbl: "अनुमानित इंतज़ार",
+    refresh_info: "हर 30 सेकंड में ऑटो अपडेट होता है",
+    reviews_tag: "ग्राहक रिव्यू",
     reviews_title: "हमारे ग्राहक क्या कहते हैं",
     team_tag: "हमारी टीम",
-    team_title: "हमारे विश्वसनीय स्टाफ से मिलें",
-    team_subtitle: "अनुभवी पेशेवर जो देखभाल और दक्षता के साथ आपकी सेवा करने के लिए समर्पित हैं।",
+    team_title: "हमारे भरोसेमंद स्टाफ से मिलें",
+    team_subtitle: "एक्सपीरियंस्ड प्रोफेशनल जो देखभाल और दक्षता के साथ आपकी सर्विस के लिए समर्पित हैं।",
     team_role_dev: "वेब डेवलपर",
-    team_exp_dev: "5+ वर्ष का अनुभव",
-    team_desc_dev: "इंडिया मोबाइल डिजिटल प्लेटफॉर्म का निर्माण और रखरखाव करते हैं। स्वच्छ कोड और आधुनिक डिज़ाइन के माध्यम से सहज उपयोगकर्ता अनुभव बनाने के प्रति जुनूनी।",
+    team_exp_dev: "5+ साल का अनुभव",
+    team_desc_dev: "इंडिया मोबाइल डिजिटल प्लेटफॉर्म बनाते और मेंटेन करते हैं। क्लीन कोड और मॉडर्न डिज़ाइन से बेहतरीन यूज़र एक्सपीरियंस देने के शौकीन।",
     team_up_mukhiya: "(यूपी मुखिया)",
-    team_role_founder: "मालिक और संस्थापक",
-    team_exp_founder: "12+ वर्ष का अनुभव",
-    team_desc_founder: "सरकारी सेवाओं को सुलभ बनाने की दृष्टि से इंडिया मोबाइल सेंटर की स्थापना की। डिजिटल सेवा वितरण और सामुदायिक समर्थन में एक दशक से अधिक का अनुभव।",
-    team_role_support: "ग्राहक सहायता प्रमुख",
-    team_exp_support: "6+ वर्ष का अनुभव",
-    team_desc_support: "ग्राहक सहायता टीम का नेतृत्व करते हैं और सुनिश्चित करते हैं कि हर आगंतुक को बुकिंग से लेकर सेवा पूर्ण होने तक त्वरित सहायता मिले।",
+    team_role_founder: "मालिक और फाउंडर",
+    team_exp_founder: "12+ साल का अनुभव",
+    team_desc_founder: "सरकारी सर्विस को आसान बनाने के विज़न से इंडिया मोबाइल सेंटर की शुरुआत की। डिजिटल सर्विस और कम्युनिटी सपोर्ट में एक दशक से ज़्यादा का अनुभव।",
+    team_role_support: "कस्टमर सपोर्ट हेड",
+    team_exp_support: "6+ साल का अनुभव",
+    team_desc_support: "कस्टमर सपोर्ट टीम लीड करते हैं और पक्का करते हैं कि हर विज़िटर को बुकिंग से लेकर सर्विस पूरी होने तक जल्दी मदद मिले।",
     team_role_biometric: "बायोमेट्रिक ऑपरेटर",
-    team_exp_biometric: "4+ वर्ष का अनुभव",
-    team_desc_biometric: "प्रमाणित बायोमेट्रिक ऑपरेटर जो आधार नामांकन और अपडेट संभालते हैं। हर ग्राहक के साथ धैर्यपूर्ण और संपूर्ण सेवा के लिए जाने जाते हैं।",
+    team_exp_biometric: "4+ साल का अनुभव",
+    team_desc_biometric: "सर्टिफाइड बायोमेट्रिक ऑपरेटर जो आधार एनरोलमेंट और अपडेट करते हैं। हर ग्राहक के साथ सब्र और अच्छी सर्विस के लिए जाने जाते हैं।",
     find_us_tag: "हमें खोजें",
-    find_us_title: "हमारा स्थान",
+    find_us_title: "हमारी लोकेशन",
     addr_lbl: "पता",
     phone_lbl: "फोन",
     whatsapp_lbl: "व्हाट्सएप",
-    addr_val: "दुकान नंबर 12, मुख्य बाजार मार्ग",
+    addr_val: "दुकान नंबर 12, मेन मार्केट रोड",
     addr_sub: "पटना, बिहार — 800001",
-    call_hours: "कार्य समय के दौरान कॉल करें",
-    msg_anytime: "हमें कभी भी संदेश भेजें",
-    hours_lbl: "कार्य समय",
+    call_hours: "वर्किंग आवर्स में कॉल करें",
+    msg_anytime: "हमें कभी भी मैसेज करें",
+    hours_lbl: "काम के घंटे",
     hours_val: "सोमवार – शनिवार",
     hours_sub: "सुबह 9:00 – शाम 5:00 बजे",
     email_lbl: "ईमेल",
-    email_sub: "हम 24 घंटे के भीतर जवाब देते हैं",
-    contact_tag: "संपर्क करें",
-    contact_title: "हमसे जुड़ें",
-    contact_desc: "हमारी सेवाओं के बारे में कोई प्रश्न? अपनी बुकिंग में सहायता चाहिए? हम आपकी सहायता के लिए यहां हैं। संपर्क करें और हम तुरंत जवाब देंगे।",
-    faq1_q: "आधार अपडेट में कितना समय लगता है?",
-    faq1_a: "हमारे केंद्र पर सफल बायोमेट्रिक सत्यापन के बाद, आधार अपडेट आमतौर पर UIDAI द्वारा 30 से 90 दिनों के भीतर दिखाई देते हैं। हम प्रक्रिया में आपका मार्गदर्शन करेंगे और आपको स्वीकृति पर्ची देंगे।",
-    faq2_q: "मुझे कौन से दस्तावेज लाने होंगे?",
-    faq2_a: "आवश्यकताएं अपडेट के प्रकार के अनुसार भिन्न होती हैं। पता अपडेट के लिए, पते का प्रमाण (बिजली का बिल, किराया समझौता, आदि) लाएं। नाम सुधार के लिए, सही नाम वाला कानूनी दस्तावेज लाएं। अपनी सेवा के लिए पूरी सूची हमसे संपर्क करें।",
+    email_sub: "हम 24 घंटे में जवाब देते हैं",
+    contact_tag: "कॉन्टैक्ट",
+    contact_title: "हमसे संपर्क करें",
+    contact_desc: "हमारी सर्विस के बारे में कोई सवाल? बुकिंग में मदद चाहिए? हम आपकी मदद के लिए यहां हैं। संपर्क करें, हम जल्दी जवाब देंगे।",
+    faq1_q: "आधार अपडेट में कितना टाइम लगता है?",
+    faq1_a: "हमारे सेंटर पर बायोमेट्रिक वेरिफिकेशन के बाद, आधार अपडेट आमतौर पर 30 से 90 दिनों में UIDAI द्वारा अपडेट हो जाता है। हम पूरी प्रोसेस में आपकी मदद करेंगे और एक रसीद देंगे।",
+    faq2_q: "मुझे कौन से डॉक्यूमेंट लाने होंगे?",
+    faq2_a: "ज़रूरतें अपडेट के टाइप पर निर्भर करती हैं। पते के अपडेट के लिए, पते का सबूत (बिजली का बिल, किराया समझौता) लाएं। नाम सुधार के लिए, सही नाम का कोई कानूनी डॉक्यूमेंट लाएं। पूरी लिस्ट के लिए हमसे संपर्क करें।",
     faq3_q: "क्या मैं किसी और के लिए बुक कर सकता हूं?",
-    faq3_a: "हां। आप परिवार के किसी सदस्य के लिए टोकन बुक कर सकते हैं। बुकिंग के दौरान उनके आधार के अंतिम 4 अंकों का उपयोग करें। कृपया सुनिश्चित करें कि व्यक्ति शारीरिक रूप से उपस्थित हो क्योंकि बायोमेट्रिक्स आवश्यक हैं।",
-    faq4_q: "सेवा शुल्क क्या है?",
-    faq4_a: "UIDAI द्वारा निर्धारित सरकारी शुल्क लागू होते हैं। हमारा सेवा सहायता शुल्क नाममात्र है। अपनी विशिष्ट सेवा के लिए वर्तमान शुल्क संरचना के लिए कृपया सीधे हमसे संपर्क करें।",
-    contact_form_title: "हमें संदेश भेजें",
+    faq3_a: "हां। आप अपने परिवार के किसी सदस्य के लिए टोकन बुक कर सकते हैं। बुकिंग में उनके आधार के आखिरी 4 अंक डालें। ध्यान दें कि व्यक्ति को खुद आना होगा क्योंकि बायोमेट्रिक ज़रूरी है।",
+    faq4_q: "सर्विस का क्या चार्ज है?",
+    faq4_a: "UIDAI के हिसाब से सरकारी फीस लगती है। हमारी सर्विस चार्ज बहुत कम है। अपनी सर्विस के लिए करंट फीस जानने के लिए हमसे सीधे संपर्क करें।",
+    contact_form_title: "हमें मैसेज भेजें",
     form_name: "आपका नाम",
-    form_name_placeholder: "अपना पूरा नाम दर्ज करें",
+    form_name_placeholder: "अपना पूरा नाम लिखें",
     form_phone: "मोबाइल नंबर",
     form_phone_placeholder: "+91 XXXXX XXXXX",
-    form_email: "ईमेल (वैकल्पिक)",
+    form_email: "ईमेल (ज़रूरी नहीं)",
     form_email_placeholder: "your@email.com",
-    form_message: "संदेश",
-    form_message_placeholder: "अपनी पूछताछ या आवश्यकता का वर्णन करें...",
-    form_send: "संदेश भेजें",
-    guidelines_header: "दस्तावेज़ दिशानिर्देश",
+    form_message: "मैसेज",
+    form_message_placeholder: "अपना सवाल या ज़रूरत बताएं...",
+    form_send: "मैसेज भेजें",
+    guidelines_header: "डॉक्यूमेंट गाइडलाइन",
     guide_aadhaar_title: "आधार अपडेट",
-    guide_aadhaar_text: "मूल आधार कार्ड + स्वयं-सत्यापित प्रति, वैध फोटो आईडी (वोटर आईडी / ड्राइविंग लाइसेंस / पासपोर्ट), 2 हालिया पासपोर्ट साइज़ फ़ोटो, और यदि लागू हो तो बदलाव के लिए सहायक दस्तावेज़ (विवाह प्रमाण पत्र, पता प्रमाण, आदि)।",
-    guide_pan_title: "पैन सेवाएं",
-    guide_pan_text: "आधार कार्ड, मौजूदा पैन कार्ड (पुनः जारी/सुधार के लिए), पते का प्रमाण (उपयोगिता बिल / बैंक स्टेटमेंट / किराया समझौता), 2 पासपोर्ट साइज़ फ़ोटो, और स्व-घोषणा पत्र।",
-    guide_passport_title: "पासपोर्ट सेवाएं",
-    guide_passport_text: "आधार कार्ड, पते का प्रमाण (उपयोगिता बिल / आधार / बैंक स्टेटमेंट), जन्म प्रमाण पत्र या कक्षा 10 की अंक तालिका, 10 पासपोर्ट साइज़ फ़ोटो, और भरे हुए अनुलग्नक फॉर्म (अनुलग्नक A / E / F जैसा लागू हो)।",
-    guide_online_title: "ऑनलाइन आवेदन",
-    guide_online_text: "आधार कार्ड, पैन कार्ड, हालिया पासपोर्ट साइज़ फ़ोटो, आय प्रमाण पत्र और जाति प्रमाण पत्र (यदि आवश्यक हो), PDF/JPEG प्रारूप में सभी प्रासंगिक दस्तावेजों की स्कैन की गई प्रतियां, और OTP सत्यापन के लिए एक वैध मोबाइल नंबर।",
+    guide_aadhaar_text: "असली आधार कार्ड + सेल्फ-अटेस्टेड कॉपी, वैलिड फोटो आईडी (वोटर आईडी / ड्राइविंग लाइसेंस / पासपोर्ट), 2 हालिया पासपोर्ट साइज़ फोटो, और अगर बदलाव है तो सपोर्टिंग डॉक्यूमेंट (शादी का सर्टिफिकेट, पता प्रूफ, वगैरह)।",
+    guide_pan_title: "पैन सर्विस",
+    guide_pan_text: "आधार कार्ड, पुराना पैन कार्ड (दोबारा जारी/सुधार के लिए), पते का प्रमाण (बिजली बिल / बैंक स्टेटमेंट / किराया समझौता), 2 पासपोर्ट साइज़ फोटो, और सेल्फ-डिक्लेरेशन फॉर्म।",
+    guide_passport_title: "पासपोर्ट सर्विस",
+    guide_passport_text: "आधार कार्ड, पते का प्रमाण (बिजली बिल / आधार / बैंक स्टेटमेंट), जन्म सर्टिफिकेट या 10वीं की मार्कशीट, 10 पासपोर्ट साइज़ फोटो, और भरे हुए अनुलग्नक फॉर्म (Annexure A / E / F जो लागू हो)।",
+    guide_online_title: "ऑनलाइन अप्लीकेशन",
+    guide_online_text: "आधार कार्ड, पैन कार्ड, हालिया पासपोर्ट साइज़ फोटो, आय और जाति सर्टिफिकेट (अगर ज़रूरी हो), PDF/JPEG में सारे डॉक्यूमेंट की स्कैन कॉपी, और OTP वेरिफिकेशन के लिए एक वैलिड मोबाइल नंबर।",
     guide_ticket_title: "टिकट बुकिंग",
-    guide_ticket_text: "सरकार द्वारा जारी वैध फोटो आईडी (आधार / वोटर आईडी / ड्राइविंग लाइसेंस / पासपोर्ट), पुष्टि के लिए मोबाइल नंबर, और भुगतान विधि (नकद / UPI / कार्ड)।",
-    guide_tips_title: "सामान्य सुझाव",
-    guide_tips_text: "मूल दस्तावेज + प्रत्येक की कम से कम 2 स्वयं-सत्यापित प्रतियां ले जाएं। फ़ोटो सफेद पृष्ठभूमि पर, हालिया (6 महीने के भीतर) होनी चाहिए। 15 मिनट पहले पहुंचें। किसी भी सुधार/बदलाव के लिए, प्रासंगिक सहायक प्रमाण पत्र लाएं।",
-    footer_desc: "आधार और डिजिटल सरकारी सेवाओं के लिए आपका विश्वसनीय भागीदार। सभी के लिए तेज़, सुरक्षित और पेशेवर सहायता।",
+    guide_ticket_text: "सरकारी फोटो आईडी (आधार / वोटर आईडी / ड्राइविंग लाइसेंस / पासपोर्ट), कन्फर्मेशन के लिए मोबाइल नंबर, और पेमेंट (कैश / UPI / कार्ड)।",
+    guide_tips_title: "आम सुझाव",
+    guide_tips_text: "असली डॉक्यूमेंट + हर एक की कम से कम 2 सेल्फ-अटेस्टेड कॉपी लेकर आएं। फोटो सफेद बैकग्राउंड पर, हालिया (6 महीने अंदर) हो। 15 मिनट पहले पहुंचें। किसी भी सुधार के लिए सपोर्टिंग सर्टिफिकेट लाएं।",
+    footer_desc: "आधार और डिजिटल सरकारी सर्विस के लिए आपका भरोसेमंद पार्टनर। सबके लिए तेज़, सिक्योर और प्रोफेशनल मदद।",
     footer_quicklinks: "त्वरित लिंक",
     footer_home: "होम",
-    footer_services: "सेवाएं",
+    footer_services: "सर्विस",
     footer_about: "हमारे बारे में",
     footer_queue: "लाइव कतार",
-    footer_location: "स्थान",
-    footer_contact: "संपर्क",
-    footer_serv_title: "सेवाएं",
+    footer_location: "लोकेशन",
+    footer_contact: "कॉन्टैक्ट",
+    footer_serv_title: "सर्विस",
     footer_mobile_link: "मोबाइल लिंक",
     footer_addr_update: "पता अपडेट",
     footer_bio_update: "बायोमेट्रिक अपडेट",
     footer_name_corr: "नाम सुधार",
-    footer_contact_title: "संपर्क",
+    footer_contact_title: "कॉन्टैक्ट",
     footer_whatsapp: "व्हाट्सएप करें",
     footer_hours: "सोम–शनि, सुबह 9–शाम 5",
-    footer_copyright: "© 2025 इंडिया मोबाइल सेंटर। सर्वाधिकार सुरक्षित।",
+    footer_copyright: "© 2025 इंडिया मोबाइल सेंटर। सभी अधिकार सुरक्षित।",
     footer_auth: "अधिकृत आधार सेवा प्रदाता",
     booking_modal_title: "आधार टोकन बुक करें",
-    check_modal_title: "टोकन जांचें",
-    admin_modal_title: "व्यवस्थापक लॉगिन",
-    admin_user_label: "उपयोगकर्ता नाम",
+    book_title: "अपना टोकन बुक करें",
+    choose_date_title: "तारीख चुनें",
+    confirmed_title: "बुकिंग कन्फर्म",
+    check_modal_title: "टोकन चेक करें",
+    admin_modal_title: "एडमिन लॉगिन",
+    admin_user_label: "यूज़रनेम",
     admin_user_placeholder: "admin",
     admin_pass_label: "पासवर्ड",
     admin_pass_placeholder: "••••••••",
     admin_login_btn: "डैशबोर्ड में लॉगिन करें",
     admin_default_creds: "डिफ़ॉल्ट: admin / admin123",
-    admin_nav_title: "इंडिया मोबाइल व्यवस्थापक",
+    admin_nav_title: "इंडिया मोबाइल एडमिन",
     admin_dashboard_label: "डैशबोर्ड",
     admin_exit_btn: "डैशबोर्ड से बाहर निकलें",
     admin_total_bookings: "कुल बुकिंग",
-    admin_pending: "लंबित",
-    admin_approved: "स्वीकृत",
-    admin_completed: "पूर्ण",
+    admin_pending: "पेंडिंग",
+    admin_approved: "अप्रूव्ड",
+    admin_completed: "कम्पलीट",
     admin_tab_bookings: "बुकिंग",
-    admin_tab_queue: "कतार नियंत्रण",
-    admin_tab_dates: "तिथियां प्रबंधित करें",
-    admin_search_placeholder: "नाम, फोन, बुकिंग आईडी, आधार द्वारा खोजें...",
-    admin_filter_all: "सभी स्थिति",
-    admin_filter_pending: "लंबित",
-    admin_filter_approved: "स्वीकृत",
-    admin_filter_completed: "पूर्ण",
-    admin_filter_cancelled: "रद्द",
+    admin_tab_queue: "कतार कंट्रोल",
+    admin_tab_dates: "डेट मैनेज करें",
+    admin_search_placeholder: "नाम, फोन, बुकिंग आईडी, आधार से सर्च...",
+    admin_filter_all: "सभी स्टेटस",
+    admin_filter_pending: "पेंडिंग",
+    admin_filter_approved: "अप्रूव्ड",
+    admin_filter_completed: "कम्पलीट",
+    admin_filter_cancelled: "कैंसिल",
     admin_th_token: "टोकन",
     admin_th_booking_id: "बुकिंग आईडी",
     admin_th_name: "नाम",
     admin_th_mobile: "मोबाइल",
-    admin_th_service: "सेवा",
+    admin_th_service: "सर्विस",
     admin_th_date: "तारीख",
-    admin_th_status: "स्थिति",
+    admin_th_status: "स्टेटस",
     admin_th_actions: "कार्रवाई",
-    admin_serving_token: "वर्तमान में सेवा प्राप्त टोकन",
-    admin_serving_desc: "लाइव कतार प्रदर्शन को अपडेट करने के लिए बदलें",
+    admin_serving_token: "अभी जिसकी बारी है",
+    admin_serving_desc: "लाइव कतार अपडेट करने के लिए बदलें",
     admin_today_summary: "आज का सारांश",
-    admin_tokens_issued: "जारी किए गए टोकन",
+    admin_tokens_issued: "टोकन जारी हुए",
     admin_in_queue: "कतार में",
-    admin_completed_today: "आज पूर्ण हुए",
+    admin_completed_today: "आज पूरे हुए",
     admin_quick_actions: "त्वरित कार्रवाई",
-    admin_mark_complete: "वर्तमान टोकन को पूर्ण चिह्नित करें",
+    admin_mark_complete: "अभी के टोकन को पूरा करें",
     admin_advance_token: "अगले टोकन पर जाएं",
-    admin_skip_token: "वर्तमान टोकन छोड़ें",
-    admin_enable_dates: "बुकिंग तिथियां सक्षम करें",
-    admin_enable_dates_desc: "ग्राहक बुकिंग के लिए तिथि को सक्षम या अक्षम करने के लिए क्लिक करें। केवल सक्षम तिथियां बुकिंग फॉर्म में दिखाई देंगी।"
+    admin_skip_token: "अभी का टोकन छोड़ें",
+    admin_enable_dates: "बुकिंग डेट ऑन करें",
+    admin_enable_dates_desc: "ग्राहक बुकिंग के लिए डेट को ऑन या ऑफ करने के लिए क्लिक करें। सिर्फ ऑन डेट ही बुकिंग फॉर्म में दिखेगी।",
+    // Booking modal dynamic keys
+    select_service: "सर्विस चुनें",
+    booking_service_choose: "-- सर्विस चुनें --",
+    mobile_update: "मोबाइल नंबर अपडेट",
+    addr_update: "पता अपडेट",
+    name_correction: "नाम सुधार",
+    dob_update: "जन्म तिथि अपडेट",
+    bio_update: "बायोमेट्रिक अपडेट",
+    other_aadhaar: "अन्य आधार सर्विस",
+    email_label: "ईमेल एड्रेस",
+    email_plc: "your@email.com",
+    aadhaar_label: "आधार नंबर",
+    aadhaar_hint: "सिर्फ अपने आधार के आखिरी 4 अंक डालें",
+    otp_hint: "आपके ईमेल पर भेजा गया 6-अंकों का OTP डालें",
+    verify_otp_btn: "OTP वेरिफाई करें और आगे बढ़ें",
+    resend_otp: "OTP दोबारा भेजें",
+    send_otp_btn: "OTP भेजें",
+    no_dates: "अभी कोई डेट उपलब्ध नहीं है। कृपया हमसे सीधे संपर्क करें।",
+    select_date_hint: "अपनी पसंदीदा अपॉइंटमेंट डेट चुनें। सिर्फ उपलब्ध डेट दिखाई गई हैं।",
+    back_btn: "वापस जाएं",
+    confirm_booking: "बुकिंग कन्फर्म करें",
+    booking_confirmed: "बुकिंग कन्फर्म हो गई",
+    booking_success: "आपका आधार अपॉइंटमेंट सफलतापूर्वक बुक हो गया है।",
+    your_token_label: "आपका टोकन नंबर",
+    booking_id_label: "बुकिंग आईडी",
+    service_label: "सर्विस",
+    aadhaar_detail: "आधार",
+    appt_date: "अपॉइंटमेंट डेट",
+    status_label: "स्टेटस",
+    approved: "अप्रूव्ड",
+    booking_info: "कृपया अपना आधार कार्ड और ज़रूरी डॉक्यूमेंट लेकर आएं। अपने टोकन के 10 मिनट पहले पहुंच जाएं।",
+    done_btn: "हो गया",
+    print_btn: "प्रिंट करें",
+    // Check token modal keys
+    check_aadhaar_hint: "बुकिंग के समय इस्तेमाल किए गए आधार नंबर के आखिरी 4 अंक डालें।",
+    check_aadhaar_label: "आधार नंबर (आखिरी 4 अंक)",
+    check_btn: "टोकन चेक करें",
+    no_bookings_title: "कोई बुकिंग नहीं मिली",
+    no_bookings_text: "इस आधार से कोई बुकिंग नहीं मिली।",
+    book_now: "अभी टोकन बुक करें",
+    try_again: "फिर से कोशिश करें",
+    token_num: "टोकन नंबर",
+    people_ahead: "आपसे आगे लोग",
+    est_wait: "अनुमानित इंतज़ार",
+    wait_min: "मिनट",
+    cancel_booking: "बुकिंग कैंसिल करें",
+    check_another: "दूसरा चेक करें"
   },
   en: {
     nav_services: "Services",
@@ -1370,11 +1422,63 @@ const translations = {
     admin_advance_token: "Advance to Next Token",
     admin_skip_token: "Skip Current Token",
     admin_enable_dates: "Enable Booking Dates",
-    admin_enable_dates_desc: "Click on a date to enable or disable it for customer bookings. Only enabled dates will appear in the booking form."
+    admin_enable_dates_desc: "Click on a date to enable or disable it for customer bookings. Only enabled dates will appear in the booking form.",
+    book_title: "Book Your Token",
+    choose_date_title: "Choose Date",
+    confirmed_title: "Booking Confirmed",
+    select_service: "Select Service",
+    booking_service_choose: "-- Choose a Service --",
+    mobile_update: "Mobile Number Update",
+    addr_update: "Address Update",
+    name_correction: "Name Correction",
+    dob_update: "Date of Birth Update",
+    bio_update: "Biometric Update",
+    other_aadhaar: "Other Aadhaar Services",
+    email_label: "Email Address",
+    email_plc: "your@email.com",
+    aadhaar_label: "Aadhaar Number",
+    aadhaar_hint: "Enter only the last 4 digits of your Aadhaar",
+    otp_hint: "Enter the 6-digit OTP sent to your email",
+    verify_otp_btn: "Verify OTP & Continue",
+    resend_otp: "Resend OTP",
+    send_otp_btn: "Send OTP",
+    no_dates: "No dates available at the moment. Please contact us directly.",
+    select_date_hint: "Select your preferred appointment date. Only available dates are shown.",
+    back_btn: "Back",
+    confirm_booking: "Confirm Booking",
+    booking_confirmed: "Booking Confirmed",
+    booking_success: "Your Aadhaar appointment is booked successfully.",
+    your_token_label: "Your Token Number",
+    booking_id_label: "Booking ID",
+    service_label: "Service",
+    aadhaar_detail: "Aadhaar",
+    appt_date: "Appointment Date",
+    status_label: "Status",
+    approved: "Approved",
+    booking_info: "Please bring your Aadhaar card and supporting documents. Arrive 10 minutes before your token is called.",
+    done_btn: "Done",
+    print_btn: "Print",
+    check_aadhaar_hint: "Enter the last 4 digits of the Aadhaar number used at the time of booking.",
+    check_aadhaar_label: "Aadhaar Number (Last 4 Digits)",
+    check_btn: "Check My Token",
+    no_bookings_title: "No Bookings Found",
+    no_bookings_text: "We could not find any bookings for this Aadhaar.",
+    book_now: "Book a Token Now",
+    try_again: "Try Again",
+    token_num: "Token Number",
+    people_ahead: "People Ahead",
+    est_wait: "Est. Wait",
+    wait_min: "min",
+    cancel_booking: "Cancel Booking",
+    check_another: "Check Another"
   }
 };
 
 let currentLang = localStorage.getItem('site_lang') || 'hi';
+
+window.t = function(key) {
+  return (translations[currentLang] && translations[currentLang][key]) || key;
+};
 
 window.setLanguage = function(lang) {
   currentLang = lang;
@@ -1416,6 +1520,14 @@ window.setLanguage = function(lang) {
       enOpt.classList.toggle('active', lang === 'en');
     }
   });
+
+  // Re-render dynamic content if modals are open
+  if (document.getElementById('bookingModal').classList.contains('open')) {
+    renderBookingStep(bookingStep);
+  }
+  if (document.getElementById('checkTokenModal').classList.contains('open')) {
+    renderCheckTokenStep(checkTokenStep);
+  }
 };
 
 window.toggleLanguage = function() {
