@@ -11,8 +11,7 @@ const DB = {
       this.bookings = DBSync.getBookings();
       this.currentToken = DBSync.getToken();
       this.enabledDates = DBSync.getDates();
-      if (this.enabledDates.length === 0) this.initDates();
-    } catch(e) { this.initDates(); }
+    } catch(e) {}
   },
 
   save() {
@@ -23,37 +22,19 @@ const DB = {
     } catch(e) {}
   },
 
-  initDates() {
-    const dates = [];
-    const now = new Date();
-    for (let i = 1; i <= 7; i++) {
-      const d = new Date(now);
-      d.setDate(now.getDate() + i);
-      dates.push({ date: d.toISOString().split('T')[0], enabled: true });
-    }
-    this.enabledDates = dates;
-    this.save();
-  },
-
   getEnabledDates() {
     return this.enabledDates.filter(d => d.enabled);
   },
 
-  getNextToken() {
-    const max = this.bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0);
-    return String(max + 1).padStart(2, '0');
-  },
-
-  generateBookingId() {
-    return 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random()*100);
-  },
-
   addBooking(data) {
-    const token = this.getNextToken();
-    const bid = this.generateBookingId();
+    const token = String(Date.now()).slice(-2);
+    const bid = 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random()*100);
     const booking = { ...data, token, bookingId: bid, status: 'approved', createdAt: new Date().toISOString() };
     this.bookings.push(booking);
     this.save();
+    if (window.__bookingsRef) {
+      window.__bookingsRef.add(booking).catch(() => {});
+    }
     return booking;
   },
 
@@ -579,7 +560,10 @@ function submitBookingStep2() {
     return;
   }
 
-  sessionBookingData.name = sessionBookingData.name || ('User ' + sessionBookingData.email.split('@')[0]);
+  if (!sessionBookingData.name) {
+    notify('Please enter your name', 'error');
+    return;
+  }
   sessionBookingData.service = service;
 
   const booking = DB.addBooking({
@@ -592,7 +576,7 @@ function submitBookingStep2() {
 
   sessionBookingData.confirmedBooking = booking;
   sessionStorage.setItem('myBooking', JSON.stringify(booking));
-  updateQueueDisplay();
+  updateHeroDisplay();
   renderBookingStep(3);
 }
 
@@ -671,7 +655,7 @@ function renderCheckTokenStep(step) {
       const statusLabel = b.status.charAt(0).toUpperCase() + b.status.slice(1);
 
       sessionStorage.setItem('myBooking', JSON.stringify(b));
-      updateQueueDisplay();
+      updateHeroDisplay();
 
       return `
         <div style="background:var(--glass); border:1px solid var(--glass-border); border-radius:14px; padding:20px; margin-bottom:16px;">
@@ -738,89 +722,220 @@ function cancelBooking(bookingId) {
     DB.save();
     archiveBooking(b);
     sessionStorage.removeItem('myBooking');
-    updateQueueDisplay();
+    updateHeroDisplay();
     notify('Booking cancelled.', 'info');
     renderCheckTokenStep(2);
   }
 }
 
 // ============================================
-// ADMIN
+// ADMIN — Firestore-driven
 // ============================================
-function openAdminLogin() {
-  window.open('https://indiamobile-admin.vercel.app/', '_blank');
+
+// -- State --
+let adminBookings = [];
+let adminQueueData = null;
+let adminActivityLogs = [];
+let adminDates = [];
+let adminUnsubscribers = [];
+
+function adminLogin() {
+  const u = document.getElementById('adminUser').value.trim();
+  const p = document.getElementById('adminPass').value.trim();
+  if (!u || !p) { notify('Enter username and password', 'error'); return; }
+
+  if (window.__adminsRef) {
+    window.__adminsRef.where('username', '==', u.toLowerCase()).get().then(snap => {
+      if (snap.empty) {
+        notify('Invalid credentials', 'error');
+        return;
+      }
+      let authed = false;
+      snap.forEach(doc => { if (doc.data().password === p) authed = true; });
+      if (authed) {
+        openAdminPanel(u);
+      } else {
+        notify('Invalid credentials', 'error');
+      }
+    }).catch(() => {
+      notify('Firestore unavailable. Check connection.', 'error');
+    });
+  } else {
+    notify('Firestore not initialized', 'error');
+  }
 }
 
 function closeAdminLogin() {
   document.getElementById('adminLoginModal').classList.remove('open');
 }
 
-function adminLogin() {
-  const u = document.getElementById('adminUser').value.trim();
-  const p = document.getElementById('adminPass').value.trim();
-  if (u === 'admin' && p === 'admin123') {
-    closeAdminLogin();
-    document.getElementById('adminPanel').classList.add('open');
-    refreshAdminData();
-    renderAdminDates();
-    document.getElementById('adminTokenDisplay').textContent = String(DB.currentToken).padStart(2, '0');
-  } else {
-    notify('Incorrect credentials', 'error');
-  }
+function openAdminPanel(user) {
+  closeAdminLogin();
+  document.getElementById('adminPanel').classList.add('open');
+  startAdminListeners();
+  logAdminAction(user, 'Admin login', '--', 'info');
 }
 
 function closeAdmin() {
   document.getElementById('adminPanel').classList.remove('open');
+  adminUnsubscribers.forEach(u => { if (typeof u === 'function') u(); });
+  adminUnsubscribers = [];
 }
 
 function switchAdminTab(tab, btn) {
   document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('adminTab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  if (btn) btn.classList.add('active');
+  const el = document.getElementById('adminTab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+  if (el) el.classList.add('active');
 }
 
-function refreshAdminData() {
-  const bookings = DB.bookings;
-  document.getElementById('adminTotalBookings').textContent = bookings.length;
-  document.getElementById('adminPending').textContent = bookings.filter(b => b.status === 'pending').length;
-  document.getElementById('adminApproved').textContent = bookings.filter(b => b.status === 'approved').length;
-  document.getElementById('adminCompleted').textContent = bookings.filter(b => b.status === 'completed').length;
+// -- Firestore — start real-time listeners --
+function startAdminListeners() {
+  showKpiLoading();
+  const db = window.__db;
+  if (!db) { showKpiError(); return; }
 
-  const today = new Date().toISOString().split('T')[0];
-  const todayBookings = bookings.filter(b => b.date === today);
-  document.getElementById('adminTokensIssued').textContent = todayBookings.length;
-  document.getElementById('adminInQueue').textContent = bookings.filter(b => b.status === 'approved').length;
-  document.getElementById('adminCompletedToday').textContent = bookings.filter(b => b.status === 'completed').length;
+  // 1. Bookings collection
+  const unsubBookings = window.__bookingsRef.onSnapshot(snap => {
+    adminBookings = [];
+    snap.forEach(doc => { adminBookings.push({ id: doc.id, ...doc.data() }); });
+    updateKpiCards();
+    renderBookingsTable();
+    renderAdminDates();
+  }, err => { showKpiError(); console.error('[Admin] Bookings error:', err); });
+  adminUnsubscribers.push(unsubBookings);
 
-  renderBookingsTable(bookings);
+  // 2. Queue document (single doc in queue collection)
+  const unsubQueue = window.__queueRef.onSnapshot(snap => {
+    snap.forEach(doc => { adminQueueData = { id: doc.id, ...doc.data() }; });
+    if (adminQueueData) {
+      document.getElementById('adminTokenDisplay').textContent = String(adminQueueData.currentToken || 1).padStart(2, '0');
+    }
+    updateKpiCards();
+  }, err => { console.error('[Admin] Queue error:', err); });
+  adminUnsubscribers.push(unsubQueue);
+
+  // 3. Activity logs
+  const unsubActivity = window.__activityRef.orderBy('timestamp', 'desc').limit(100).onSnapshot(snap => {
+    adminActivityLogs = [];
+    snap.forEach(doc => { adminActivityLogs.push({ id: doc.id, ...doc.data() }); });
+    renderActivityLogs();
+  }, err => { console.error('[Admin] Activity error:', err); });
+  adminUnsubscribers.push(unsubActivity);
+
+  // 4. Dates collection (if used)
+  const unsubDates = window.__bookingsRef.where('__type', '==', 'date_config').onSnapshot(snap => {
+    adminDates = [];
+    snap.forEach(doc => { adminDates.push({ id: doc.id, ...doc.data() }); });
+    renderAdminDates();
+  }, err => { /* optional */ });
+  adminUnsubscribers.push(unsubDates);
 }
 
-function renderBookingsTable(bookings) {
-  const tbody = document.getElementById('bookingsTableBody');
-  if (bookings.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--text3);">No bookings yet</td></tr>';
+// -- KPI --
+function showKpiLoading() {
+  const loading = document.getElementById('adminKpiLoading');
+  const grid = document.getElementById('adminKpiGrid');
+  const err = document.getElementById('adminKpiError');
+  if (loading) loading.style.display = 'grid';
+  if (grid) grid.style.display = 'none';
+  if (err) err.style.display = 'none';
+}
+
+function showKpiError() {
+  const loading = document.getElementById('adminKpiLoading');
+  const grid = document.getElementById('adminKpiGrid');
+  const err = document.getElementById('adminKpiError');
+  if (loading) loading.style.display = 'none';
+  if (grid) grid.style.display = 'none';
+  if (err) err.style.display = 'block';
+}
+
+function updateKpiCards() {
+  const loading = document.getElementById('adminKpiLoading');
+  const grid = document.getElementById('adminKpiGrid');
+  const err = document.getElementById('adminKpiError');
+  if (loading) loading.style.display = 'none';
+  if (err) err.style.display = 'none';
+
+  if (!adminBookings.length) {
+    if (grid) grid.style.display = 'grid';
+    setKpiVal('kpiTodayBookings', 0);
+    setKpiVal('kpiPending', 0);
+    setKpiVal('kpiApproved', 0);
+    setKpiVal('kpiCompleted', 0);
+    setKpiVal('kpiCancelled', 0);
+    setKpiVal('kpiCurrentToken', adminQueueData ? String(adminQueueData.currentToken || 1).padStart(2, '0') : '--');
+    if (grid) grid.style.display = 'grid';
     return;
   }
 
-  tbody.innerHTML = bookings.map(b => {
-    const d = new Date(b.date + 'T00:00:00');
+  const today = new Date().toISOString().split('T')[0];
+  const todayB = adminBookings.filter(b => b.date === today);
+  const pending = adminBookings.filter(b => b.status === 'pending').length;
+  const approved = adminBookings.filter(b => b.status === 'approved').length;
+  const completed = adminBookings.filter(b => b.status === 'completed').length;
+  const cancelled = adminBookings.filter(b => b.status === 'cancelled').length;
+  const ct = adminQueueData ? String(adminQueueData.currentToken || 1).padStart(2, '0') : '--';
+
+  if (grid) grid.style.display = 'grid';
+  setKpiVal('kpiTodayBookings', todayB.length);
+  setKpiVal('kpiPending', pending);
+  setKpiVal('kpiApproved', approved);
+  setKpiVal('kpiCompleted', completed);
+  setKpiVal('kpiCancelled', cancelled);
+  setKpiVal('kpiCurrentToken', ct);
+}
+
+function setKpiVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+// -- Bookings Table --
+function renderBookingsTable() {
+  const tbody = document.getElementById('bookingsTableBody');
+  if (!tbody) return;
+  const q = (document.getElementById('adminSearch')?.value || '').toLowerCase();
+  const status = document.getElementById('adminStatusFilter')?.value || '';
+
+  let filtered = adminBookings;
+  if (status) filtered = filtered.filter(b => b.status === status);
+  if (q) filtered = filtered.filter(b =>
+    (b.name || '').toLowerCase().includes(q) ||
+    (b.email || '').toLowerCase().includes(q) ||
+    (b.bookingId || '').toLowerCase().includes(q) ||
+    (b.aadhaarLast4 || '').includes(q)
+  );
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--text3);" data-translate="admin_no_bookings">No bookings available</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(b => {
+    const d = b.date ? new Date(b.date + 'T00:00:00') : null;
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const displayDate = `${d.getDate()} ${months[d.getMonth()]}`;
+    const displayDate = d ? `${d.getDate()} ${months[d.getMonth()]}` : '--';
+    const token = b.token || b.tokens || '--';
+    const bid = b.bookingId || b.id || '--';
+    const name = b.name || b.fullName || '--';
+    const email = b.email || b.mobile || '--';
     return `
       <tr>
-        <td><span class="token-badge">${b.token}</span></td>
-        <td style="font-size:12px; color:var(--text3);">${b.bookingId}</td>
-        <td style="font-weight:500;">${b.name}</td>
-        <td>${b.email || '--'}</td>
-        <td style="font-size:13px;">${b.service}</td>
+        <td><span class="token-badge">${token}</span></td>
+        <td style="font-size:12px; color:var(--text3);">${bid}</td>
+        <td style="font-weight:500;">${name}</td>
+        <td>${email}</td>
+        <td style="font-size:13px;">${b.service || 'Aadhaar Update'}</td>
         <td style="font-size:13px;">${displayDate}</td>
-        <td><span class="status-pill ${b.status}">${b.status.charAt(0).toUpperCase()+b.status.slice(1)}</span></td>
+        <td><span class="status-pill ${b.status}">${(b.status || 'pending').charAt(0).toUpperCase()+(b.status||'pending').slice(1)}</span></td>
         <td>
           <div class="action-btns">
-            ${b.status !== 'completed' && b.status !== 'cancelled' ? `<button class="action-btn success" onclick="updateBookingStatus('${b.bookingId}','completed')">Complete</button>` : ''}
-            ${b.status === 'pending' ? `<button class="action-btn" onclick="updateBookingStatus('${b.bookingId}','approved')">Approve</button>` : ''}
-            ${b.status !== 'cancelled' && b.status !== 'completed' ? `<button class="action-btn danger" onclick="updateBookingStatus('${b.bookingId}','cancelled')">Cancel</button>` : ''}
+            ${b.status !== 'completed' && b.status !== 'cancelled' ? `<button class="action-btn success" onclick="updateBookingStatus('${b.id}','completed')">Complete</button>` : ''}
+            ${b.status === 'pending' ? `<button class="action-btn" onclick="updateBookingStatus('${b.id}','approved')">Approve</button>` : ''}
+            ${b.status !== 'cancelled' && b.status !== 'completed' ? `<button class="action-btn danger" onclick="updateBookingStatus('${b.id}','cancelled')">Cancel</button>` : ''}
           </div>
         </td>
       </tr>
@@ -828,109 +943,154 @@ function renderBookingsTable(bookings) {
   }).join('');
 }
 
-function filterBookings() {
-  const q = document.getElementById('adminSearch').value.toLowerCase();
-  const status = document.getElementById('adminStatusFilter').value;
-  let filtered = DB.bookings;
-  if (status) filtered = filtered.filter(b => b.status === status);
-  if (q) filtered = filtered.filter(b =>
-    b.name.toLowerCase().includes(q) ||
-    (b.email || '').toLowerCase().includes(q) ||
-    b.bookingId.toLowerCase().includes(q) ||
-    b.aadhaarLast4.includes(q)
-  );
-  renderBookingsTable(filtered);
+function filterBookings() { renderBookingsTable(); }
+
+function updateBookingStatus(docId, status) {
+  if (!window.__bookingsRef || !docId) return;
+  window.__bookingsRef.doc(docId).update({ status, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+    .then(() => {
+      logAdminAction(sessionStorage.getItem('adminUser') || 'Admin', 'Booking ' + status, docId, status === 'completed' ? 'success' : 'info');
+      notify('Booking updated to ' + status, 'success');
+    })
+    .catch(err => { notify('Failed to update: ' + err.message, 'error'); });
 }
 
-function updateBookingStatus(bookingId, status) {
-  const b = DB.bookings.find(x => x.bookingId === bookingId);
-  if (b) {
-    b.status = status;
-    DB.save();
-    if (status === 'completed' || status === 'cancelled') archiveBooking(b);
-    refreshAdminData();
-    updateQueueDisplay();
-    notify('Booking updated to ' + status, 'success');
-  }
-}
-
+// -- Queue Control --
 function changeToken(delta) {
-  DB.currentToken = Math.max(1, DB.currentToken + delta);
-  DB.save();
-  document.getElementById('adminTokenDisplay').textContent = String(DB.currentToken).padStart(2, '0');
-  updateQueueDisplay();
-  notify('Token updated to ' + String(DB.currentToken).padStart(2,'0'), 'info');
+  if (!window.__queueRef) return;
+  window.__queueRef.get().then(snap => {
+    let docId = null;
+    let ct = 1;
+    snap.forEach(doc => { docId = doc.id; ct = doc.data().currentToken || 1; });
+    const newToken = Math.max(1, ct + delta);
+    if (docId) {
+      window.__queueRef.doc(docId).update({ currentToken: newToken });
+    } else {
+      window.__queueRef.add({ currentToken: newToken });
+    }
+    logAdminAction(sessionStorage.getItem('adminUser') || 'Admin', 'Token changed', String(newToken).padStart(2,'0'), 'info');
+    notify('Token updated to ' + String(newToken).padStart(2,'0'), 'info');
+  });
 }
 
 function markNextComplete() {
-  const active = DB.bookings.find(b => parseInt(b.token) === DB.currentToken && (b.status === 'approved' || b.status === 'pending'));
-  if (active) {
-    active.status = 'completed';
-    DB.save();
-    archiveBooking(active);
-    refreshAdminData();
-    notify('Token ' + String(DB.currentToken).padStart(2,'0') + ' marked complete', 'success');
-  } else {
-    notify('No active booking for current token', 'info');
-  }
+  if (!window.__bookingsRef || !adminQueueData) return;
+  const ct = adminQueueData.currentToken || 1;
+  window.__bookingsRef.where('token', '==', String(ct).padStart(2,'0'))
+    .where('status', 'in', ['approved','pending']).get().then(snap => {
+      if (snap.empty) {
+        notify('No active booking for current token', 'info');
+        return;
+      }
+      snap.forEach(doc => {
+        doc.ref.update({ status: 'completed', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      });
+      logAdminAction(sessionStorage.getItem('adminUser') || 'Admin', 'Marked complete', String(ct).padStart(2,'0'), 'success');
+      notify('Token ' + String(ct).padStart(2,'0') + ' marked complete', 'success');
+    });
 }
 
 function advanceToken() {
-  DB.currentToken += 1;
-  DB.save();
-  document.getElementById('adminTokenDisplay').textContent = String(DB.currentToken).padStart(2, '0');
-  updateQueueDisplay();
-  notify('Advanced to next token', 'info');
+  if (!window.__queueRef) return;
+  window.__queueRef.get().then(snap => {
+    let docId = null;
+    let ct = 1;
+    snap.forEach(doc => { docId = doc.id; ct = doc.data().currentToken || 1; });
+    const newToken = ct + 1;
+    if (docId) {
+      window.__queueRef.doc(docId).update({ currentToken: newToken });
+    } else {
+      window.__queueRef.add({ currentToken: newToken });
+    }
+    logAdminAction(sessionStorage.getItem('adminUser') || 'Admin', 'Advanced token', String(newToken).padStart(2,'0'), 'info');
+    notify('Advanced to next token', 'info');
+  });
 }
 
 function skipToken() {
-  DB.currentToken += 1;
-  DB.save();
-  document.getElementById('adminTokenDisplay').textContent = String(DB.currentToken).padStart(2, '0');
-  updateQueueDisplay();
+  advanceToken();
   notify('Token skipped', 'info');
 }
 
-function renderAdminDates() {
-  const grid = document.getElementById('adminDateGrid');
-  grid.innerHTML = DB.enabledDates.map((d, i) => {
-    const date = new Date(d.date + 'T00:00:00');
-    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// -- Activity Logs --
+function logAdminAction(admin, action, detail, type) {
+  if (!window.__activityRef) return;
+  window.__activityRef.add({
+    admin: admin || 'Admin',
+    action: action || 'Unknown action',
+    detail: detail || '',
+    type: type || 'info',
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(() => {});
+}
+
+function renderActivityLogs() {
+  const list = document.getElementById('activityList');
+  const empty = document.getElementById('activityEmpty');
+  const loading = document.getElementById('activityLoading');
+  if (!list) return;
+  if (!adminActivityLogs.length) {
+    if (list) list.style.display = 'none';
+    if (empty) empty.style.display = 'block';
+    if (loading) loading.style.display = 'none';
+    return;
+  }
+  if (list) list.style.display = 'flex';
+  if (empty) empty.style.display = 'none';
+  if (loading) loading.style.display = 'none';
+
+  list.innerHTML = adminActivityLogs.map(a => {
+    const icons = { success: 'fa-check-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle', error: 'fa-times-circle' };
+    const icon = icons[a.type] || 'fa-info-circle';
+    const ts = a.timestamp ? (a.timestamp.toDate ? a.timestamp.toDate().toLocaleString() : new Date(a.timestamp).toLocaleString()) : '--';
     return `
-      <div class="date-manage-item ${d.enabled ? 'enabled' : ''}" onclick="toggleDate(${i})">
-        <div class="date-manage-item-day">${days[date.getDay()]}</div>
-        <div class="date-manage-item-num">${date.getDate()}</div>
-        <div class="date-manage-item-month" style="font-size:12px;color:var(--text3);">${months[date.getMonth()]}</div>
-        <div class="date-manage-item-status">${d.enabled ? '● Enabled' : '○ Disabled'}</div>
+      <div class="activity-item">
+        <div class="activity-item-icon ${a.type || 'info'}"><i class="fas ${icon}"></i></div>
+        <div class="activity-item-text">
+          <strong>${a.admin || 'Admin'}</strong> ${a.action || ''}
+          ${a.detail ? '<span style="color:var(--text3)">— ' + a.detail + '</span>' : ''}
+        </div>
+        <div class="activity-item-time">${ts}</div>
       </div>
     `;
   }).join('');
 }
 
-function toggleDate(index) {
-  DB.enabledDates[index].enabled = !DB.enabledDates[index].enabled;
-  DB.save();
-  renderAdminDates();
-  notify('Date ' + (DB.enabledDates[index].enabled ? 'enabled' : 'disabled'), 'info');
-}
+// -- Dates --
+function renderAdminDates() {
+  const grid = document.getElementById('adminDateGrid');
+  if (!grid) return;
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// ============================================
-// CONTACT FORM
-// ============================================
-function submitContactForm() {
-  const name = document.getElementById('contactName').value.trim();
-  const phone = document.getElementById('contactPhone').value.trim();
-  const msg = document.getElementById('contactMessage').value.trim();
-  if (!name || !phone || !msg) {
-    notify('Please fill in all required fields', 'error');
+  if (!adminDates.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:24px; color:var(--text3);" data-translate="admin_no_dates">No dates configured.</div>';
     return;
   }
-  notify('Message sent! We will get back to you soon.', 'success');
-  document.getElementById('contactName').value = '';
-  document.getElementById('contactPhone').value = '';
-  document.getElementById('contactEmail').value = '';
-  document.getElementById('contactMessage').value = '';
+
+  grid.innerHTML = adminDates.map((d, i) => {
+    if (!d.date) return '';
+    const dt = new Date(d.date + 'T00:00:00');
+    return `
+      <div class="date-manage-item ${d.enabled !== false ? 'enabled' : ''}" onclick="toggleDate('${d.id}')">
+        <div class="date-manage-item-day">${days[dt.getDay()]}</div>
+        <div class="date-manage-item-num">${dt.getDate()}</div>
+        <div class="date-manage-item-month">${months[dt.getMonth()]}</div>
+        <div class="date-manage-item-status">${d.enabled !== false ? '● Enabled' : '○ Disabled'}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleDate(docId) {
+  if (!window.__bookingsRef || !docId) return;
+  const target = adminDates.find(d => d.id === docId);
+  if (!target) return;
+  const newVal = target.enabled !== false ? false : true;
+  window.__bookingsRef.doc(docId).update({ enabled: newVal }).then(() => {
+    logAdminAction(sessionStorage.getItem('adminUser') || 'Admin', 'Date ' + (newVal ? 'enabled' : 'disabled'), target.date || docId, 'info');
+    notify('Date ' + (newVal ? 'enabled' : 'disabled'), 'info');
+  }).catch(err => { notify('Failed: ' + err.message, 'error'); });
 }
 
 // Close modals on backdrop click
@@ -973,9 +1133,32 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Demo data seeding removed
+// ============================================
+// CONTACT FORM
+// ============================================
+function submitContactForm() {
+  const name = document.getElementById('contactName').value.trim();
+  const phone = document.getElementById('contactPhone').value.trim();
+  const msg = document.getElementById('contactMessage').value.trim();
+  if (!name || !phone || !msg) {
+    notify('Please fill in all required fields', 'error');
+    return;
+  }
+  if (window.__activityRef) {
+    window.__activityRef.add({
+      type: 'contact',
+      name, phone, msg,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(() => {});
+  }
+  notify('Message sent! We will get back to you soon.', 'success');
+  document.getElementById('contactName').value = '';
+  document.getElementById('contactPhone').value = '';
+  document.getElementById('contactEmail').value = '';
+  document.getElementById('contactMessage').value = '';
+}
 
-updateQueueDisplay();
+updateHeroDisplay();
 
 // ============================================
 // BILINGUAL LANGUAGE SYSTEM (HINDI / ENGLISH)
@@ -1120,11 +1303,10 @@ const translations = {
     check_modal_title: "टोकन चेक करें",
     admin_modal_title: "एडमिन लॉगिन",
     admin_user_label: "यूज़रनेम",
-    admin_user_placeholder: "admin",
+    admin_user_placeholder: "यूज़रनेम",
     admin_pass_label: "पासवर्ड",
     admin_pass_placeholder: "••••••••",
     admin_login_btn: "डैशबोर्ड में लॉगिन करें",
-    admin_default_creds: "डिफ़ॉल्ट: admin / admin123",
     admin_nav_title: "इंडिया मोबाइल एडमिन",
     admin_dashboard_label: "डैशबोर्ड",
     admin_exit_btn: "डैशबोर्ड से बाहर निकलें",
@@ -1135,6 +1317,16 @@ const translations = {
     admin_tab_bookings: "बुकिंग",
     admin_tab_queue: "कतार कंट्रोल",
     admin_tab_dates: "डेट मैनेज करें",
+    admin_tab_activity: "एक्टिविटी लॉग",
+    admin_no_bookings: "कोई बुकिंग नहीं है",
+    admin_no_dates: "कोई डेट कॉन्फ़िगर नहीं है",
+    admin_firestore_error: "डैशबोर्ड डेटा लोड करने में विफल। फायरस्टोर कनेक्शन जांचें।",
+    kpi_today_bookings: "आज की बुकिंग",
+    kpi_pending: "पेंडिंग टोकन",
+    kpi_approved: "प्रोसेसिंग टोकन",
+    kpi_completed: "कम्पलीट टोकन",
+    kpi_cancelled: "कैंसिल टोकन",
+    kpi_current_token: "चालू टोकन",
     admin_search_placeholder: "नाम, फोन, बुकिंग आईडी, आधार से सर्च...",
     admin_filter_all: "सभी स्टेटस",
     admin_filter_pending: "पेंडिंग",
@@ -1345,11 +1537,10 @@ const translations = {
     check_modal_title: "Check My Token",
     admin_modal_title: "Admin Login",
     admin_user_label: "Username",
-    admin_user_placeholder: "admin",
+    admin_user_placeholder: "Username",
     admin_pass_label: "Password",
     admin_pass_placeholder: "••••••••",
     admin_login_btn: "Login to Dashboard",
-    admin_default_creds: "Default: admin / admin123",
     admin_nav_title: "India Mobile Admin",
     admin_dashboard_label: "Dashboard",
     admin_exit_btn: "Exit Dashboard",
@@ -1360,6 +1551,16 @@ const translations = {
     admin_tab_bookings: "Bookings",
     admin_tab_queue: "Queue Control",
     admin_tab_dates: "Manage Dates",
+    admin_tab_activity: "Activity Logs",
+    admin_no_bookings: "No bookings available",
+    admin_no_dates: "No dates configured.",
+    admin_firestore_error: "Failed to load dashboard data. Check Firestore connection.",
+    kpi_today_bookings: "Today's Bookings",
+    kpi_pending: "Pending Tokens",
+    kpi_approved: "Processing Tokens",
+    kpi_completed: "Completed Tokens",
+    kpi_cancelled: "Cancelled Tokens",
+    kpi_current_token: "Current Running Token",
     admin_search_placeholder: "Search by name, phone, booking ID, Aadhaar...",
     admin_filter_all: "All Status",
     admin_filter_pending: "Pending",

@@ -33,6 +33,9 @@
   }
 }
 </script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
 <script type="module">
 import { initializeApp } from "firebase/app";
 
@@ -630,14 +633,13 @@ window.verifyOTP = async (code) => {
     <div class="modal-body">
       <div class="form-group">
         <label class="form-label" data-translate="admin_user_label">Username</label>
-        <input type="text" class="form-input" id="adminUser" placeholder="admin" data-translate="admin_user_placeholder">
+        <input type="text" class="form-input" id="adminUser" placeholder="Username" data-translate="admin_user_placeholder">
       </div>
       <div class="form-group">
         <label class="form-label" data-translate="admin_pass_label">Password</label>
         <input type="password" class="form-input" id="adminPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()" data-translate="admin_pass_placeholder">
       </div>
       <button class="btn-primary btn-full" onclick="adminLogin()" style="margin-top:8px;" data-translate="admin_login_btn">Login to Dashboard</button>
-      <p class="text-muted" style="text-align:center; margin-top:16px;" data-translate="admin_default_creds">Default: admin / admin123</p>
     </div>
   </div>
 </div>
@@ -653,30 +655,34 @@ window.verifyOTP = async (code) => {
     <button class="btn-secondary" onclick="closeAdmin()" style="font-size:13px; padding:8px 16px;" data-translate="admin_exit_btn">Exit Dashboard</button>
   </div>
   <div class="admin-body">
-    <div class="admin-stats-row">
-      <div class="admin-stat">
-        <div class="admin-stat-num" id="adminTotalBookings">0</div>
-        <div class="admin-stat-lbl" data-translate="admin_total_bookings">Total Bookings</div>
+    <div class="admin-stats-row" id="adminKpiRow">
+      <div class="admin-kpi-loading" id="adminKpiLoading" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px;">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
       </div>
-      <div class="admin-stat">
-        <div class="admin-stat-num" id="adminPending">0</div>
-        <div class="admin-stat-lbl" data-translate="admin_pending"><span class="admin-stat-dot" style="background:#fbbf24;"></span>Pending</div>
+      <div class="admin-kpi-grid" id="adminKpiGrid" style="display:none; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px;">
+        <div class="admin-stat"><div class="admin-stat-num" id="kpiTodayBookings">--</div><div class="admin-stat-lbl" data-translate="kpi_today_bookings">Today's Bookings</div></div>
+        <div class="admin-stat"><div class="admin-stat-num" id="kpiPending">--</div><div class="admin-stat-lbl" data-translate="kpi_pending">Pending Tokens</div></div>
+        <div class="admin-stat"><div class="admin-stat-num" id="kpiApproved">--</div><div class="admin-stat-lbl" data-translate="kpi_approved">Processing Tokens</div></div>
+        <div class="admin-stat"><div class="admin-stat-num" id="kpiCompleted">--</div><div class="admin-stat-lbl" data-translate="kpi_completed">Completed Tokens</div></div>
+        <div class="admin-stat"><div class="admin-stat-num" id="kpiCancelled">--</div><div class="admin-stat-lbl" data-translate="kpi_cancelled">Cancelled Tokens</div></div>
+        <div class="admin-stat"><div class="admin-stat-num" id="kpiCurrentToken">--</div><div class="admin-stat-lbl" data-translate="kpi_current_token">Current Running Token</div></div>
       </div>
-      <div class="admin-stat">
-        <div class="admin-stat-num" id="adminApproved">0</div>
-        <div class="admin-stat-lbl" data-translate="admin_approved"><span class="admin-stat-dot" style="background:var(--accent);"></span>Approved</div>
-      </div>
-      <div class="admin-stat">
-        <div class="admin-stat-num" id="adminCompleted">0</div>
-        <div class="admin-stat-lbl" data-translate="admin_completed"><span class="admin-stat-dot" style="background:#34d399;"></span>Completed</div>
+      <div class="admin-error" id="adminKpiError" style="display:none; text-align:center; padding:20px; color:var(--danger);">
+        <i class="fas fa-exclamation-triangle"></i> <span data-translate="admin_firestore_error">Failed to load dashboard data. Check Firestore connection.</span>
       </div>
     </div>
 
-    <div class="admin-tabs">
-      <button class="admin-tab active" onclick="switchAdminTab('bookings', this)" data-translate="admin_tab_bookings">Bookings</button>
-      <button class="admin-tab" onclick="switchAdminTab('queue', this)" data-translate="admin_tab_queue">Queue Control</button>
-      <button class="admin-tab" onclick="switchAdminTab('dates', this)" data-translate="admin_tab_dates">Manage Dates</button>
-    </div>
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="switchAdminTab('bookings', this)" data-translate="admin_tab_bookings">Bookings</button>
+        <button class="admin-tab" onclick="switchAdminTab('queue', this)" data-translate="admin_tab_queue">Queue Control</button>
+        <button class="admin-tab" onclick="switchAdminTab('activity', this)" data-translate="admin_tab_activity">Activity Logs</button>
+        <button class="admin-tab" onclick="switchAdminTab('dates', this)" data-translate="admin_tab_dates">Manage Dates</button>
+      </div>
 
     <!-- Bookings Tab -->
     <div class="admin-section active" id="adminTabBookings">
@@ -755,6 +761,18 @@ window.verifyOTP = async (code) => {
       </div>
     </div>
 
+    <!-- Activity Logs -->
+    <div class="admin-section" id="adminTabActivity">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <h3 style="font-size:16px; font-weight:600; margin-bottom:0;" data-translate="admin_activity_title">Activity Logs</h3>
+      </div>
+      <div id="activityLogContainer">
+        <div class="activity-empty" id="activityEmpty" data-translate="activity_no_logs">No activity recorded yet.</div>
+        <div class="activity-loading" id="activityLoading">Loading...</div>
+        <div class="activity-list" id="activityList" style="display:none;"></div>
+      </div>
+    </div>
+
     <!-- Manage Dates -->
     <div class="admin-section" id="adminTabDates">
       <div style="margin-bottom:20px;">
@@ -770,7 +788,7 @@ window.verifyOTP = async (code) => {
 <div id="notif" style="display:none;" class="notification"></div>
 <div id="recaptcha-container" style="position:fixed;bottom:0;left:0;width:0;height:0;overflow:hidden;"></div>
 
-<script src="db-sync.js"></script>
+<script src="js/firebase-init.js"></script>
 <script defer src="js/app.js"></script>
 </body>
 </html>

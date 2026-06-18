@@ -2043,7 +2043,38 @@ footer {
   line-height: 1;
 }
 
-/* ---- Mobile language toggle in mobile menu ---- */
+/* Admin skeleton / loading / error / empty states */
+.skeleton-card {
+  height: 80px;
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--bg2) 50%, var(--bg3) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 12px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.admin-error { font-size: 14px; color: var(--danger); padding: 16px; text-align: center; }
+.activity-list { display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; }
+.activity-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; background: var(--bg3); border: 1px solid var(--glass-border);
+  border-radius: 10px; font-size: 13px;
+}
+.activity-item-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.activity-item-icon.success { background: rgba(34,197,94,0.15); color: #34d399; }
+.activity-item-icon.info { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.activity-item-icon.warning { background: rgba(234,179,8,0.15); color: #eab308; }
+.activity-item-icon.error { background: rgba(239,68,68,0.15); color: #ef4444; }
+.activity-item-text { flex: 1; }
+.activity-item-time { font-size: 11px; color: var(--text3); white-space: nowrap; }
+.activity-empty, .activity-loading { text-align: center; padding: 24px; color: var(--text3); font-size: 14px; }
+.admin-kpi-grid .admin-stat { padding: 16px; background: var(--bg3); border: 1px solid var(--glass-border); border-radius: 12px; text-align: center; }
+.admin-kpi-grid .admin-stat-num { font-family: 'Space Grotesk',sans-serif; font-size: 28px; font-weight: 700; color: var(--text); }
+.admin-kpi-grid .admin-stat-lbl { font-size: 11px; color: var(--text3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* Mobile language toggle in mobile menu */
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .lang-option {

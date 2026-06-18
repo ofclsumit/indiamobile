@@ -769,43 +769,28 @@ function renderActivity() {
 // EXPORT
 // ============================================
 function exportReport(type) {
-  if (type === 'excel') {
-    notify('Exporting Excel report...', 'info');
-    setTimeout(() => notify('Report exported successfully.', 'success'), 1500);
-    logActivity('Exported Excel Report', '--', 'Success');
-  } else {
-    notify('Exporting PDF report...', 'info');
-    setTimeout(() => notify('Report exported successfully.', 'success'), 1500);
-    logActivity('Exported PDF Report', '--', 'Success');
-  }
+  notify('Export feature requires server-side implementation.', 'info');
+  logActivity('Attempted to export ' + type + ' report', '--', 'Info');
 }
 
 // ============================================
 // ADMIN MANAGEMENT
 // ============================================
-let admins = [
-  { name: 'Admin', email: 'admin@digiseva.com', role: 'owner', added: new Date().toISOString() },
-  { name: 'Manager', email: 'manager@digiseva.com', role: 'manager', added: new Date().toISOString() },
-  { name: 'Staff', email: 'staff@digiseva.com', role: 'staff', added: new Date().toISOString() },
-];
+let admins = [];
 
 function renderAdmins() {
   const el = document.getElementById('adminList');
+  if (!el) return;
+  if (!admins.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--db-text3);">No admins configured.</div>';
+    return;
+  }
   el.innerHTML = admins.map(a => {
-    const roleLabel = a.role.charAt(0).toUpperCase() + a.role.slice(1);
-    const perms = a.role === 'owner'
-      ? ['Full Access', 'Manage Bookings', 'Manage Queue', 'View Analytics', 'Settings Access', 'Admin Management']
-      : a.role === 'manager'
-      ? ['Manage Bookings', 'Manage Queue', 'View Analytics', 'View Reports']
-      : ['View Queue', 'Call Next Token', 'Mark Completed'];
+    const roleLabel = a.role ? a.role.charAt(0).toUpperCase() + a.role.slice(1) : 'Staff';
     return `<div class="db-role-card">
       <div class="db-role-header">
-        <div><div class="db-role-name">${a.name}</div><div style="font-size:12px;color:var(--db-text3);margin-top:2px;">${a.email}</div></div>
-        <span class="db-role-badge ${a.role}">${roleLabel}</span>
-      </div>
-      <div style="font-size:11px;color:var(--db-text3);">Added ${new Date(a.added).toLocaleDateString('en-IN')}</div>
-      <div class="db-role-perms">
-        ${perms.map(p => `<div class="db-role-perm"><i class="fas fa-check" style="color:var(--db-green);"></i> ${p}</div>`).join('')}
+        <div><div class="db-role-name">${a.name || 'Unknown'}</div><div style="font-size:12px;color:var(--db-text3);margin-top:2px;">${a.email || '--'}</div></div>
+        <span class="db-role-badge ${a.role || 'staff'}">${roleLabel}</span>
       </div>
     </div>`;
   }).join('');
@@ -818,35 +803,41 @@ function addAdmin() {
   if (!email) return;
   const role = prompt('Enter role (owner/manager/staff):');
   if (!['owner', 'manager', 'staff'].includes(role)) { notify('Invalid role.', 'error'); return; }
-  admins.push({ name, email, role, added: new Date().toISOString() });
-  renderAdmins();
-  logActivity('Added Admin: ' + name, '--', 'Success');
-  notify('Admin ' + name + ' added.', 'success');
+  if (window.__adminsRef) {
+    window.__adminsRef.add({ name, email, role, added: new Date().toISOString() }).then(() => {
+      logActivity('Added Admin: ' + name, '--', 'Success');
+      notify('Admin ' + name + ' added.', 'success');
+    });
+  } else {
+    notify('Firestore not available.', 'error');
+  }
 }
 
 // ============================================
 // NOTIFICATIONS
 // ============================================
-let notifications = [
-  { type: 'warning', text: 'Queue is running behind schedule by approximately <strong>15 minutes</strong>', time: '2 min ago', read: false },
-  { type: 'info', text: '<strong>High booking volume</strong> detected for today — 45 bookings so far', time: '15 min ago', read: false },
-  { type: 'error', text: '<strong>No-show</strong> detected for Token #05 — marked as cancelled', time: '1 hour ago', read: false },
-];
+let notifications = [];
 
 function renderNotifications() {
   const el = document.getElementById('notifList');
+  if (!el) return;
+  if (!notifications.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--db-text3);">No notifications</div>';
+    return;
+  }
   el.innerHTML = notifications.map(n => {
     const iconClass = n.type === 'warning' ? 'warning' : n.type === 'error' ? 'error' : n.type === 'success' ? 'success' : 'info';
     const icon = n.type === 'warning' ? 'fa-triangle-exclamation' : n.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info';
     return `<div class="db-notif-item" style="${n.read ? 'opacity:0.6;' : ''}" onclick="markNotifRead(this)">
       <div class="db-notif-icon ${iconClass}"><i class="fas ${icon}"></i></div>
-      <div><div class="db-notif-text">${n.text}</div><div class="db-notif-time">${n.time}</div></div>
+      <div><div class="db-notif-text">${n.text}</div><div class="db-notif-time">${n.time || '--'}</div></div>
     </div>`;
   }).join('');
 }
 
 function markNotifRead(el) {
   el.style.opacity = '0.6';
+}
   const idx = Array.from(el.parentNode.children).indexOf(el);
   if (notifications[idx]) notifications[idx].read = true;
   updateNotifBadge();

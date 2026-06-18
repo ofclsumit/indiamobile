@@ -517,19 +517,6 @@ function showStep2() {
   document.getElementById('portalStep2').style.display = 'block';
 
   let dates = DBSync.getDates().filter(d => d.enabled);
-  if (!dates || dates.length === 0) {
-    const now = new Date();
-    const targetDays = [2, 5];
-    dates = [];
-    for (let i = 1; i <= 14; i++) {
-      const d = new Date(now);
-      d.setDate(now.getDate() + i);
-      if (targetDays.includes(d.getDay())) {
-        dates.push({ date: d.toISOString().split('T')[0], enabled: true });
-      }
-      if (dates.length >= 4) break;
-    }
-  }
 
   const grid = document.getElementById('portalDateGrid');
   if (!dates || dates.length === 0) {
