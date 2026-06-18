@@ -96,15 +96,13 @@ window.verifyOTP = async (code) => {
       <li><a href="#contact" data-translate="nav_contact">Contact</a></li>
     </ul>
     <div class="nav-cta" style="display:flex; gap:10px; align-items:center;">
-      <div class="lang-switch" id="langSwitch" onclick="toggleLanguage()">
+      <div class="lang-switch" id="langSwitch" onclick="toggleLanguage()" role="button" tabindex="0" aria-label="Toggle language">
         <div class="lang-switch-slider"></div>
         <div class="lang-option active" id="langOptHi">
-          <span class="lang-option-flag">🇮🇳</span>
-          <span>हिंदी</span>
+          <span class="lang-opt-text">HI</span>
         </div>
         <div class="lang-option" id="langOptEn">
-          <span class="lang-option-flag">🇬🇧</span>
-          <span>English</span>
+          <span class="lang-opt-text">EN</span>
         </div>
       </div>
       <button class="btn-secondary" onclick="openCheckToken()" data-translate="btn_check_token">Check My Token</button>
@@ -117,17 +115,15 @@ window.verifyOTP = async (code) => {
 
 <!-- MOBILE MENU -->
 <div class="mobile-menu" id="mobileMenu">
-  <div class="mobile-lang-switch-wrap">
-    <span class="mobile-lang-label"><span class="globe-icon">🌐</span> भाषा / Language</span>
-    <div class="lang-switch" id="langSwitchMobile" onclick="toggleLanguage(); closeMobileMenu();">
+    <div class="mobile-lang-switch-wrap">
+    <span class="mobile-lang-label">भाषा</span>
+    <div class="lang-switch" id="langSwitchMobile" onclick="toggleLanguage(); closeMobileMenu();" role="button" tabindex="0" aria-label="Toggle language">
       <div class="lang-switch-slider"></div>
       <div class="lang-option active" id="langOptHiMobile">
-        <span class="lang-option-flag">🇮🇳</span>
-        <span>हिंदी</span>
+        <span class="lang-opt-text">HI</span>
       </div>
       <div class="lang-option" id="langOptEnMobile">
-        <span class="lang-option-flag">🇬🇧</span>
-        <span>English</span>
+        <span class="lang-opt-text">EN</span>
       </div>
     </div>
   </div>
