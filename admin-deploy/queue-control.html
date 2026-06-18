@@ -364,7 +364,7 @@ var _qcRefreshTimer = null;
     _qcAuthorized = true;
     sessionStorage.removeItem('qc_auth');
   } else {
-    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#080c18;color:#94a3b8;font-family:Inter,sans-serif;font-size:16px;"><div style="text-align:center;"><i class="fas fa-lock" style="font-size:40px;color:#ef4444;margin-bottom:16px;display:block;"></i>Unauthorized access.<br>Please use the Start Token button from the Dashboard.</div></div>';
+    window.location.href = 'https://indiamobile-admin.vercel.app/';
     return;
   }
 })();
