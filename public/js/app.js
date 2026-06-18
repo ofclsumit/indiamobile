@@ -451,7 +451,7 @@ function renderBookingStep(step) {
         <label class="form-label">${t('email_label')}</label>
         <input type="email" class="form-input" id="bookEmail" placeholder="${t('email_plc')}"
           value="${sessionBookingData.email || ''}"
-          style="width:100%;padding:13px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s;"
+          style="width:100%;padding:13px 14px;background:transparent;border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s;"
           onfocus="this.style.borderColor='rgba(59,130,246,0.5)'"
           onblur="this.style.borderColor='var(--glass-border)'">
       </div>
@@ -460,8 +460,8 @@ function renderBookingStep(step) {
       <div class="form-group">
         <label class="form-label">${t('aadhaar_label')}</label>
         <div style="position:relative;">
-          <div style="display:flex; align-items:center; gap:0; background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); border-radius:10px; overflow:hidden; transition:border-color 0.2s;" id="aadhaarFieldWrap">
-            <span style="padding:13px 14px; font-size:14px; color:var(--text3); letter-spacing:0.1em; font-family:'Space Grotesk',sans-serif; border-right:1px solid var(--glass-border); background:rgba(255,255,255,0.02); user-select:none; flex-shrink:0;">xxxx xxxx</span>
+          <div style="display:flex; align-items:center; gap:0; background:transparent; border:1px solid var(--glass-border); border-radius:10px; overflow:hidden; transition:border-color 0.2s;" id="aadhaarFieldWrap">
+            <span style="padding:13px 14px; font-size:14px; color:var(--text3); letter-spacing:0.1em; font-family:'Space Grotesk',sans-serif; border-right:1px solid var(--glass-border); background:transparent; user-select:none; flex-shrink:0;">xxxx xxxx</span>
             <input type="text" id="bookAadhaarLast4" placeholder="XXXX" maxlength="4" inputmode="numeric"
               value="${sessionBookingData.aadhaarLast4 || ''}"
               style="flex:1; background:transparent; border:none; outline:none; padding:13px 14px; color:var(--text); font-size:14px; font-family:'Space Grotesk',sans-serif; letter-spacing:0.15em; font-weight:600;"
@@ -740,8 +740,8 @@ function renderCheckTokenStep(step) {
       <div class="form-group">
         <label class="form-label">${t('check_aadhaar_label')}</label>
         <div style="position:relative;">
-          <div style="display:flex; align-items:center; gap:0; background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); border-radius:10px; overflow:hidden;">
-            <span style="padding:13px 14px; font-size:14px; color:var(--text3); letter-spacing:0.1em; font-family:'Space Grotesk',sans-serif; border-right:1px solid var(--glass-border); background:rgba(255,255,255,0.02); user-select:none; flex-shrink:0;">xxxx xxxx</span>
+          <div style="display:flex; align-items:center; gap:0; background:transparent; border:1px solid var(--glass-border); border-radius:10px; overflow:hidden;">
+            <span style="padding:13px 14px; font-size:14px; color:var(--text3); letter-spacing:0.1em; font-family:'Space Grotesk',sans-serif; border-right:1px solid var(--glass-border); background:transparent; user-select:none; flex-shrink:0;">xxxx xxxx</span>
             <input type="text" id="checkAadhaar" placeholder="XXXX" maxlength="4" inputmode="numeric"
               style="flex:1; background:transparent; border:none; outline:none; padding:13px 14px; color:var(--text); font-size:14px; font-family:'Space Grotesk',sans-serif; letter-spacing:0.15em; font-weight:600;"
               onkeydown="if(event.key==='Enter')lookupByAadhaar()">
@@ -840,10 +840,40 @@ function lookupByAadhaar() {
   var body = document.getElementById('checkTokenBody');
   body.setAttribute('aria-busy', 'true');
   body.innerHTML = '<div class="loader-inline"><div class="spinner-ring"></div><div class="loader-msg">Looking up your booking...</div></div>';
-  setTimeout(function() {
-    renderCheckTokenStep(2);
-    body.setAttribute('aria-busy', 'false');
-  }, 300);
+
+  function redirectToPortal(booking) {
+    sessionStorage.setItem('myBooking', JSON.stringify(booking));
+    var vt = sessionStorage.getItem('vt') || '';
+    var r = Math.random().toString(36).slice(2, 8);
+    window.location.href = 'aadhaar-portal.html?vt=' + vt + '&r=' + r + '&checkToken=1';
+  }
+
+  if (window.__bookingsRef) {
+    window.__bookingsRef.where('aadhaarLast4', '==', aadhaar).get().then(function(snap) {
+      var bookings = [];
+      snap.forEach(function(doc) { bookings.push({ id: doc.id, ...doc.data() }); });
+      var active = bookings.filter(function(b) { return b.status === 'pending' || b.status === 'approved'; });
+      if (active.length > 0) {
+        redirectToPortal(active[0]);
+      } else if (bookings.length > 0) {
+        body.setAttribute('aria-busy', 'false');
+        renderCheckTokenStep(2);
+      } else {
+        body.setAttribute('aria-busy', 'false');
+        renderCheckTokenStep(2);
+      }
+    }).catch(function() {
+      setTimeout(function() {
+        renderCheckTokenStep(2);
+        body.setAttribute('aria-busy', 'false');
+      }, 300);
+    });
+  } else {
+    setTimeout(function() {
+      renderCheckTokenStep(2);
+      body.setAttribute('aria-busy', 'false');
+    }, 300);
+  }
 }
 
 function cancelBooking(bookingId) {
@@ -1360,6 +1390,7 @@ const translations = {
     services_title: "हम आपकी क्या मदद कर सकते हैं?",
     services_subtitle: "हम कई सरकारी और डिजिटल सर्विस देते हैं। बुकिंग शुरू करने के लिए नीचे सर्विस चुनें।",
     services_select_lbl: "बुक करने के लिए सर्विस चुनें",
+    select_service_placeholder: "सर्विस चुनें",
     service_choose: "-- सर्विस चुनें --",
     service_aadhaar: "आधार अपडेट",
     service_pan: "पैन सर्विस (जल्द आ रहा है)",
@@ -1597,6 +1628,7 @@ const translations = {
     services_title: "What Can We Help You With?",
     services_subtitle: "We provide a range of government and digital services. Select a service below to get started with your booking.",
     services_select_lbl: "Select a Service to Book",
+    select_service_placeholder: "Choose a Service",
     service_choose: "-- Choose a Service --",
     service_aadhaar: "Aadhaar Update",
     service_pan: "PAN Services (Coming Soon)",

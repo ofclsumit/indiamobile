@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/x-icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
 <title>Aadhaar Update Booking — India Mobile</title>
 <meta name="description" content="Book your Aadhaar update appointment online at India Mobile Center. Fast and secure booking.">
 <script>
@@ -350,7 +354,7 @@ resetInactivityTimer();
       <div class="form-group">
         <label class="form-label">Email Address</label>
         <input type="email" class="form-input" id="portalEmail" placeholder="your@email.com"
-          style="width:100%;padding:13px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s;"
+          style="width:100%;padding:13px 14px;background:transparent;border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s;"
           onfocus="this.style.borderColor='rgba(59,130,246,0.5)'"
           onblur="this.style.borderColor='var(--glass-border)'">
       </div>
@@ -358,7 +362,7 @@ resetInactivityTimer();
       <div class="form-group">
         <label class="form-label">Full Name</label>
         <input type="text" class="form-input" id="portalName" placeholder="Enter your full name" maxlength="50"
-          style="width:100%;padding:13px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s;"
+          style="width:100%;padding:13px 14px;background:transparent;border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s;"
           onfocus="this.style.borderColor='rgba(59,130,246,0.5)'"
           onblur="this.style.borderColor='var(--glass-border)'">
       </div>
@@ -400,6 +404,11 @@ resetInactivityTimer();
 
       <div id="portalSendBtn">
         <button class="btn-primary btn-full" onclick="continueToBooking()">Send OTP</button>
+      </div>
+      <div style="text-align:center;margin-top:16px;">
+        <a href="index.html?checkToken=1" style="color:var(--text3);font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">
+          Already booked? <strong style="color:var(--accent);">Find your token</strong> <i class="fas fa-arrow-right" style="font-size:11px;"></i>
+        </a>
       </div>
     </div>
 
@@ -607,13 +616,56 @@ function showStep2() {
   document.getElementById('portalStep1').style.display = 'none';
   document.getElementById('portalStep2').style.display = 'block';
 
+  const grid = document.getElementById('portalDateGrid');
   let dates = DBSync.getDates().filter(d => d.enabled);
 
-  const grid = document.getElementById('portalDateGrid');
-  if (!dates || dates.length === 0) {
-    grid.innerHTML = '<p style="color:var(--text3);font-size:14px;text-align:center;padding:20px;grid-column:1/-1;">No dates available. Please contact us directly.</p>';
-    return;
+  if (dates.length > 0) { renderDateGrid(dates); return; }
+
+  grid.innerHTML = '<p style="color:var(--text3);font-size:14px;text-align:center;padding:20px;grid-column:1/-1;">Loading dates...</p>';
+
+  if (window.__bookingsRef) {
+    window.__bookingsRef.where('__type', '==', 'date_config').get().then(snap => {
+      dates = [];
+      snap.forEach(doc => dates.push({ id: doc.id, ...doc.data() }));
+      const enabled = dates.filter(d => d.enabled !== false);
+      if (enabled.length > 0) {
+        try { DBSync.setDates(dates); } catch(e) {}
+        renderDateGrid(enabled);
+      } else {
+        renderFallbackDates();
+      }
+    }).catch(() => { renderFallbackDates(); });
+  } else {
+    renderFallbackDates();
   }
+}
+
+function renderFallbackDates() {
+  const grid = document.getElementById('portalDateGrid');
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dates = [];
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  while (dates.length < 8) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() === 2 || d.getDay() === 5) {
+      const dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      dates.push({ date: dateStr, enabled: true });
+    }
+  }
+  grid.innerHTML = dates.map(dd => {
+    const date = new Date(dd.date + 'T00:00:00');
+    return `<div class="date-btn" onclick="portalSelectDate('${dd.date}', this)">
+      <div class="date-btn-day">${dayNames[date.getDay()]}</div>
+      <div class="date-btn-num">${date.getDate()}</div>
+      <div class="date-btn-month">${monthNames[date.getMonth()]}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderDateGrid(dates) {
+  const grid = document.getElementById('portalDateGrid');
   const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   grid.innerHTML = dates.map(d => {
@@ -694,7 +746,8 @@ function showConfirmation(booking) {
   document.getElementById('confirmName').textContent = booking.name || '-';
   document.getElementById('confirmService').textContent = booking.service;
   const aad = booking.aadhaarFull || '';
-  document.getElementById('confirmAadhaar').textContent = aad.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3');
+  const aadDisplay = aad ? aad.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3') : ('xxxx xxxx ' + (booking.aadhaarLast4 || ''));
+  document.getElementById('confirmAadhaar').textContent = aadDisplay;
   const d = new Date(booking.date + 'T00:00:00');
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -708,6 +761,28 @@ function showConfirmation(booking) {
 }
 
 
+// Auto-show confirmation if redirected from check token with booking data
+(function() {
+  var myBooking = sessionStorage.getItem('myBooking');
+  if (myBooking) {
+    try {
+      var booking = JSON.parse(myBooking);
+      if (booking && booking.token) {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('checkToken') === '1') {
+          var checkLoad = function() {
+            if (typeof showConfirmation === 'function') {
+              showConfirmation(booking);
+            } else {
+              setTimeout(checkLoad, 200);
+            }
+          };
+          checkLoad();
+        }
+      }
+    } catch(e) {}
+  }
+})();
 </script>
 
 <!-- Language Toggle -->
