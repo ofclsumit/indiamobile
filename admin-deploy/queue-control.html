@@ -120,7 +120,7 @@ body {
 .qc-hero-status.none { background: var(--surface); color: var(--text3); border: 1px solid var(--border); }
 .qc-actions {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   margin-bottom: 32px;
 }
@@ -149,9 +149,7 @@ body {
 .qc-action-btn.next:hover { border-color: var(--accent); color: var(--accent); }
 .qc-action-btn.complete:hover { border-color: var(--green); color: var(--green); }
 .qc-action-btn.cancel:hover { border-color: var(--red); color: var(--red); }
-.qc-action-btn.skip:hover { border-color: var(--amber); color: var(--amber); }
-.qc-action-btn.recall:hover { border-color: var(--accent); color: var(--accent); }
-.qc-action-btn.noshow:hover { border-color: var(--red); color: var(--red); }
+.qc-action-btn.sendtolast:hover { border-color: var(--amber); color: var(--amber); }
 .qc-section-title {
   font-size: 13px;
   font-weight: 600;
@@ -234,6 +232,16 @@ body {
   0%, 100% { box-shadow: 0 4px 24px rgba(16,185,129,0.35), 0 0 0 rgba(16,185,129,0); }
   50% { box-shadow: 0 8px 40px rgba(16,185,129,0.55), 0 0 60px rgba(16,185,129,0.15); }
 }
+.qc-save-exit {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; margin-top: 8px;
+  border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text3);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: inherit; text-transform: uppercase; letter-spacing: 0.05em;
+  transition: all 0.2s; width: fit-content;
+}
+.qc-save-exit:hover { background: var(--surface-hover); color: var(--red); border-color: var(--red); }
 .qc-saving-bar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
   height: 3px;
@@ -286,13 +294,13 @@ body {
     </button>
 
     <div class="qc-actions">
-      <button class="qc-action-btn next" onclick="qcCallNext()"><i class="fas fa-forward-step"></i> Call Next</button>
-      <button class="qc-action-btn complete" onclick="qcMarkComplete()"><i class="fas fa-check-circle"></i> Complete</button>
-      <button class="qc-action-btn cancel" onclick="qcCancel()"><i class="fas fa-ban"></i> Cancel</button>
-      <button class="qc-action-btn skip" onclick="qcSkip()"><i class="fas fa-forward"></i> Skip</button>
-      <button class="qc-action-btn recall" onclick="qcRecall()"><i class="fas fa-rotate-left"></i> Recall</button>
-      <button class="qc-action-btn noshow" onclick="qcNoShow()"><i class="fas fa-user-slash"></i> No-Show</button>
-    </div>
+    <button class="qc-action-btn next" onclick="qcCallNext()"><i class="fas fa-forward-step"></i> Next</button>
+    <button class="qc-action-btn complete" onclick="qcMarkComplete()"><i class="fas fa-check-circle"></i> Complete</button>
+    <button class="qc-action-btn cancel" onclick="qcCancel()"><i class="fas fa-ban"></i> Cancel</button>
+    <button class="qc-action-btn sendtolast" onclick="qcSendToLast()"><i class="fas fa-forward"></i> Send to Last</button>
+  </div>
+
+  <button class="qc-save-exit" onclick="qcSaveExit()"><i class="fas fa-floppy-disk"></i> Save &amp; Exit</button>
   </div>
 
   <div class="qc-right">
@@ -452,7 +460,7 @@ async function qcCallNext() {
   waiting.sort((a, b) => parseInt(a.token) - parseInt(b.token));
   if (!waiting.length) { notify('No customers waiting.', 'error'); return; }
   const next = waiting[0];
-  if (!(await showQCModal('Call token #' + String(next.token).padStart(2, '0') + ' (' + (next.name || 'Customer') + ')?'))) return;
+  if (!(await showQCModal('Call next: Token #' + String(next.token).padStart(2, '0') + ' — ' + (next.name || 'Customer') + '?'))) return;
   next.status = 'processing';
   DBSync.setBookings(bookings);
   DBSync.setToken(parseInt(next.token));
@@ -487,34 +495,25 @@ async function qcCancel() {
   refreshQueue();
 }
 
-async function qcSkip() {
+async function qcSendToLast() {
   const bookings = DBSync.getBookings();
   const processing = bookings.find(b => b.status === 'processing');
   if (!processing) { notify('No customer currently being served.', 'error'); return; }
-  if (!(await showQCModal('Skip #' + String(processing.token).padStart(2, '0') + ' (' + (processing.name || 'Customer') + ')? They will be moved to end of queue.'))) return;
+  if (!(await showQCModal('Send #' + String(processing.token).padStart(2, '0') + ' (' + (processing.name || 'Customer') + ') to the end of queue?'))) return;
   processing.status = 'approved';
   DBSync.setBookings(bookings);
-  logQCAction('Skipped', processing.token, 'Success');
-  notify('#' + String(processing.token).padStart(2, '0') + ' skipped.', 'warning');
+  logQCAction('Sent To Last', processing.token, 'Success');
+  notify('#' + String(processing.token).padStart(2, '0') + ' moved to end of queue.', 'warning');
   refreshQueue();
 }
 
-async function qcRecall() {
-  const ct = DBSync.getToken();
-  if (!(await showQCModal('Recall #' + String(ct).padStart(2, '0') + '?'))) return;
-  notify('Recall: Token #' + String(ct).padStart(2, '0') + ', please proceed to counter.', 'info');
-  logQCAction('Recalled', ct, 'Success');
+async function qcSaveExit() {
+  if (!(await showQCModal('Save current state and exit? The live token will be reset.'))) return;
+  DBSync.setToken(0);
+  logQCAction('Saved & Exited', '--', 'Success');
+  notify('State saved. Redirecting to dashboard...', 'info');
+  setTimeout(function() { window.location.href = 'index.html'; }, 800);
 }
-
-async function qcNoShow() {
-  const ct = DBSync.getToken();
-  const bookings = DBSync.getBookings();
-  const b = bookings.find(x => parseInt(x.token) === ct && (x.status === 'processing' || x.status === 'approved' || x.status === 'waiting'));
-  if (!b) { notify('No active token to mark as no-show.', 'error'); return; }
-  if (!(await showQCModal('Mark #' + String(ct).padStart(2, '0') + ' (' + (b.name || 'Customer') + ') as no-show? Status will be set to cancelled.'))) return;
-  b.status = 'cancelled';
-  DBSync.setBookings(bookings);
-  logQCAction('No-Show', ct, 'Success');
   notify('#' + String(ct).padStart(2, '0') + ' marked no-show.', 'warning');
   refreshQueue();
 }
