@@ -2021,29 +2021,25 @@ footer {
   overflow: visible;
 }
 .confirm-stamp-svg circle.bg {
-  fill: rgba(21,128,61,0.12);
+  fill: rgba(21,128,61,0.08);
 }
 .confirm-stamp-svg circle.outer {
   fill: none;
-  stroke: #15803d;
-  stroke-width: 3;
-  stroke-dasharray: 4 3;
-  opacity: 0.7;
+  stroke: #166534;
+  stroke-width: 2.5;
+  stroke-dasharray: 5 4;
 }
 .confirm-stamp-svg circle.inner {
   fill: none;
-  stroke: #15803d;
-  stroke-width: 1.5;
-  opacity: 0.5;
+  stroke: #166534;
+  stroke-width: 1;
 }
 .confirm-stamp-svg line.star {
-  stroke: #15803d;
-  stroke-width: 1.5;
-  opacity: 0.6;
+  stroke: #166534;
+  stroke-width: 1;
 }
 .confirm-stamp-svg circle.center-dot {
-  fill: #15803d;
-  opacity: 0.5;
+  fill: #166534;
 }
 .confirm-stamp-text {
   position: relative;
@@ -2059,22 +2055,20 @@ footer {
 .confirm-stamp-text .main {
   display: block;
   font-family: 'Space Grotesk', 'Arial Black', sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 900;
-  letter-spacing: 2px;
-  color: #15803d;
+  letter-spacing: 2.5px;
+  color: #166534;
   text-transform: uppercase;
-  opacity: 0.75;
 }
 .confirm-stamp-text .sub {
   display: block;
   font-family: 'Space Grotesk', 'Arial Black', sans-serif;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 3px;
-  color: #15803d;
+  letter-spacing: 3.5px;
+  color: #166534;
   text-transform: uppercase;
-  opacity: 0.65;
   margin-top: 1px;
 }
 
