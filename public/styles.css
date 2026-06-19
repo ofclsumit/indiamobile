@@ -2021,25 +2021,25 @@ footer {
   overflow: visible;
 }
 .confirm-stamp-svg circle.bg {
-  fill: rgba(21,128,61,0.08);
+  fill: rgba(20,83,45,0.85);
 }
 .confirm-stamp-svg circle.outer {
   fill: none;
-  stroke: #166534;
+  stroke: #14532d;
   stroke-width: 2.5;
   stroke-dasharray: 5 4;
 }
 .confirm-stamp-svg circle.inner {
   fill: none;
-  stroke: #166534;
+  stroke: #14532d;
   stroke-width: 1;
 }
 .confirm-stamp-svg line.star {
-  stroke: #166534;
+  stroke: #14532d;
   stroke-width: 1;
 }
 .confirm-stamp-svg circle.center-dot {
-  fill: #166534;
+  fill: #14532d;
 }
 .confirm-stamp-text {
   position: relative;
@@ -2058,7 +2058,7 @@ footer {
   font-size: 15px;
   font-weight: 900;
   letter-spacing: 2.5px;
-  color: #166534;
+  color: #fff;
   text-transform: uppercase;
 }
 .confirm-stamp-text .sub {
@@ -2067,7 +2067,7 @@ footer {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 3.5px;
-  color: #166534;
+  color: #fff;
   text-transform: uppercase;
   margin-top: 1px;
 }
