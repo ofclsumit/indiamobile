@@ -146,6 +146,13 @@ module.exports = async (req, res) => {
       syncData.cache = input.cache;
     } else if (action === 'reset') {
       syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], _lastUpdated: Date.now() };
+    } else if (action === 'resetExceptCustomers') {
+      syncData.token = 0;
+      syncData.dates = [];
+      syncData.activity = [];
+      syncData.settings = [];
+      syncData.otps = {};
+      syncData.cache = [];
     } else {
       ['bookings', 'token', 'dates', 'activity', 'settings', 'otps', 'cache'].forEach(k => {
         if (input[k] !== undefined) syncData[k] = input[k];

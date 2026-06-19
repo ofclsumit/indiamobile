@@ -1992,6 +1992,60 @@ footer {
   animation: live-pulse 0.6s ease-out;
 }
 
+/* ---- CONFIRMED BOOKING STAMP ---- */
+.confirm-stamp-wrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+.confirm-stamp {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0.8;
+  user-select: none;
+  background: #15803d;
+  color: #fff;
+  font-family: 'Space Grotesk', 'Arial Black', 'Impact', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 8px 24px;
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 2px #15803d,
+    3px 3px 0 2px rgba(0,0,0,0.12),
+    inset 0 0 0 1px rgba(255,255,255,0.15);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.25);
+  white-space: nowrap;
+}
+.confirm-stamp::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.04) 2px,
+    rgba(0,0,0,0.04) 4px
+  );
+  pointer-events: none;
+}
+.confirm-stamp-sub {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-top: 1px;
+  opacity: 0.9;
+}
+
 @media print {
   body { background: #fff; color: #000; }
   nav, .top-nav, .portal-nav, .btn-primary, .modal-overlay, .modal,
@@ -1999,6 +2053,9 @@ footer {
   button, .no-print { display: none !important; }
   .booking-confirm { box-shadow: none; border: 1px solid #ddd; padding: 20px; max-width: 600px; margin: 20px auto; }
   .booking-confirm * { color: #000 !important; }
+  .confirm-stamp,
+  .confirm-stamp * { color: #fff !important; }
+  .confirm-stamp { opacity: 0.5 !important; background: #15803d !important; box-shadow: 0 0 0 2px #15803d, 2px 2px 0 2px rgba(0,0,0,0.1) !important; }
   .form-card { box-shadow: none; border: 1px solid #ddd; }
   @page { margin: 15mm; }
 }

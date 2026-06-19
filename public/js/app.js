@@ -531,39 +531,44 @@ function renderBookingStep(step) {
 
     body.innerHTML = stepIndicator + `
       <div class="booking-confirm">
-        <div style="width:80px;height:80px;margin:0 auto 16px;">
-          <svg viewBox="0 0 80 80" style="width:80px;height:80px;">
-            <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(16,185,129,0.3)" stroke-width="3"/>
-            <circle cx="40" cy="40" r="36" fill="none" stroke="#34d399" stroke-width="3" stroke-dasharray="226" stroke-dashoffset="226" stroke-linecap="round" class="anim-circle"/>
-            <path d="M24 42l12 12 22-24" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="56" stroke-dashoffset="56" class="anim-check"/>
-          </svg>
-        </div>
-        <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;">${t('booking_confirmed')}</h3>
-        <p style="font-size:14px;color:var(--text2);margin-bottom:24px;">${t('booking_success')}</p>
-
-        <div style="text-align:center; margin-bottom:24px;">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">${t('your_token_label')}</div>
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:72px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 30px rgba(56,189,248,0.3);">${booking.token}</div>
-        </div>
-
-        <div class="booking-id-badge">${t('booking_id_label')}: ${booking.bookingId}</div>
-
-        <div class="booking-detail-grid">
-          <div class="booking-detail-row">
-            <span class="booking-detail-key">${t('service_label')}</span>
-            <span class="booking-detail-val">${booking.service}</span>
+        <div class="confirm-stamp-wrap">
+          <div class="confirm-stamp">
+            CONFIRMED<br><span class="confirm-stamp-sub">BOOKING</span>
           </div>
-          <div class="booking-detail-row">
-            <span class="booking-detail-key">${t('aadhaar_detail')}</span>
-            <span class="booking-detail-val" style="font-family:'Space Grotesk',sans-serif; letter-spacing:0.1em;">xxxx xxxx ${booking.aadhaarLast4}</span>
+          <div style="width:80px;height:80px;margin:0 auto 16px;">
+            <svg viewBox="0 0 80 80" style="width:80px;height:80px;">
+              <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(16,185,129,0.3)" stroke-width="3"/>
+              <circle cx="40" cy="40" r="36" fill="none" stroke="#34d399" stroke-width="3" stroke-dasharray="226" stroke-dashoffset="226" stroke-linecap="round" class="anim-circle"/>
+              <path d="M24 42l12 12 22-24" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="56" stroke-dashoffset="56" class="anim-check"/>
+            </svg>
           </div>
-          <div class="booking-detail-row">
-            <span class="booking-detail-key">${t('appt_date')}</span>
-            <span class="booking-detail-val">${displayDate}</span>
+          <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;">${t('booking_confirmed')}</h3>
+          <p style="font-size:14px;color:var(--text2);margin-bottom:24px;">${t('booking_success')}</p>
+
+          <div style="text-align:center; margin-bottom:24px;">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">${t('your_token_label')}</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:72px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 30px rgba(56,189,248,0.3);">${booking.token}</div>
           </div>
-          <div class="booking-detail-row">
-            <span class="booking-detail-key">${t('status_label')}</span>
-            <span class="booking-detail-val text-success">${t('approved')}</span>
+
+          <div class="booking-id-badge">${t('booking_id_label')}: ${booking.bookingId}</div>
+
+          <div class="booking-detail-grid">
+            <div class="booking-detail-row">
+              <span class="booking-detail-key">${t('service_label')}</span>
+              <span class="booking-detail-val">${booking.service}</span>
+            </div>
+            <div class="booking-detail-row">
+              <span class="booking-detail-key">${t('aadhaar_detail')}</span>
+              <span class="booking-detail-val" style="font-family:'Space Grotesk',sans-serif; letter-spacing:0.1em;">xxxx xxxx ${booking.aadhaarLast4}</span>
+            </div>
+            <div class="booking-detail-row">
+              <span class="booking-detail-key">${t('appt_date')}</span>
+              <span class="booking-detail-val">${displayDate}</span>
+            </div>
+            <div class="booking-detail-row">
+              <span class="booking-detail-key">${t('status_label')}</span>
+              <span class="booking-detail-val text-success">${t('approved')}</span>
+            </div>
           </div>
         </div>
 
@@ -575,6 +580,7 @@ function renderBookingStep(step) {
         <div style="display:flex;gap:10px;margin-top:24px;">
           <button class="btn-primary btn-full" onclick="closeBooking()" style="flex:1;justify-content:center;">${t('done_btn')}</button>
           <button class="btn-primary btn-full" onclick="window.print()" style="flex:1;justify-content:center;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);">${t('print_btn')}</button>
+        </div>
         </div>
       </div>
     `;

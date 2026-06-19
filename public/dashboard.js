@@ -929,6 +929,49 @@ function saveSettings() {
   logActivity('Updated Settings', '--', 'Success');
 }
 
+function resetAllData() {
+  showConfirmModal(
+    'Reset All Data',
+    'This will reset token counter, activity logs, settings, dates, cache, and OTP data. Customer booking records will be preserved. Are you sure?',
+    async () => {
+      try {
+        // Reset server-side data (preserves bookings)
+        await fetch(DBSync.API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'resetExceptCustomers' })
+        });
+
+        // Reset local state
+        activityLog = [];
+        saveActivityLog();
+
+        // Reset localStorage keys (keep ds_bookings)
+        localStorage.removeItem('ds_token');
+        localStorage.removeItem('ds_dates');
+        localStorage.removeItem('ds_activity');
+        localStorage.removeItem('ds_settings');
+        localStorage.removeItem('ds_cache');
+        localStorage.removeItem('ds_sms_config');
+
+        // Reset via DBSync (syncs to Firestore)
+        DBSync.setToken(0);
+        DBSync.setDates([]);
+        DBSync.setCache([]);
+        DBSync.setActivity([]);
+        DBSync.setSettings({});
+
+        notify('All data reset successfully. Customer records preserved.', 'success');
+        logActivity('Reset All Data (except customers)', '--', 'Success');
+
+        fullRefresh();
+      } catch (e) {
+        notify('Reset failed: ' + e.message, 'error');
+      }
+    }
+  );
+}
+
 // ============================================
 // NOTIFICATION HELPER
 // ============================================
@@ -961,4 +1004,39 @@ function notify(msg, type) {
     n.style.transform = 'translateY(20px)';
     n.style.opacity = '0';
   }, 3000);
+}
+
+// ============================================
+// CONFIRMATION MODAL
+// ============================================
+let _confirmCallback = null;
+
+function showConfirmModal(title, message, callback) {
+  _confirmCallback = callback || null;
+  const overlay = document.getElementById('confirmModalOverlay');
+  const titleEl = document.getElementById('modalTitle');
+  const msgEl = document.getElementById('modalMsg');
+  if (titleEl) titleEl.textContent = title;
+  if (msgEl) msgEl.textContent = message;
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function closeConfirmModal(result, event) {
+  if (event && event.target !== document.getElementById('confirmModalOverlay')) {
+    if (event.target.closest('.modal-card')) return;
+  }
+  const overlay = document.getElementById('confirmModalOverlay');
+  if (overlay) overlay.style.display = 'none';
+  if (result === false && _confirmCallback) {
+    _confirmCallback = null;
+  }
+}
+
+function executeConfirmModal() {
+  if (typeof _confirmCallback === 'function') {
+    const cb = _confirmCallback;
+    _confirmCallback = null;
+    closeConfirmModal(true);
+    cb();
+  }
 }

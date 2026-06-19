@@ -353,14 +353,18 @@ resetInactivityTimer();
   <div id="confirmView" style="display:none;">
     <div class="form-card">
       <div class="booking-confirm">
-        <div style="width:80px;height:80px;margin:0 auto 16px;">
-          <svg viewBox="0 0 80 80" style="width:80px;height:80px;">
-            <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(16,185,129,0.3)" stroke-width="3"/>
-            <circle cx="40" cy="40" r="36" fill="none" stroke="#34d399" stroke-width="3" stroke-dasharray="226" stroke-dashoffset="226" stroke-linecap="round" class="anim-circle"/>
-            <path d="M24 42l12 12 22-24" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="56" stroke-dashoffset="56" class="anim-check"/>
-          </svg>
-        </div>
-        <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px;">Booking Confirmed</h3>
+        <div class="confirm-stamp-wrap">
+          <div class="confirm-stamp">
+            CONFIRMED<br><span class="confirm-stamp-sub">BOOKING</span>
+          </div>
+          <div style="width:80px;height:80px;margin:0 auto 16px;">
+            <svg viewBox="0 0 80 80" style="width:80px;height:80px;">
+              <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(16,185,129,0.3)" stroke-width="3"/>
+              <circle cx="40" cy="40" r="36" fill="none" stroke="#34d399" stroke-width="3" stroke-dasharray="226" stroke-dashoffset="226" stroke-linecap="round" class="anim-circle"/>
+              <path d="M24 42l12 12 22-24" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="56" stroke-dashoffset="56" class="anim-check"/>
+            </svg>
+          </div>
+          <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px;">Booking Confirmed</h3>
         <p style="font-size:14px;color:var(--text2);margin-bottom:24px;">Your appointment is booked successfully.</p>
         <div style="text-align:center;margin-bottom:24px;">
           <div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">Token Number</div>
@@ -395,6 +399,7 @@ resetInactivityTimer();
         <div style="display:flex;gap:10px;margin-top:16px;">
           <a href="index.html" class="btn-primary btn-full" style="justify-content:center;text-decoration:none;flex:1;"><i class="fas fa-arrow-left" style="font-size:14px;"></i> Back to Home</a>
           <button onclick="window.print()" class="btn-primary btn-full" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);justify-content:center;flex:1;"><i class="fas fa-print" style="font-size:14px;"></i> Print</button>
+        </div>
         </div>
       </div>
     </div>
