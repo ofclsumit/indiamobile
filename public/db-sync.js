@@ -224,17 +224,18 @@ const DBSync = {
 
   // --- Get next token number from Firestore counter (atomic) ---
   async getNextToken() {
-    if (this._firestoreReady && this._db) {
-      const counterRef = this._db.collection('counters').doc('tokenCounter');
+    var db = this._firestoreReady && this._db ? this._db : (window.__db || null);
+    if (db) {
+      var counterRef = db.collection('counters').doc('tokenCounter');
 
       // Initialize counter from existing bookings if it doesn't exist
       try {
-        const counterDoc = await counterRef.get();
+        var counterDoc = await counterRef.get();
         if (!counterDoc.exists) {
-          const snap = await this._db.collection('bookings').get();
-          let maxToken = 0;
-          snap.forEach(d => {
-            const t = parseInt(d.data().token);
+          var snap = await db.collection('bookings').get();
+          var maxToken = 0;
+          snap.forEach(function(d) {
+            var t = parseInt(d.data().token);
             if (t > maxToken) maxToken = t;
           });
           await counterRef.set({
@@ -247,31 +248,36 @@ const DBSync = {
       }
 
       // Atomic increment via transaction
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (var attempt = 0; attempt < 3; attempt++) {
         try {
-          return await this._db.runTransaction(async (transaction) => {
-            const doc = await transaction.get(counterRef);
-            const lastToken = (doc.data() && doc.data().lastTokenNumber) || 0;
-            const newToken = lastToken + 1;
+          var newToken = await db.runTransaction(async function(transaction) {
+            var doc = await transaction.get(counterRef);
+            var lastToken = (doc.data() && doc.data().lastTokenNumber) || 0;
+            var nt = lastToken + 1;
             transaction.update(counterRef, {
-              lastTokenNumber: newToken,
+              lastTokenNumber: nt,
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            return newToken;
+            return nt;
           });
+          // Sync lastIssuedToken to appData/sync for admin dashboard
+          try {
+            db.doc('appData/sync').set({ lastIssuedToken: newToken }, { merge: true }).catch(function() {});
+          } catch(e) {}
+          return newToken;
         } catch (e) {
           if (attempt === 2) {
             console.warn('[DBSync] Transaction failed after retries:', e);
             break;
           }
-          await new Promise(r => setTimeout(r, 200));
+          await new Promise(function(r) { setTimeout(r, 200); });
         }
       }
     }
 
     // Fallback: compute from local bookings max
-    const bookings = this.getBookings();
-    const max = bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0);
+    var bookings = this.getBookings();
+    var max = bookings.reduce(function(m, b) { return Math.max(m, parseInt(b.token) || 0); }, 0);
     return max + 1;
   },
 

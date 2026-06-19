@@ -1012,10 +1012,10 @@ function startAdminListeners() {
   }, function() {});
   adminUnsubscribers.push(unsubDates);
 
-  // Listen for counter changes (Last Issued Token)
-  if (window.__countersRef) {
-    var unsubCounter = window.__countersRef.doc('tokenCounter').onSnapshot(function(snap) {
-      var val = snap.exists ? (snap.data().lastTokenNumber || 0) : '--';
+  // Listen for Last Issued Token from appData/sync (reliable read path)
+  if (window.__db) {
+    var unsubCounter = window.__db.doc('appData/sync').onSnapshot(function(snap) {
+      var val = snap.exists ? (snap.data().lastIssuedToken || '--') : '--';
       var el = document.getElementById('kpiLastIssuedToken');
       if (el) el.textContent = val;
     }, function() {});

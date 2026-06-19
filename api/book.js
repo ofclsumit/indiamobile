@@ -11,62 +11,42 @@ const FIRESTORE_PROJECT = 'india-mobile-17134';
 const FIRESTORE_DOC_PATH = 'appData/sync';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
 const BOOKINGS_COLL_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings`;
-const FIRESTORE_COMMIT_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents:commit`;
-
 async function getNextTokenFromCounter() {
-  const COUNTER_PATH = `projects/${FIRESTORE_PROJECT}/databases/(default)/documents/counters/tokenCounter`;
-  const COUNTER_URL = `https://firestore.googleapis.com/v1/${COUNTER_PATH}`;
-
+  // Read current counter from appData/sync (reliable REST path)
   for (let attempt = 0; attempt < 5; attempt++) {
-    // Read current counter
-    const getRes = await fetch(COUNTER_URL);
-    let lastToken = 0;
-    let updateTime = null;
+    try {
+      const getRes = await fetch(FIRESTORE_URL);
+      let lastToken = 0;
 
-    if (getRes.ok) {
-      const doc = await getRes.json();
-      if (doc.fields && doc.fields.lastTokenNumber) {
-        lastToken = parseInt(doc.fields.lastTokenNumber.integerValue || doc.fields.lastTokenNumber.stringValue) || 0;
-      }
-      updateTime = doc.updateTime;
-    }
-
-    const newToken = lastToken + 1;
-
-    // Write with optimistic locking via :commit endpoint
-    const write = {
-      update: {
-        name: COUNTER_PATH,
-        fields: {
-          lastTokenNumber: { integerValue: String(newToken) },
-          updatedAt: { timestampValue: new Date().toISOString() }
+      if (getRes.ok) {
+        const doc = await getRes.json();
+        if (doc.fields && doc.fields.lastIssuedToken) {
+          lastToken = parseInt(doc.fields.lastIssuedToken.integerValue || doc.fields.lastIssuedToken.stringValue) || 0;
         }
-      },
-      updateMask: { fieldPaths: ['lastTokenNumber', 'updatedAt'] }
-    };
+      }
 
-    if (updateTime) {
-      write.currentDocument = { updateTime };
-    } else {
-      write.currentDocument = { exists: false };
-    }
+      const newToken = lastToken + 1;
 
-    const commitRes = await fetch(FIRESTORE_COMMIT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ writes: [write] })
-    });
+      // Write back to appData/sync using PATCH
+      const writeRes = await fetch(FIRESTORE_URL + '?updateMask.fieldPaths=lastIssuedToken', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { lastIssuedToken: { integerValue: String(newToken) } } })
+      });
 
-    if (commitRes.ok) {
-      return String(newToken);
+      if (writeRes.ok) {
+        return String(newToken);
+      }
+    } catch (e) {
+      // Fall through to retry
     }
 
     if (attempt === 4) break;
     await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
   }
 
-  // Fallback (should rarely happen)
-  return String(Date.now() % 10000 + 1);
+  // Fallback: compute from bookings max
+  return '0';
 }
 
 function firestoreValueToJS(val) {
@@ -218,7 +198,11 @@ module.exports = async (req, res) => {
   const dupDevice = active.find(b => b.deviceId === deviceId);
   if (dupDevice) return res.json({ success: true, isDuplicate: true, field: 'device', booking: dupDevice });
 
-  const token = await getNextTokenFromCounter();
+  let token = await getNextTokenFromCounter();
+  if (!token || token === '0') {
+    const max = bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0);
+    token = String(max + 1);
+  }
   const booking = {
     token,
     bookingId: bookingId(),
