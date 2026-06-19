@@ -2000,50 +2000,82 @@ footer {
 }
 .confirm-stamp {
   position: absolute;
-  top: 45%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(-15deg);
+  top: 28px;
+  right: 24px;
+  transform: rotate(12deg);
   pointer-events: none;
   z-index: 10;
-  opacity: 0.8;
   user-select: none;
-  background: #15803d;
-  color: #fff;
-  font-family: 'Space Grotesk', 'Arial Black', 'Impact', sans-serif;
-  font-size: 20px;
-  font-weight: 900;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  padding: 8px 24px;
-  border-radius: 6px;
-  box-shadow:
-    0 0 0 2px #15803d,
-    3px 3px 0 2px rgba(0,0,0,0.12),
-    inset 0 0 0 1px rgba(255,255,255,0.15);
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.25);
-  white-space: nowrap;
+  width: 130px;
+  height: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
-.confirm-stamp::before {
-  content: '';
+.confirm-stamp-svg {
   position: absolute;
   inset: 0;
-  border-radius: 6px;
-  background: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.04) 2px,
-    rgba(0,0,0,0.04) 4px
-  );
-  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
-.confirm-stamp-sub {
+.confirm-stamp-svg circle.bg {
+  fill: rgba(21,128,61,0.12);
+}
+.confirm-stamp-svg circle.outer {
+  fill: none;
+  stroke: #15803d;
+  stroke-width: 3;
+  stroke-dasharray: 4 3;
+  opacity: 0.7;
+}
+.confirm-stamp-svg circle.inner {
+  fill: none;
+  stroke: #15803d;
+  stroke-width: 1.5;
+  opacity: 0.5;
+}
+.confirm-stamp-svg line.star {
+  stroke: #15803d;
+  stroke-width: 1.5;
+  opacity: 0.6;
+}
+.confirm-stamp-svg circle.center-dot {
+  fill: #15803d;
+  opacity: 0.5;
+}
+.confirm-stamp-text {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  margin-top: 6px;
+}
+.confirm-stamp-text .main {
   display: block;
-  font-size: 11px;
-  font-weight: 700;
+  font-family: 'Space Grotesk', 'Arial Black', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
   letter-spacing: 2px;
+  color: #15803d;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.confirm-stamp-text .sub {
+  display: block;
+  font-family: 'Space Grotesk', 'Arial Black', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #15803d;
+  text-transform: uppercase;
+  opacity: 0.65;
   margin-top: 1px;
-  opacity: 0.9;
 }
 
 @media print {
@@ -2053,9 +2085,14 @@ footer {
   button, .no-print { display: none !important; }
   .booking-confirm { box-shadow: none; border: 1px solid #ddd; padding: 20px; max-width: 600px; margin: 20px auto; }
   .booking-confirm * { color: #000 !important; }
-  .confirm-stamp,
-  .confirm-stamp * { color: #fff !important; }
-  .confirm-stamp { opacity: 0.5 !important; background: #15803d !important; box-shadow: 0 0 0 2px #15803d, 2px 2px 0 2px rgba(0,0,0,0.1) !important; }
+  .confirm-stamp { opacity: 1 !important; }
+  .confirm-stamp-svg circle.bg { fill: rgba(21,128,61,0.08) !important; }
+  .confirm-stamp-svg circle.outer,
+  .confirm-stamp-svg circle.inner,
+  .confirm-stamp-svg line.star,
+  .confirm-stamp-svg circle.center-dot { stroke: #15803d !important; opacity: 0.5 !important; }
+  .confirm-stamp-text .main,
+  .confirm-stamp-text .sub { color: #15803d !important; opacity: 0.6 !important; }
   .form-card { box-shadow: none; border: 1px solid #ddd; }
   @page { margin: 15mm; }
 }

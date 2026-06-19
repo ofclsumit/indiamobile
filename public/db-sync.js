@@ -18,6 +18,7 @@ const DBSync = {
     ACTIVITY: 'ds_activity',
     SETTINGS: 'ds_settings',
     CACHE: 'ds_cache',
+    CUSTOMERS: 'ds_customers',
   },
 
   FIRESTORE_DOC: 'appData/sync',
@@ -59,7 +60,9 @@ const DBSync = {
       let changed = false;
       const fields = {
         bookings: 'BOOKINGS', token: 'TOKEN', dates: 'DATES',
-        activity: 'ACTIVITY', settings: 'SETTINGS', cache: 'CACHE'
+        activity: 'ACTIVITY', settings: 'SETTINGS', cache: 'CACHE',
+        customers: 'CUSTOMERS',
+        customers: 'CUSTOMERS'
       };
 
       for (const [key, kKey] of Object.entries(fields)) {
@@ -119,6 +122,9 @@ const DBSync = {
   getSettings() {
     try { return JSON.parse(localStorage.getItem(this.KEYS.SETTINGS)) || {}; } catch(e) { return {}; }
   },
+  getCustomers() {
+    try { return JSON.parse(localStorage.getItem(this.KEYS.CUSTOMERS)) || []; } catch(e) { return []; }
+  },
 
   // --- Write (local + Firestore + API fallback) ---
   setBookings(val) {
@@ -158,6 +164,11 @@ const DBSync = {
     localStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(val));
     this._writeToFirestore({ settings: val });
     this._notify('settings');
+  },
+  setCustomers(val) {
+    localStorage.setItem(this.KEYS.CUSTOMERS, JSON.stringify(val));
+    this._writeToFirestore({ customers: val });
+    this._notify('customers');
   },
 
   // --- Firestore write ---
@@ -295,6 +306,7 @@ const DBSync = {
       activity: this.getActivity(),
       settings: this.getSettings(),
       cache: this.getCache(),
+      customers: this.getCustomers(),
       source: source,
       timestamp: Date.now(),
     };
@@ -421,6 +433,7 @@ DBSync.pushToServer = async function () {
   const token = this.getToken();
   const dates = this.getDates();
   const cache = this.getCache();
+  const customers = this.getCustomers();
 
   if (this._firestoreReady && this._db) {
     const data = { _lastUpdated: Date.now() };
@@ -428,6 +441,7 @@ DBSync.pushToServer = async function () {
     if (cache && cache.length > 0) data.cache = cache;
     if (token > 0) data.token = token;
     if (dates.length > 0) data.dates = dates;
+    if (customers.length > 0) data.customers = customers;
     if (Object.keys(data).length > 1) {
       try {
         await this._db.doc(this.FIRESTORE_DOC).set(data, { merge: true });
@@ -444,6 +458,7 @@ DBSync.pushToServer = async function () {
   if (cache && cache.length > 0) tasks.push(this._syncToServer({ action: 'setCache', cache }));
   if (token > 0) tasks.push(this._syncToServer({ action: 'setToken', token }));
   if (dates.length > 0) tasks.push(this._syncToServer({ action: 'setDates', dates }));
+  if (customers.length > 0) tasks.push(this._syncToServer({ action: 'setCustomers', customers }));
   if (tasks.length > 0) await Promise.all(tasks);
 };
 

@@ -533,7 +533,23 @@ function renderBookingStep(step) {
       <div class="booking-confirm">
         <div class="confirm-stamp-wrap">
           <div class="confirm-stamp">
-            CONFIRMED<br><span class="confirm-stamp-sub">BOOKING</span>
+            <svg class="confirm-stamp-svg" viewBox="0 0 130 130">
+              <circle class="bg" cx="65" cy="65" r="62"/>
+              <circle class="outer" cx="65" cy="65" r="60"/>
+              <circle class="inner" cx="65" cy="65" r="55"/>
+              <line class="star" x1="65" y1="7" x2="65" y2="17"/>
+              <line class="star" x1="65" y1="113" x2="65" y2="123"/>
+              <line class="star" x1="7" y1="65" x2="17" y2="65"/>
+              <line class="star" x1="113" y1="65" x2="123" y2="65"/>
+              <line class="star" x1="24" y1="24" x2="31" y2="31"/>
+              <line class="star" x1="99" y1="99" x2="106" y2="106"/>
+              <line class="star" x1="24" y1="106" x2="31" y2="99"/>
+              <line class="star" x1="99" y1="31" x2="106" y2="24"/>
+            </svg>
+            <div class="confirm-stamp-text">
+              <span class="main">CONFIRMED</span>
+              <span class="sub">BOOKING</span>
+            </div>
           </div>
           <div style="width:80px;height:80px;margin:0 auto 16px;">
             <svg viewBox="0 0 80 80" style="width:80px;height:80px;">
@@ -580,7 +596,6 @@ function renderBookingStep(step) {
         <div style="display:flex;gap:10px;margin-top:24px;">
           <button class="btn-primary btn-full" onclick="closeBooking()" style="flex:1;justify-content:center;">${t('done_btn')}</button>
           <button class="btn-primary btn-full" onclick="window.print()" style="flex:1;justify-content:center;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);">${t('print_btn')}</button>
-        </div>
         </div>
       </div>
     `;

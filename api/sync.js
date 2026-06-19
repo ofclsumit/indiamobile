@@ -7,6 +7,7 @@ const FIRESTORE_PROJECT = 'india-mobile-17134';
 const FIRESTORE_DOC_PATH = 'appData/sync';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
 const QUEUE_CURRENT_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/queue/current`;
+const COUNTER_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/counters/tokenCounter`;
 
 function firestoreValueToJS(val) {
   if (val.stringValue !== undefined) return val.stringValue;
@@ -96,6 +97,7 @@ function loadData() {
     settings: [],
     otps: {},
     cache: [],
+    customers: [],
     _lastUpdated: Date.now(),
   };
 }
@@ -144,17 +146,30 @@ module.exports = async (req, res) => {
       syncData.settings = input.settings;
     } else if (action === 'setCache' && input.cache !== undefined) {
       syncData.cache = input.cache;
+    } else if (action === 'setCustomers' && input.customers !== undefined) {
+      syncData.customers = input.customers;
     } else if (action === 'reset') {
-      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], _lastUpdated: Date.now() };
+      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: [], _lastUpdated: Date.now() };
+      try {
+        var counterFields = { lastTokenNumber: { integerValue: '0' }, updatedAt: { stringValue: new Date().toISOString() } };
+        var counterUrl = COUNTER_URL + '?updateMask.fieldPaths=lastTokenNumber&updateMask.fieldPaths=updatedAt';
+        await fetch(counterUrl, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: counterFields }) });
+      } catch(e) { console.error('Counter reset error:', e); }
     } else if (action === 'resetExceptCustomers') {
-      syncData.token = 0;
-      syncData.dates = [];
-      syncData.activity = [];
-      syncData.settings = [];
-      syncData.otps = {};
-      syncData.cache = [];
+      const keptCustomers = syncData.customers || [];
+      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: keptCustomers, _lastUpdated: Date.now() };
+      // Reset token counter so next booking starts from 1
+      try {
+        var counterFields = { lastTokenNumber: { integerValue: '0' }, updatedAt: { stringValue: new Date().toISOString() } };
+        var counterUrl = COUNTER_URL + '?updateMask.fieldPaths=lastTokenNumber&updateMask.fieldPaths=updatedAt';
+        await fetch(counterUrl, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: counterFields })
+        });
+      } catch(e) { console.error('Counter reset error:', e); }
     } else {
-      ['bookings', 'token', 'dates', 'activity', 'settings', 'otps', 'cache'].forEach(k => {
+      ['bookings', 'token', 'dates', 'activity', 'settings', 'otps', 'cache', 'customers'].forEach(k => {
         if (input[k] !== undefined) syncData[k] = input[k];
       });
     }

@@ -622,14 +622,32 @@ function updateCalendarSettings() {
 // ============================================
 function renderCustomers() {
   const bookings = DBSync.getBookings();
+  const storedCustomers = DBSync.getCustomers();
   const search = (document.getElementById('customerSearch')?.value || '').toLowerCase();
 
+  // Build customer map from bookings (current data)
   const customerMap = {};
   bookings.forEach(b => {
     if (!b.email) return;
-    if (!customerMap[b.email]) customerMap[b.email] = { email: b.email, name: b.name || 'Unknown', aadhaar: b.aadhaarLast4 || '--', bookings: [] };
+    if (!customerMap[b.email]) customerMap[b.email] = { email: b.email, name: b.name || 'Unknown', aadhaar: b.aadhaarLast4 || b.aadhaar || '--', bookings: [], stored: false };
     customerMap[b.email].bookings.push(b);
     if (b.name && !customerMap[b.email].name.startsWith(b.name)) customerMap[b.email].name = b.name;
+  });
+
+  // Merge in stored customers (preserved from previous resets)
+  storedCustomers.forEach(sc => {
+    if (!sc.email) return;
+    if (customerMap[sc.email]) {
+      if (!customerMap[sc.email].stored) customerMap[sc.email].stored = true;
+    } else {
+      customerMap[sc.email] = {
+        email: sc.email,
+        name: sc.name || 'Unknown',
+        aadhaar: sc.aadhaar || '--',
+        bookings: [],
+        stored: true
+      };
+    }
   });
 
   let customers = Object.values(customerMap);
@@ -639,15 +657,15 @@ function renderCustomers() {
 
   const tbody = document.getElementById('customerTableBody');
   tbody.innerHTML = customers.map(c => {
-    const lastBooking = c.bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-    const lastDate = lastBooking?.date ? new Date(lastBooking.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '--';
+    const lastBooking = c.bookings.length > 0 ? c.bookings.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))[0] : null;
+    const lastDate = lastBooking?.date ? new Date(lastBooking.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : (c.lastBooking ? new Date(c.lastBooking + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '--');
     const active = c.bookings.some(b => b.status === 'approved' || b.status === 'pending' || b.status === 'processing');
     const initials = c.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
     return `<tr>
       <td><div style="display:flex;align-items:center;gap:10px;"><div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--db-accent),#6366f1);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;">${initials}</div><span class="name-cell">${c.name}</span></div></td>
       <td>${c.email}</td>
       <td style="font-family:'Space Grotesk',sans-serif;letter-spacing:0.05em;">xxxx xxxx ${c.aadhaar}</td>
-      <td>${c.bookings.length}</td>
+      <td>${c.bookings.length + (c.totalBookings || 0)}</td>
       <td>${lastDate}</td>
       <td><span class="db-badge ${active ? 'approved' : 'completed'}">${active ? 'Active' : 'Inactive'}</span></td>
     </tr>`;
@@ -932,10 +950,38 @@ function saveSettings() {
 function resetAllData() {
   showConfirmModal(
     'Reset All Data',
-    'This will reset token counter, activity logs, settings, dates, cache, and OTP data. Customer booking records will be preserved. Are you sure?',
+    'This will clear all bookings, token counter, activity logs, settings, dates, cache, and OTP data. Customer profiles will be preserved. New bookings will start from token 1. Are you sure?',
     async () => {
       try {
-        // Reset server-side data (preserves bookings)
+        // Extract customer profiles from current bookings before clearing
+        const bookings = DBSync.getBookings();
+        const customerMap = {};
+        bookings.forEach(b => {
+          if (!b.email) return;
+          if (!customerMap[b.email]) {
+            customerMap[b.email] = {
+              email: b.email,
+              name: b.name || 'Unknown',
+              aadhaar: b.aadhaarLast4 || b.aadhaar || '--',
+              lastBooking: b.date || '',
+              totalBookings: 0
+            };
+          }
+          customerMap[b.email].totalBookings++;
+          if (b.date && b.date > customerMap[b.email].lastBooking) {
+            customerMap[b.email].lastBooking = b.date;
+          }
+        });
+        const customers = Object.values(customerMap);
+
+        // Save customers to server before reset
+        await fetch(DBSync.API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'setCustomers', customers })
+        });
+
+        // Reset server-side data (clears bookings, preserves customers on server)
         await fetch(DBSync.API, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -946,7 +992,8 @@ function resetAllData() {
         activityLog = [];
         saveActivityLog();
 
-        // Reset localStorage keys (keep ds_bookings)
+        // Clear all localStorage (including bookings, customers stays in sync doc)
+        localStorage.removeItem('ds_bookings');
         localStorage.removeItem('ds_token');
         localStorage.removeItem('ds_dates');
         localStorage.removeItem('ds_activity');
@@ -954,15 +1001,32 @@ function resetAllData() {
         localStorage.removeItem('ds_cache');
         localStorage.removeItem('ds_sms_config');
 
+        // Store customers locally for display
+        localStorage.setItem('ds_customers', JSON.stringify(customers));
+
         // Reset via DBSync (syncs to Firestore)
+        DBSync.setBookings([]);
         DBSync.setToken(0);
         DBSync.setDates([]);
         DBSync.setCache([]);
         DBSync.setActivity([]);
         DBSync.setSettings({});
+        DBSync.setCustomers(customers);
 
-        notify('All data reset successfully. Customer records preserved.', 'success');
-        logActivity('Reset All Data (except customers)', '--', 'Success');
+        // Reset Firestore token counter so next booking starts at 1
+        try {
+          if (DBSync._firestoreReady && DBSync._db) {
+            await DBSync._db.collection('counters').doc('tokenCounter').set({
+              lastTokenNumber: 0,
+              updatedAt: new Date().toISOString()
+            });
+          }
+        } catch (e) {
+          console.warn('Failed to reset token counter:', e);
+        }
+
+        notify('All data reset. Customer profiles preserved. Tokens will start from 1.', 'success');
+        logActivity('Reset All Data (customers preserved, token restarts from 1)', '--', 'Success');
 
         fullRefresh();
       } catch (e) {

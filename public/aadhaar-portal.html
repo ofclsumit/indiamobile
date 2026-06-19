@@ -355,7 +355,23 @@ resetInactivityTimer();
       <div class="booking-confirm">
         <div class="confirm-stamp-wrap">
           <div class="confirm-stamp">
-            CONFIRMED<br><span class="confirm-stamp-sub">BOOKING</span>
+            <svg class="confirm-stamp-svg" viewBox="0 0 130 130">
+              <circle class="bg" cx="65" cy="65" r="62"/>
+              <circle class="outer" cx="65" cy="65" r="60"/>
+              <circle class="inner" cx="65" cy="65" r="55"/>
+              <line class="star" x1="65" y1="7" x2="65" y2="17"/>
+              <line class="star" x1="65" y1="113" x2="65" y2="123"/>
+              <line class="star" x1="7" y1="65" x2="17" y2="65"/>
+              <line class="star" x1="113" y1="65" x2="123" y2="65"/>
+              <line class="star" x1="24" y1="24" x2="31" y2="31"/>
+              <line class="star" x1="99" y1="99" x2="106" y2="106"/>
+              <line class="star" x1="24" y1="106" x2="31" y2="99"/>
+              <line class="star" x1="99" y1="31" x2="106" y2="24"/>
+            </svg>
+            <div class="confirm-stamp-text">
+              <span class="main">CONFIRMED</span>
+              <span class="sub">BOOKING</span>
+            </div>
           </div>
           <div style="width:80px;height:80px;margin:0 auto 16px;">
             <svg viewBox="0 0 80 80" style="width:80px;height:80px;">
@@ -365,32 +381,33 @@ resetInactivityTimer();
             </svg>
           </div>
           <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px;">Booking Confirmed</h3>
-        <p style="font-size:14px;color:var(--text2);margin-bottom:24px;">Your appointment is booked successfully.</p>
-        <div style="text-align:center;margin-bottom:24px;">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">Token Number</div>
-          <div id="confirmToken" style="font-family:'Space Grotesk',sans-serif;font-size:72px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 30px rgba(56,189,248,0.3);"></div>
-        </div>
-        <div class="booking-id-badge" id="confirmBookingId"></div>
-        <div class="booking-detail-grid">
-          <div class="booking-detail-row">
-            <span class="booking-detail-key">Name</span>
-            <span class="booking-detail-val" id="confirmName"></span>
+          <p style="font-size:14px;color:var(--text2);margin-bottom:24px;">Your appointment is booked successfully.</p>
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">Token Number</div>
+            <div id="confirmToken" style="font-family:'Space Grotesk',sans-serif;font-size:72px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 30px rgba(56,189,248,0.3);"></div>
           </div>
-          <div class="booking-detail-row">
-            <span class="booking-detail-key">Service</span>
-            <span class="booking-detail-val" id="confirmService"></span>
-          </div>
-          <div class="booking-detail-row">
-            <span class="booking-detail-key">Aadhaar</span>
-            <span class="booking-detail-val" id="confirmAadhaar" style="font-family:'Space Grotesk',sans-serif;letter-spacing:0.1em;"></span>
-          </div>
-          <div class="booking-detail-row">
-            <span class="booking-detail-key">Appointment Date</span>
-            <span class="booking-detail-val" id="confirmDate"></span>
-          </div>
-          <div class="booking-detail-row">
-            <span class="booking-detail-key">Status</span>
-            <span class="booking-detail-val text-success">Approved</span>
+          <div class="booking-id-badge" id="confirmBookingId"></div>
+          <div class="booking-detail-grid">
+            <div class="booking-detail-row">
+              <span class="booking-detail-key">Name</span>
+              <span class="booking-detail-val" id="confirmName"></span>
+            </div>
+            <div class="booking-detail-row">
+              <span class="booking-detail-key">Service</span>
+              <span class="booking-detail-val" id="confirmService"></span>
+            </div>
+            <div class="booking-detail-row">
+              <span class="booking-detail-key">Aadhaar</span>
+              <span class="booking-detail-val" id="confirmAadhaar" style="font-family:'Space Grotesk',sans-serif;letter-spacing:0.1em;"></span>
+            </div>
+            <div class="booking-detail-row">
+              <span class="booking-detail-key">Appointment Date</span>
+              <span class="booking-detail-val" id="confirmDate"></span>
+            </div>
+            <div class="booking-detail-row">
+              <span class="booking-detail-key">Status</span>
+              <span class="booking-detail-val text-success">Approved</span>
+            </div>
           </div>
         </div>
         <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px 16px;margin-top:16px;font-size:13px;color:#fbbf24;text-align:left;">
@@ -400,10 +417,7 @@ resetInactivityTimer();
           <a href="index.html" class="btn-primary btn-full" style="justify-content:center;text-decoration:none;flex:1;"><i class="fas fa-arrow-left" style="font-size:14px;"></i> Back to Home</a>
           <button onclick="window.print()" class="btn-primary btn-full" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);justify-content:center;flex:1;"><i class="fas fa-print" style="font-size:14px;"></i> Print</button>
         </div>
-        </div>
       </div>
-    </div>
-  </div>
 
   <!-- BOOKING FORM -->
   <div id="bookingForm">
