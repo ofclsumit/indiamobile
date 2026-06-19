@@ -140,7 +140,7 @@ const DBSync = {
     this._writeToFirestore({ token: val });
     if (this._firestoreReady && this._db) {
       var t = parseInt(val);
-      this._db.collection('queue').doc('current').set({ currentToken: isNaN(t) ? 0 : t }).catch(function() {});
+      this._db.collection('queue').doc('current').set({ currentToken: isNaN(t) ? 0 : t }, { merge: true }).catch(function() {});
     }
     this._notify('token');
   },

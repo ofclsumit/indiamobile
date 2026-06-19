@@ -994,6 +994,10 @@ function startAdminListeners() {
     snap.forEach(function(doc) { adminQueueData = { id: doc.id, ...doc.data() }; });
     if (adminQueueData) {
       document.getElementById('adminTokenDisplay').textContent = String(adminQueueData.currentToken || 1).padStart(2, '0');
+      var sdEl = document.getElementById('adminServingDate');
+      if (sdEl && adminQueueData.servingDate && !sdEl._userChanged) {
+        sdEl.value = adminQueueData.servingDate;
+      }
     }
     updateKpiCards();
   }, function(err) { console.error('[Admin] Queue error:', err); });
@@ -1063,8 +1067,10 @@ function updateKpiCards() {
     return;
   }
 
-  const today = new Date().toISOString().split('T')[0];
-  const todayB = adminBookings.filter(b => b.date === today);
+  const servingDate = getServingDate();
+  var sdSummary = document.getElementById('adminSummaryDate');
+  if (sdSummary) sdSummary.textContent = 'Date: ' + servingDate;
+  const todayB = adminBookings.filter(b => b.date === servingDate);
   const pending = adminBookings.filter(b => b.status === 'pending').length;
   const approved = adminBookings.filter(b => b.status === 'approved').length;
   const completed = adminBookings.filter(b => b.status === 'completed').length;
@@ -1138,25 +1144,52 @@ function updateBookingStatus(docId, status) {
 }
 
 // -- Queue Control --
+function getServingDate() {
+  var el = document.getElementById('adminServingDate');
+  if (el && el.value) return el.value;
+  return (adminQueueData && adminQueueData.servingDate) || new Date().toISOString().split('T')[0];
+}
+
+function onServingDateChange(val) {
+  var el = document.getElementById('adminServingDate');
+  if (el) el._userChanged = true;
+  if (!window.__queueRef) return;
+  window.__queueRef.get().then(function(snap) {
+    var docId = null;
+    var data = {};
+    snap.forEach(function(doc) { docId = doc.id; data = doc.data(); });
+    var payload = { servingDate: val };
+    if (data && data.currentToken) payload.currentToken = data.currentToken;
+    if (docId) {
+      window.__queueRef.doc(docId).update(payload);
+    } else {
+      window.__queueRef.add(payload);
+    }
+    notify('Serving date updated to ' + val, 'info');
+  });
+  updateKpiCards();
+}
+
 function startToken() {
   if (!window.__queueRef) return;
-  const today = new Date().toISOString().split('T')[0];
-  window.__bookingsRef.where('date', '==', today).where('status', 'in', ['approved','pending','waiting']).get().then(snap => {
-    if (snap.empty) { notify('No bookings today to start the queue.', 'error'); return; }
+  const servingDate = getServingDate();
+  window.__bookingsRef.where('date', '==', servingDate).where('status', 'in', ['approved','pending','waiting']).get().then(snap => {
+    if (snap.empty) { notify('No bookings for this date to start the queue.', 'error'); return; }
     let minToken = Infinity;
     snap.forEach(doc => { const t = parseInt(doc.data().token); if (t < minToken) minToken = t; });
     if (!isFinite(minToken)) { notify('No valid tokens found.', 'error'); return; }
     window.__queueRef.get().then(qsnap => {
       let docId = null;
       qsnap.forEach(doc => { docId = doc.id; });
+      var payload = { currentToken: minToken, servingDate: servingDate };
       if (docId) {
-        window.__queueRef.doc(docId).update({ currentToken: minToken });
+        window.__queueRef.doc(docId).update(payload);
       } else {
-        window.__queueRef.add({ currentToken: minToken });
+        window.__queueRef.add(payload);
       }
     });
     logAdminAction(getAdminUser(), 'Started Queue', String(minToken).padStart(2,'0'), 'success');
-    notify('Queue started at Token #' + String(minToken).padStart(2,'0'), 'success');
+    notify('Queue started at Token #' + String(minToken).padStart(2,'0') + ' for ' + servingDate, 'success');
   }).catch(err => { notify('Error starting queue: ' + err.message, 'error'); });
 }
 
@@ -1165,12 +1198,14 @@ function changeToken(delta) {
   window.__queueRef.get().then(snap => {
     let docId = null;
     let ct = 1;
-    snap.forEach(doc => { docId = doc.id; ct = doc.data().currentToken || 1; });
+    let sd = null;
+    snap.forEach(doc => { docId = doc.id; var d = doc.data(); ct = d.currentToken || 1; sd = d.servingDate; });
     const newToken = Math.max(1, ct + delta);
+    var payload = { currentToken: newToken, servingDate: sd || getServingDate() };
     if (docId) {
-      window.__queueRef.doc(docId).update({ currentToken: newToken });
+      window.__queueRef.doc(docId).update(payload);
     } else {
-      window.__queueRef.add({ currentToken: newToken });
+      window.__queueRef.add(payload);
     }
     logAdminAction(getAdminUser(), 'Token changed', String(newToken).padStart(2,'0'), 'info');
     notify('Token updated to ' + String(newToken).padStart(2,'0'), 'info');
@@ -1181,7 +1216,8 @@ function markNextComplete() {
   if (!window.__bookingsRef || !adminQueueData) return;
   const ct = adminQueueData.currentToken || 1;
   const tokenStr = String(parseInt(ct));
-  findBookingByToken(tokenStr).then(booking => {
+  const servingDate = adminQueueData.servingDate || getServingDate();
+  findBookingByToken(tokenStr, servingDate).then(booking => {
     if (!booking) {
       notify('No active booking for current token', 'info');
       return;
@@ -1192,10 +1228,14 @@ function markNextComplete() {
   });
 }
 
-async function findBookingByToken(tokenStr) {
-  var snap = await window.__bookingsRef.where('token', '==', tokenStr).where('status', 'in', ['approved','pending','waiting']).get();
+async function findBookingByToken(tokenStr, dateFilter) {
+  var q = window.__bookingsRef.where('token', '==', tokenStr).where('status', 'in', ['approved','pending','waiting']);
+  if (dateFilter) q = q.where('date', '==', dateFilter);
+  var snap = await q.get();
   if (!snap.empty) return snap.docs[0];
-  snap = await window.__bookingsRef.where('token', '==', tokenStr.padStart(2,'0')).where('status', 'in', ['approved','pending','waiting']).get();
+  q = window.__bookingsRef.where('token', '==', tokenStr.padStart(2,'0')).where('status', 'in', ['approved','pending','waiting']);
+  if (dateFilter) q = q.where('date', '==', dateFilter);
+  snap = await q.get();
   if (!snap.empty) return snap.docs[0];
   return null;
 }
@@ -1205,12 +1245,14 @@ function advanceToken() {
   window.__queueRef.get().then(snap => {
     let docId = null;
     let ct = 1;
-    snap.forEach(doc => { docId = doc.id; ct = doc.data().currentToken || 1; });
+    let sd = null;
+    snap.forEach(doc => { docId = doc.id; var d = doc.data(); ct = d.currentToken || 1; sd = d.servingDate; });
     const newToken = ct + 1;
+    var payload = { currentToken: newToken, servingDate: sd || getServingDate() };
     if (docId) {
-      window.__queueRef.doc(docId).update({ currentToken: newToken });
+      window.__queueRef.doc(docId).update(payload);
     } else {
-      window.__queueRef.add({ currentToken: newToken });
+      window.__queueRef.add(payload);
     }
     logAdminAction(getAdminUser(), 'Advanced token', String(newToken).padStart(2,'0'), 'info');
     notify('Advanced to next token', 'info');
@@ -1580,7 +1622,8 @@ const translations = {
     admin_th_actions: "कार्रवाई",
     admin_serving_token: "अभी जिसकी बारी है",
     admin_serving_desc: "लाइव कतार अपडेट करने के लिए बदलें",
-    admin_today_summary: "आज का सारांश",
+    admin_serving_date_label: "सर्विस की तारीख",
+    admin_today_summary: "सर्विस तारीख का सारांश",
     admin_tokens_issued: "टोकन जारी हुए",
     admin_in_queue: "कतार में",
     admin_completed_today: "आज पूरे हुए",
@@ -1817,7 +1860,8 @@ const translations = {
     admin_th_actions: "Actions",
     admin_serving_token: "Currently Serving Token",
     admin_serving_desc: "Change to update the live queue display",
-    admin_today_summary: "Today's Summary",
+    admin_serving_date_label: "Serving Date",
+    admin_today_summary: "Serving Date Summary",
     admin_tokens_issued: "Tokens Issued",
     admin_in_queue: "In Queue",
     admin_completed_today: "Completed Today",

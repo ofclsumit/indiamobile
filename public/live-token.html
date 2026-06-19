@@ -226,6 +226,7 @@ body { display: flex; flex-direction: column; }
       <div class="live-time">
         <span id="ltTime">--</span><span class="live-seconds" id="ltSeconds">--</span>
       </div>
+      <div style="font-size:14px; color:var(--accent); margin-top:4px; font-weight:500;" id="ltServingDate"></div>
     </div>
 
     <div class="live-actions">
@@ -300,12 +301,27 @@ setInterval(updateClock, 1000);
   }
 
   function tryListen() {
+    function setServingDateDisplay(snapData) {
+      var el = document.getElementById('ltServingDate');
+      if (!el) return;
+      if (snapData && snapData.servingDate) {
+        var d = new Date(snapData.servingDate + 'T00:00:00');
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        el.textContent = 'Serving: ' + days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+      } else {
+        el.textContent = '';
+      }
+    }
+
     if (window.__queueRef) {
       window.__queueRef.doc('current').onSnapshot(function(snap) {
         if (snap.exists) {
           setTokenDisplay(snap.data().currentToken || 0);
+          setServingDateDisplay(snap.data());
         } else {
           setTokenDisplay(0);
+          setServingDateDisplay(null);
         }
         hidePageLoader();
       }, function() { pollFallback(); hidePageLoader(); });
@@ -313,8 +329,8 @@ setInterval(updateClock, 1000);
       DBSync.initFirestore().then(function(ok) {
         if (ok && window.__queueRef) {
           window.__queueRef.doc('current').onSnapshot(function(snap) {
-            if (snap.exists) { setTokenDisplay(snap.data().currentToken || 0); }
-            else { setTokenDisplay(0); }
+            if (snap.exists) { setTokenDisplay(snap.data().currentToken || 0); setServingDateDisplay(snap.data()); }
+            else { setTokenDisplay(0); setServingDateDisplay(null); }
             hidePageLoader();
           }, function() { pollFallback(); hidePageLoader(); });
         } else { pollFallback(); }
