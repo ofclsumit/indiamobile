@@ -567,8 +567,9 @@ function renderBookingStep(step) {
           </div>
         </div>
 
-        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px 16px;margin-top:16px;font-size:13px;color:#fbbf24;text-align:left;">
-          ${t('booking_info')}
+        <div style="margin-top:16px;text-align:left;">
+          <h4 style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;">${t('instructions_title')}</h4>
+          ${t('instructions_body')}
         </div>
 
         <div style="display:flex;gap:10px;margin-top:24px;">
@@ -1606,7 +1607,8 @@ const translations = {
     appt_date: "अपॉइंटमेंट डेट",
     status_label: "स्टेटस",
     approved: "अप्रूव्ड",
-    booking_info: "कृपया अपना आधार कार्ड और ज़रूरी डॉक्यूमेंट लेकर आएं। अपने टोकन के 10 मिनट पहले पहुंच जाएं।",
+    instructions_title: "महत्वपूर्ण निर्देश",
+    instructions_body: '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:14px 16px;margin-bottom:12px;font-size:13px;font-weight:700;color:#fc8181;text-align:left;">महत्वपूर्ण: टोकन बुकिंग/प्रबंधन शुल्क ₹5 केंद्र पर भुगतान करना अनिवार्य है। कृपया संभव हो तो सही राशि साथ लेकर आएं।</div><ol style="margin:0;padding-left:20px;font-size:13px;color:var(--text2);line-height:1.8;"><li>कृपया निर्धारित समय से कम से कम 15 मिनट पहले केंद्र पर पहुंचें।</li><li>अपना मूल आधार कार्ड तथा आवश्यक दस्तावेज साथ लेकर आएं।</li><li>यात्रा के समय अपना बुकिंग आईडी और टोकन नंबर उपलब्ध रखें।</li><li>अधूरे या गलत दस्तावेज होने पर सेवा में देरी या अस्वीकृति हो सकती है।</li><li>विशेष परिस्थितियों में केंद्र टोकन क्रम में परिवर्तन कर सकता है।</li><li>केंद्र कर्मचारियों द्वारा दिए गए निर्देशों का पालन करें।</li><li>आवश्यक दस्तावेजों के बिना यह बुकिंग सेवा की गारंटी नहीं देती है।</li><li>केंद्र आने से पहले लाइव कतार की स्थिति अवश्य जांच लें।</li><li>सत्यापन हेतु इस पुष्टि पृष्ठ या डाउनलोड की गई पीडीएफ को सुरक्षित रखें।</li></ol>',
     done_btn: "हो गया",
     print_btn: "प्रिंट करें",
     // Check token modal keys
@@ -1843,7 +1845,8 @@ const translations = {
     appt_date: "Appointment Date",
     status_label: "Status",
     approved: "Approved",
-    booking_info: "Please bring your Aadhaar card and supporting documents. Arrive 10 minutes before your token is called.",
+    instructions_title: "Important Instructions",
+    instructions_body: '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:14px 16px;margin-bottom:12px;font-size:13px;font-weight:700;color:#fc8181;text-align:left;">IMPORTANT: A booking/token management charge of ₹5 must be paid at the centre during your visit. Please keep the exact amount ready if possible.</div><ol style="margin:0;padding-left:20px;font-size:13px;color:var(--text2);line-height:1.8;"><li>Please arrive at the centre at least 15 minutes before your scheduled time.</li><li>Carry your original Aadhaar Card and all required supporting documents.</li><li>Keep your Booking ID and Token Number available during your visit.</li><li>Incomplete or incorrect documents may result in service delay or rejection.</li><li>The centre reserves the right to change token sequence in exceptional circumstances.</li><li>Follow all instructions provided by the centre staff.</li><li>This booking confirmation does not guarantee service if mandatory documents are missing.</li><li>Please check the live queue status before visiting the centre.</li><li>Keep this confirmation page or downloaded PDF available for verification.</li></ol>',
     done_btn: "Done",
     print_btn: "Print",
     check_aadhaar_hint: "Enter the last 4 digits of the Aadhaar number used at the time of booking.",
