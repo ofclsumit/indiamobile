@@ -884,6 +884,12 @@ window.hidePageLoader = function() {
 <div id="recaptcha-container" style="position:fixed;bottom:0;left:0;width:0;height:0;overflow:hidden;"></div>
 
 <script src="js/firebase-init.js"></script>
+<script src="db-sync.js"></script>
+<script>
+  DBSync.initFirestore().then(ok => {
+    if (ok) DBSync.startRealtimeListener();
+  });
+</script>
 <script defer src="js/app.js"></script>
 </body>
 </html>

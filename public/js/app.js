@@ -27,7 +27,8 @@ const DB = {
   },
 
   async addBooking(data) {
-    const token = String(await DBSync.getNextToken());
+    let token;
+    try { token = String(await DBSync.getNextToken()); } catch(e) { token = String(Date.now()).slice(-4); }
     const bid = 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random()*100);
     const booking = { ...data, token, bookingId: bid, status: 'approved', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this.bookings.push(booking);
