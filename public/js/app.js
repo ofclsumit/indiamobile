@@ -26,9 +26,8 @@ const DB = {
     return this.enabledDates.filter(d => d.enabled);
   },
 
-  addBooking(data) {
-    const max = this.bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0);
-    const token = String(max + 1);
+  async addBooking(data) {
+    const token = String(await DBSync.getNextToken());
     const bid = 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random()*100);
     const booking = { ...data, token, bookingId: bid, status: 'approved', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this.bookings.push(booking);
@@ -661,7 +660,7 @@ function handleAadhaarBackspace(input, prevId) {
 
 
 
-function submitBookingStep2() {
+async function submitBookingStep2() {
   const service = document.getElementById('bookService') ? document.getElementById('bookService').value : sessionBookingData.service;
 
   if (!service) { notify('Please select a service', 'error'); return; }
@@ -689,7 +688,7 @@ function submitBookingStep2() {
   }
   sessionBookingData.service = service;
 
-  const booking = DB.addBooking({
+  const booking = await DB.addBooking({
     email: sessionBookingData.email,
     name: sessionBookingData.name,
     aadhaarLast4: sessionBookingData.aadhaarLast4,
@@ -1012,6 +1011,16 @@ function startAdminListeners() {
     renderAdminDates();
   }, function() {});
   adminUnsubscribers.push(unsubDates);
+
+  // Listen for counter changes (Last Issued Token)
+  if (window.__countersRef) {
+    var unsubCounter = window.__countersRef.doc('tokenCounter').onSnapshot(function(snap) {
+      var val = snap.exists ? (snap.data().lastTokenNumber || 0) : '--';
+      var el = document.getElementById('kpiLastIssuedToken');
+      if (el) el.textContent = val;
+    }, function() {});
+    adminUnsubscribers.push(unsubCounter);
+  }
 }
 
 // -- KPI --
@@ -1048,6 +1057,7 @@ function updateKpiCards() {
     setKpiVal('kpiCompleted', 0);
     setKpiVal('kpiCancelled', 0);
     setKpiVal('kpiCurrentToken', adminQueueData ? String(adminQueueData.currentToken || 1).padStart(2, '0') : '--');
+    setKpiVal('kpiLastIssuedToken', '--');
     if (grid) grid.style.display = 'grid';
     return;
   }
@@ -1067,6 +1077,7 @@ function updateKpiCards() {
   setKpiVal('kpiCompleted', completed);
   setKpiVal('kpiCancelled', cancelled);
   setKpiVal('kpiCurrentToken', ct);
+  // kpiLastIssuedToken is updated by the counter listener in startAdminListeners
 }
 
 function setKpiVal(id, val) {
@@ -1551,6 +1562,7 @@ const translations = {
     kpi_completed: "कम्पलीट टोकन",
     kpi_cancelled: "कैंसिल टोकन",
     kpi_current_token: "चालू टोकन",
+    kpi_last_issued_token: "अंतिम जारी टोकन",
     admin_search_placeholder: "नाम, फोन, बुकिंग आईडी, आधार से सर्च...",
     admin_filter_all: "सभी स्टेटस",
     admin_filter_pending: "पेंडिंग",
@@ -1787,6 +1799,7 @@ const translations = {
     kpi_completed: "Completed Tokens",
     kpi_cancelled: "Cancelled Tokens",
     kpi_current_token: "Current Running Token",
+    kpi_last_issued_token: "Last Issued Token",
     admin_search_placeholder: "Search by name, phone, booking ID, Aadhaar...",
     admin_filter_all: "All Status",
     admin_filter_pending: "Pending",

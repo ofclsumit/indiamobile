@@ -222,6 +222,59 @@ const DBSync = {
     });
   },
 
+  // --- Get next token number from Firestore counter (atomic) ---
+  async getNextToken() {
+    if (this._firestoreReady && this._db) {
+      const counterRef = this._db.collection('counters').doc('tokenCounter');
+
+      // Initialize counter from existing bookings if it doesn't exist
+      try {
+        const counterDoc = await counterRef.get();
+        if (!counterDoc.exists) {
+          const snap = await this._db.collection('bookings').get();
+          let maxToken = 0;
+          snap.forEach(d => {
+            const t = parseInt(d.data().token);
+            if (t > maxToken) maxToken = t;
+          });
+          await counterRef.set({
+            lastTokenNumber: maxToken,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+      } catch (e) {
+        console.warn('[DBSync] Counter init failed:', e);
+      }
+
+      // Atomic increment via transaction
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          return await this._db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(counterRef);
+            const lastToken = (doc.data() && doc.data().lastTokenNumber) || 0;
+            const newToken = lastToken + 1;
+            transaction.update(counterRef, {
+              lastTokenNumber: newToken,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            return newToken;
+          });
+        } catch (e) {
+          if (attempt === 2) {
+            console.warn('[DBSync] Transaction failed after retries:', e);
+            break;
+          }
+          await new Promise(r => setTimeout(r, 200));
+        }
+      }
+    }
+
+    // Fallback: compute from local bookings max
+    const bookings = this.getBookings();
+    const max = bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0);
+    return max + 1;
+  },
+
   // --- Subscribe ---
   subscribe(fn) {
     this._listeners.push(fn);

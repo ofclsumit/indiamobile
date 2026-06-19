@@ -6,16 +6,68 @@ function bookingId() {
   return 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100);
 }
 
-function nextToken(bookings) {
-  const max = bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0);
-  return String(max + 1);
-}
-
 // --- Firestore REST API helpers ---
 const FIRESTORE_PROJECT = 'india-mobile-17134';
 const FIRESTORE_DOC_PATH = 'appData/sync';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
 const BOOKINGS_COLL_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings`;
+const FIRESTORE_COMMIT_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents:commit`;
+
+async function getNextTokenFromCounter() {
+  const COUNTER_PATH = `projects/${FIRESTORE_PROJECT}/databases/(default)/documents/counters/tokenCounter`;
+  const COUNTER_URL = `https://firestore.googleapis.com/v1/${COUNTER_PATH}`;
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    // Read current counter
+    const getRes = await fetch(COUNTER_URL);
+    let lastToken = 0;
+    let updateTime = null;
+
+    if (getRes.ok) {
+      const doc = await getRes.json();
+      if (doc.fields && doc.fields.lastTokenNumber) {
+        lastToken = parseInt(doc.fields.lastTokenNumber.integerValue || doc.fields.lastTokenNumber.stringValue) || 0;
+      }
+      updateTime = doc.updateTime;
+    }
+
+    const newToken = lastToken + 1;
+
+    // Write with optimistic locking via :commit endpoint
+    const write = {
+      update: {
+        name: COUNTER_PATH,
+        fields: {
+          lastTokenNumber: { integerValue: String(newToken) },
+          updatedAt: { timestampValue: new Date().toISOString() }
+        }
+      },
+      updateMask: { fieldPaths: ['lastTokenNumber', 'updatedAt'] }
+    };
+
+    if (updateTime) {
+      write.currentDocument = { updateTime };
+    } else {
+      write.currentDocument = { exists: false };
+    }
+
+    const commitRes = await fetch(FIRESTORE_COMMIT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ writes: [write] })
+    });
+
+    if (commitRes.ok) {
+      return String(newToken);
+    }
+
+    if (attempt === 4) break;
+    await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
+  }
+
+  // Fallback (should rarely happen)
+  return String(Date.now() % 10000 + 1);
+}
 
 function firestoreValueToJS(val) {
   if (val.stringValue !== undefined) return val.stringValue;
@@ -166,7 +218,7 @@ module.exports = async (req, res) => {
   const dupDevice = active.find(b => b.deviceId === deviceId);
   if (dupDevice) return res.json({ success: true, isDuplicate: true, field: 'device', booking: dupDevice });
 
-  const token = nextToken(bookings);
+  const token = await getNextTokenFromCounter();
   const booking = {
     token,
     bookingId: bookingId(),
