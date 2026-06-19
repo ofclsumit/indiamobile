@@ -216,7 +216,7 @@ body { display: flex; flex-direction: column; }
       <span class="live-dot"></span> LIVE
     </div>
 
-    <div class="live-token-number" id="ltToken" style="font-size:48px;transition:all 0.5s ease;">Connecting to queue...</div>
+    <div class="live-token-number" id="ltToken" style="font-size:48px;transition:all 0.5s ease;">_ _</div>
     <div class="live-token-label">Current Serving Token</div>
 
     <div class="live-divider"></div>
@@ -267,9 +267,11 @@ function updateClock() {
   const yr = now.getFullYear();
   document.getElementById('ltDate').textContent = d + ', ' + date + ' ' + mo + ' ' + yr;
 
-  const h = String(now.getHours()).padStart(2,'0');
+  var h = now.getHours();
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
   const m = String(now.getMinutes()).padStart(2,'0');
-  document.getElementById('ltTime').textContent = h + ':' + m + ':';
+  document.getElementById('ltTime').textContent = h + ':' + m + ':' + ampm + ' ';
   document.getElementById('ltSeconds').textContent = String(now.getSeconds()).padStart(2,'0');
 }
 updateClock();
@@ -283,16 +285,21 @@ setInterval(updateClock, 1000);
       el.style.fontSize = '';
       el.textContent = String(val).padStart(2, '0');
       el.classList.add('live-pulse-ring');
-      hidePageLoader();
+    } else {
+      el.style.fontSize = '48px';
+      el.textContent = '_ _';
+      el.classList.remove('live-pulse-ring');
     }
+    hidePageLoader();
   }
 
   function tryListen() {
     if (window.__queueRef) {
       window.__queueRef.doc('current').onSnapshot(function(snap) {
         if (snap.exists) {
-          var t = snap.data().currentToken;
-          if (t) setTokenDisplay(t);
+          setTokenDisplay(snap.data().currentToken || 0);
+        } else {
+          setTokenDisplay(0);
         }
         hidePageLoader();
       }, function() { pollFallback(); hidePageLoader(); });
@@ -300,7 +307,8 @@ setInterval(updateClock, 1000);
       DBSync.initFirestore().then(function(ok) {
         if (ok && window.__queueRef) {
           window.__queueRef.doc('current').onSnapshot(function(snap) {
-            if (snap.exists) { var t = snap.data().currentToken; if (t) setTokenDisplay(t); }
+            if (snap.exists) { setTokenDisplay(snap.data().currentToken || 0); }
+            else { setTokenDisplay(0); }
             hidePageLoader();
           }, function() { pollFallback(); hidePageLoader(); });
         } else { pollFallback(); }
@@ -311,16 +319,14 @@ setInterval(updateClock, 1000);
   }
 
   function pollFallback() {
-    var t = DBSync.getToken();
-    if (t > 0) setTokenDisplay(t);
+    setTokenDisplay(DBSync.getToken() || 0);
     setInterval(function() {
-      var t2 = DBSync.getToken();
-      if (t2 > 0) setTokenDisplay(t2);
+      setTokenDisplay(DBSync.getToken() || 0);
     }, 3000);
   }
 
   document.addEventListener('db-sync', function(e) {
-    if (e.detail && e.detail.token > 0) setTokenDisplay(e.detail.token);
+    if (e.detail && e.detail.token !== undefined) setTokenDisplay(e.detail.token);
   });
 
   tryListen();
