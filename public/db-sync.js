@@ -122,9 +122,11 @@ const DBSync = {
 
   // --- Write (local + Firestore + API fallback) ---
   setBookings(val) {
+    const oldBookings = this.getBookings();
     localStorage.setItem(this.KEYS.BOOKINGS, JSON.stringify(val));
     if (val && val.length > 0) {
       this._writeToFirestore({ bookings: val });
+      this._syncBookingStatuses(oldBookings, val);
     }
     this._notify('bookings');
   },
@@ -136,6 +138,10 @@ const DBSync = {
   setToken(val) {
     localStorage.setItem(this.KEYS.TOKEN, val);
     this._writeToFirestore({ token: val });
+    if (this._firestoreReady && this._db) {
+      var t = parseInt(val);
+      this._db.collection('queue').doc('current').set({ currentToken: isNaN(t) ? 0 : t }).catch(function() {});
+    }
     this._notify('token');
   },
   setDates(val) {
@@ -193,6 +199,27 @@ const DBSync = {
       if (!res.ok) return null;
       return await res.json();
     } catch(e) { return null; }
+  },
+
+  // --- Sync status changes to /bookings Firestore collection ---
+  _syncBookingStatuses(oldList, newList) {
+    if (!oldList || !newList || !this._firestoreReady || !this._db) return;
+    newList.forEach(function(nb) {
+      if (!nb.bookingId) return;
+      var ob = oldList.find(function(b) { return b.bookingId === nb.bookingId; });
+      if (ob && ob.status !== nb.status) {
+        try {
+          DBSync._db.collection('bookings').doc(nb.bookingId).update({
+            status: nb.status,
+            updatedAt: new Date().toISOString()
+          }).catch(function(e) {
+            console.warn('[DBSync] Failed to sync booking status to /bookings:', e);
+          });
+        } catch(e) {
+          console.warn('[DBSync] Error syncing booking status:', e);
+        }
+      }
+    });
   },
 
   // --- Subscribe ---

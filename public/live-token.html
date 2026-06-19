@@ -216,8 +216,8 @@ body { display: flex; flex-direction: column; }
       <span class="live-dot"></span> LIVE
     </div>
 
-    <div class="live-token-number" id="ltToken" style="font-size:48px;transition:all 0.5s ease;">_ _</div>
-    <div class="live-token-label">Current Serving Token</div>
+    <div class="live-token-number" id="ltToken" style="font-size:20px;transition:all 0.5s ease;">TOKEN NOT STARTED</div>
+    <div class="live-token-label" id="ltLabel">Current Serving Token</div>
 
     <div class="live-divider"></div>
 
@@ -281,14 +281,20 @@ setInterval(updateClock, 1000);
 (function initLiveToken() {
   function setTokenDisplay(val) {
     var el = document.getElementById('ltToken');
+    var label = document.getElementById('ltLabel');
+    var status = document.querySelector('.live-status-text');
     if (val > 0) {
       el.style.fontSize = '';
       el.textContent = String(val).padStart(2, '0');
       el.classList.add('live-pulse-ring');
+      label.textContent = 'Current Serving Token';
+      if (status) status.textContent = 'Token numbers are updated in real-time. Visit our center before your token is called.';
     } else {
-      el.style.fontSize = '48px';
-      el.textContent = '_ _';
+      el.style.fontSize = '20px';
+      el.textContent = 'TOKEN NOT STARTED';
       el.classList.remove('live-pulse-ring');
+      label.textContent = 'Queue Status';
+      if (status) status.textContent = 'The queue has not started yet. Please check back later.';
     }
     hidePageLoader();
   }

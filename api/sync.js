@@ -6,6 +6,7 @@ const DATA_FILE = '/tmp/sync-data.json';
 const FIRESTORE_PROJECT = 'india-mobile-17134';
 const FIRESTORE_DOC_PATH = 'appData/sync';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
+const QUEUE_CURRENT_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/queue/current`;
 
 function firestoreValueToJS(val) {
   if (val.stringValue !== undefined) return val.stringValue;
@@ -156,6 +157,19 @@ module.exports = async (req, res) => {
     // Write to both Firestore AND /tmp
     saveData(syncData);
     await writeToFirestore(syncData);
+
+    // Sync token to /queue/current for live-token page
+    if (input.token !== undefined) {
+      var tokenVal = input.token;
+      try {
+        var qFields = { currentToken: { integerValue: String(Math.max(0, parseInt(tokenVal) || 0)) } };
+        await fetch(QUEUE_CURRENT_URL + '?updateMask.fieldPaths=currentToken', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: qFields })
+        });
+      } catch(e) { console.error('Queue/current sync error:', e); }
+    }
 
     return res.json({ success: true, data: syncData });
   }
