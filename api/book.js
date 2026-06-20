@@ -294,7 +294,7 @@ module.exports = async (req, res) => {
 
   bookings.push(booking);
 
-  try { await createBookingDocument(booking); } catch(e) {}
+  createBookingDocument(booking).catch(function() {});
 
   if (useFirestore) {
     await writeBookingsToFirestore(bookings);

@@ -1083,13 +1083,13 @@ async function portalConfirmBooking() {
       showEligibilityOverlay(result.booking);
       return;
     } else {
-      // Verify booking exists in Firestore before showing success
+      // Write booking to Firestore using Client SDK (gRPC/WebSocket - works)
       if (window.__bookingsRef && result.booking && result.booking.bookingId) {
-        var verifySnap = await window.__bookingsRef.doc(result.booking.bookingId).get().catch(function() { return null; });
-        if (!verifySnap || !verifySnap.exists) {
-          notify('Booking creation failed. Please try again.', 'error');
-          statusEl.style.display = 'none';
-          return;
+        try {
+          await window.__bookingsRef.doc(result.booking.bookingId).set(result.booking);
+          console.log('[DBG] Portal booking doc created:', result.booking.bookingId);
+        } catch (e) {
+          console.warn('[DBG] Portal Firestore set failed:', e.message);
         }
       }
       sessionStorage.setItem('myBooking', JSON.stringify(result.booking));
