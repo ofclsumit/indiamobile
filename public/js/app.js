@@ -1,68 +1,19 @@
 // ============================================
-// DATA STORE (Firestore-backed)
+// FIRESTORE-BACKED CACHE (synced via onSnapshot)
 // ============================================
 const DB = {
   bookings: [],
   currentToken: 0,
   enabledDates: [],
 
-  load() {
-    try {
-      this.bookings = DBSync.getBookings();
-      this.currentToken = DBSync.getToken();
-      this.enabledDates = DBSync.getDates();
-    } catch(e) {}
-  },
-
-  save() {
-    try {
-      DBSync.setBookings(this.bookings);
-      DBSync.setToken(this.currentToken);
-      DBSync.setDates(this.enabledDates);
-    } catch(e) {}
-  },
-
   getEnabledDates() {
-    return this.enabledDates.filter(d => d.enabled);
-  },
-
-  async addBooking(data) {
-    let token;
-    try {
-      token = await DBSync.getNextToken();
-      if (!token || isNaN(token)) token = 0;
-    } catch(e) { token = 0; }
-    const bid = 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random()*100);
-    const booking = { ...data, token, bookingId: bid, status: 'approved', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-    this.bookings.push(booking);
-    if (window.__bookingsRef) {
-      window.__bookingsRef.add(booking).catch(e => {
-        try { DBSync.setBookings(this.bookings); } catch(ex) {}
-      });
-    } else {
-      try { DBSync.setBookings(this.bookings); } catch(ex) {}
-    }
-    return booking;
-  },
-
-  getByEmail(email) {
-    return this.bookings.filter(b => b.email === email && b.status !== 'cancelled');
-  },
-
-  getActiveByEmail(email) {
-    return DBSync.getBookings().find(b => b.email === email && (b.status === 'pending' || b.status === 'approved'));
-  },
-
-  getActiveByAadhaar(aadhaar) {
-    return DBSync.getBookings().find(b => b.aadhaarLast4 === aadhaar && (b.status === 'pending' || b.status === 'approved'));
+    return this.enabledDates.filter(d => d && d.enabled);
   },
 
   getByAadhaar(aadhaar) {
-    return this.bookings.filter(b => b.aadhaarLast4 === aadhaar && b.status !== 'cancelled');
+    return this.bookings.filter(b => b && b.aadhaarLast4 === aadhaar && b.status !== 'cancelled');
   }
 };
-
-DB.load();
 
 // ============================================
 // BUTTON LOADING STATE UTILITY
@@ -153,26 +104,34 @@ function initPublicFirestoreListeners() {
     setTimeout(initPublicFirestoreListeners, 800);
     return;
   }
-  var dataLoaded = 0;
-  // Keep local DB in sync with Firestore bookings
-  window.__bookingsRef.onSnapshot(snap => {
+  // Keep DB synced with Firestore bookings
+  window.__bookingsRef.onSnapshot(function(snap) {
     DB.bookings = [];
-    snap.forEach(doc => DB.bookings.push({ id: doc.id, ...doc.data() }));
+    snap.forEach(function(doc) {
+      var b = doc.data();
+      b.id = doc.id;
+      DB.bookings.push(b);
+      // Collect date config docs
+      if (b.__type === 'date_config') {
+        DB.enabledDates.push(b);
+      }
+    });
     updateHeroDisplay();
-    if (document.getElementById('checkTokenModal')?.classList.contains('open')) {
+    if (document.getElementById('checkTokenModal') && document.getElementById('checkTokenModal').classList.contains('open')) {
       renderCheckTokenStep(checkTokenStep);
     }
-    dataLoaded++;
-    if (dataLoaded >= 2) hidePageLoader();
-  }, function() { dataLoaded++; if (dataLoaded >= 2) hidePageLoader(); });
+    hidePageLoader();
+  }, function() {
+    hidePageLoader();
+  });
 
   // Track current token from queue collection
-  window.__queueRef.onSnapshot(snap => {
-    snap.forEach(doc => { DB.currentToken = doc.data().currentToken || 1; });
+  window.__queueRef.onSnapshot(function(snap) {
+    snap.forEach(function(doc) {
+      DB.currentToken = doc.data().currentToken || 1;
+    });
     updateHeroDisplay();
-    dataLoaded++;
-    if (dataLoaded >= 2) hidePageLoader();
-  }, function() { dataLoaded++; if (dataLoaded >= 2) hidePageLoader(); });
+  }, function() {});
 }
 initPublicFirestoreListeners();
 
@@ -640,23 +599,29 @@ function renderBookingStep(step) {
 }
 
 // Fetch bookings from server API (always fresh, bypasses localStorage cache)
-async function fetchSyncBookings() {
-  try {
-    const res = await fetch('/api/sync');
-    const data = await res.json();
-    return data.bookings || [];
-  } catch(e) {
-    return DBSync.getBookings();
-  }
-}
-
 async function checkActiveBookingByEmail(email) {
   try {
-    var bookings = await fetchSyncBookings();
-    return bookings.find(function(b) {
-      return b.email === email && (b.status === 'pending' || b.status === 'approved');
-    }) || null;
+    if (window.__bookingsRef) {
+      console.log('[DBG] checkActiveBookingByEmail query email:', email);
+      var snap = await window.__bookingsRef.where('email', '==', email).get();
+      var active = null;
+      var count = 0;
+      snap.forEach(function(doc) {
+        count++;
+        var b = doc.data();
+        b.id = doc.id;
+        console.log('[DBG]   Doc:', doc.id, 'status:', b.status, 'token:', b.token);
+        if (b.status === 'pending' || b.status === 'approved' || b.status === 'processing' || b.status === 'in_queue') {
+          active = b;
+        }
+      });
+      console.log('[DBG] checkActiveBookingByEmail docs:', count, 'active:', active ? active.bookingId : null);
+      return active;
+    }
+    console.log('[DBG] checkActiveBookingByEmail: __bookingsRef not available');
+    return null;
   } catch(e) {
+    console.warn('[checkActiveBookingByEmail] Error:', e);
     return null;
   }
 }
@@ -763,11 +728,20 @@ async function submitBookingStep2() {
     return;
   }
 
-  var syncBookings = await fetchSyncBookings();
-  var existingAadhaar = syncBookings.find(function(b) { return b.aadhaarLast4 === aadhaarLast4 && (b.status === 'pending' || b.status === 'approved') && b.email !== sessionBookingData.email; });
-  if (existingAadhaar) {
-    notify('This Aadhaar number is already associated with a booking.', 'error');
-    return;
+  // Check Firestore for existing Aadhaar-based bookings
+  if (window.__bookingsRef) {
+    var aadhaarSnap = await window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get();
+    var existingAadhaar = null;
+    aadhaarSnap.forEach(function(doc) {
+      var b = doc.data();
+      if ((b.status === 'pending' || b.status === 'approved' || b.status === 'processing' || b.status === 'in_queue') && b.email !== sessionBookingData.email) {
+        existingAadhaar = b;
+      }
+    });
+    if (existingAadhaar) {
+      notify('This Aadhaar number is already associated with a booking.', 'error');
+      return;
+    }
   }
 
   if (!sessionBookingData.name) {
@@ -990,9 +964,9 @@ function lookupByAadhaar() {
   }
 
   if (window.__bookingsRef) {
-    DBSync.forceFetch().then(function() {
-      var syncBookings = DBSync.getBookings();
-      var matches = syncBookings.filter(function(b) { return b.aadhaarLast4 === aadhaar; });
+    window.__bookingsRef.where('aadhaarLast4', '==', aadhaar).get().then(function(snap) {
+      var matches = [];
+      snap.forEach(function(doc) { matches.push(doc.data()); });
       if (matches.length > 0) {
         redirectToPortal(matches[0]);
         return;
@@ -1041,21 +1015,21 @@ function lookupByAadhaar() {
 
 function cancelBooking(bookingId) {
   if (!confirm('Are you sure you want to cancel this booking?')) return;
-  const b = DB.bookings.find(x => x.bookingId === bookingId);
-  if (b) {
-    b.status = 'cancelled';
-    b.updatedAt = new Date().toISOString();
-    DB.save();
-    if (window.__bookingsRef && b.bookingId) {
-      window.__bookingsRef.doc(b.bookingId).update({ status: 'cancelled', updatedAt: b.updatedAt }).catch(e => {
-        console.warn('[cancelBooking] Firestore sync failed:', e);
-      });
-    }
-    archiveBooking(b);
-    sessionStorage.removeItem('myBooking');
-    updateHeroDisplay();
-    notify('Booking cancelled.', 'info');
-    renderCheckTokenStep(2);
+  if (window.__bookingsRef && bookingId) {
+    window.__bookingsRef.doc(bookingId).update({
+      status: 'cancelled',
+      updatedAt: new Date().toISOString()
+    }).then(function() {
+      notify('Booking cancelled.', 'info');
+      sessionStorage.removeItem('myBooking');
+      updateHeroDisplay();
+      renderCheckTokenStep(2);
+    }).catch(function(e) {
+      console.warn('[cancelBooking] Firestore update failed:', e);
+      notify('Failed to cancel booking. Please try again.', 'error');
+    });
+  } else {
+    notify('Firestore not available.', 'error');
   }
 }
 

@@ -680,17 +680,21 @@ function startEligibilityCheck() {
   stopEligibilityListener();
   var email = portalData.email;
   var aadhaarLast4 = portalData.aadhaarLast4;
+  console.log('[DBG] Eligibility: starting onSnapshot for email:', email);
 
   if (window.__bookingsRef) {
-    // Subscribe to real-time changes via Firestore onSnapshot
     var q = window.__bookingsRef.where('email', '==', email);
     _eligibilityUnsub = q.onSnapshot(function(snap) {
+      var docCount = 0;
+      snap.forEach(function() { docCount++; });
+      console.log('[DBG] Eligibility snapshot:', docCount, 'docs for email:', email);
       processEligibilitySnapshot(snap, email, aadhaarLast4);
     }, function(err) {
-      console.warn('[Eligibility] Firestore listener error, falling back to one-time check:', err);
+      console.warn('[DBG] Eligibility listener error:', err.message);
       oneTimeEligibilityCheck(email, aadhaarLast4);
     });
   } else {
+    console.log('[DBG] Eligibility: no __bookingsRef, falling back');
     oneTimeEligibilityCheck(email, aadhaarLast4);
   }
 }
@@ -698,16 +702,25 @@ function startEligibilityCheck() {
 function processEligibilitySnapshot(snap, email, aadhaarLast4) {
   var activeBooking = null;
   var completedOrCancelled = null;
+  var totalDocs = 0;
   snap.forEach(function(doc) {
+    totalDocs++;
     var b = doc.data();
     b.id = doc.id;
-    if (b.email !== email) return;
+    console.log('[DBG]   Snapshot doc:', doc.id, 'email:', b.email, 'status:', b.status, 'token:', b.token);
+    if (b.email !== email) {
+      console.log('[DBG]     Skipped - email mismatch:', b.email, '!=', email);
+      return;
+    }
     if (isActiveStatus(b.status)) {
       activeBooking = b;
+      console.log('[DBG]     Active booking found:', b.bookingId);
     } else if (b.status === 'completed' || b.status === 'cancelled') {
       completedOrCancelled = b;
+      console.log('[DBG]     Completed/cancelled booking:', b.bookingId);
     }
   });
+  console.log('[DBG] Eligibility result: totalDocs=' + totalDocs + ' active=' + (activeBooking ? activeBooking.bookingId : 'none') + ' completed=' + (completedOrCancelled ? completedOrCancelled.bookingId : 'none'));
 
   if (activeBooking) {
     // Active booking exists — block date selection
