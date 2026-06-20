@@ -28,7 +28,7 @@ const DB = {
 
   async addBooking(data) {
     let token;
-    try { token = String(await DBSync.getNextToken()); } catch(e) { token = String(Date.now()).slice(-4); }
+    try { token = String(await DBSync.getNextToken()); } catch(e) { token = String(Date.now()).slice(-4) + String(Math.floor(Math.random() * 100)).padStart(2, '0'); }
     const bid = 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random()*100);
     const booking = { ...data, token, bookingId: bid, status: 'approved', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this.bookings.push(booking);
@@ -774,13 +774,36 @@ async function submitBookingStep2() {
   }
   sessionBookingData.service = service;
 
-  const booking = await DB.addBooking({
-    email: sessionBookingData.email,
-    name: sessionBookingData.name,
-    aadhaarLast4: sessionBookingData.aadhaarLast4,
-    service: sessionBookingData.service,
-    date: sessionBookingData.date
-  });
+  // Use server API for atomic token generation — avoids race conditions
+  var booking;
+  try {
+    var res = await fetch('/api/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: sessionBookingData.email,
+        name: sessionBookingData.name,
+        aadhaarLast4: sessionBookingData.aadhaarLast4,
+        deviceId: getDeviceId(),
+        date: sessionBookingData.date,
+        service: sessionBookingData.service
+      })
+    });
+    var result = await res.json();
+    if (!result.success) {
+      notify(result.message || 'Booking failed', 'error');
+      return;
+    }
+    if (result.isDuplicate) {
+      notify('You already have an active booking (Token #' + result.booking.token + ').', 'info');
+      booking = result.booking;
+    } else {
+      booking = result.booking;
+    }
+  } catch(e) {
+    notify('Network error. Please try again.', 'error');
+    return;
+  }
 
   sessionBookingData.confirmedBooking = booking;
   sessionStorage.setItem('myBooking', JSON.stringify(booking));

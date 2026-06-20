@@ -11,7 +11,7 @@ const FIRESTORE_PROJECT = 'india-mobile-17134';
 const FIRESTORE_DOC_PATH = 'appData/sync';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
 const BOOKINGS_COLL_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings`;
-async function getNextTokenFromCounter() {
+async function getNextTokenFromCounter(maxFromBookings) {
   const commitUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents:commit`;
   const docName = `projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
 
@@ -51,7 +51,43 @@ async function getNextTokenFromCounter() {
     await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
   }
 
-  // Fallback: compute from bookings max
+  // Fallback: try a direct PATCH to initialize the counter, then one more transform attempt
+  if (maxFromBookings > 0) {
+    try {
+      const initVal = String(maxFromBookings);
+      await fetch(FIRESTORE_URL + '?updateMask.fieldPaths=lastIssuedToken', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: { lastIssuedToken: { integerValue: initVal } }
+        })
+      });
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const res = await fetch(commitUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            writes: [{
+              transform: {
+                document: docName,
+                fieldTransforms: [{
+                  fieldPath: "lastIssuedToken",
+                  increment: { integerValue: "1" }
+                }]
+              }
+            }]
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const result = data.writeResults?.[0]?.transformResults?.[0]?.integerValue;
+          if (result !== undefined) return String(parseInt(result));
+        }
+        await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
+      }
+    } catch(e) {}
+  }
+
   return '0';
 }
 
@@ -181,11 +217,13 @@ module.exports = async (req, res) => {
   const body = req.body || {};
   const email = (body.email || '').trim().toLowerCase();
   const aadhaar = (body.aadhaar || '').replace(/\D/g, '');
+  const aadhaarLast4Only = (body.aadhaarLast4 || '').replace(/\D/g, '');
   const deviceId = (body.deviceId || '').trim();
   const date = (body.date || '').trim();
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, message: 'Invalid email' });
-  if (aadhaar.length !== 12) return res.status(400).json({ success: false, message: 'Invalid Aadhaar' });
+  const aadhaarValue = aadhaar.length === 12 ? aadhaar : (aadhaarLast4Only.length === 4 ? aadhaarLast4Only : '');
+  if (!fullAadhaar) return res.status(400).json({ success: false, message: 'Invalid Aadhaar' });
   if (!deviceId) return res.status(400).json({ success: false, message: 'Missing device ID' });
   if (!date) return res.status(400).json({ success: false, message: 'Missing date' });
 
@@ -201,13 +239,15 @@ module.exports = async (req, res) => {
   const dupEmail = active.find(b => b.email === email);
   if (dupEmail) return res.json({ success: true, isDuplicate: true, field: 'email', booking: dupEmail });
 
-  const dupAadhaar = active.find(b => b.aadhaarFull === aadhaar);
-  if (dupAadhaar) return res.json({ success: true, isDuplicate: true, field: 'aadhaar', booking: dupAadhaar });
+  if (aadhaar.length === 12) {
+    const dupAadhaar = active.find(b => b.aadhaarFull === aadhaarValue);
+    if (dupAadhaar) return res.json({ success: true, isDuplicate: true, field: 'aadhaar', booking: dupAadhaar });
+  }
 
   const dupDevice = active.find(b => b.deviceId === deviceId);
   if (dupDevice) return res.json({ success: true, isDuplicate: true, field: 'device', booking: dupDevice });
 
-  let token = await getNextTokenFromCounter();
+  let token = await getNextTokenFromCounter(bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0));
   if (!token || token === '0') {
     const max = bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0);
     token = String(max + 1);
@@ -217,8 +257,8 @@ module.exports = async (req, res) => {
     bookingId: bookingId(),
     email,
     name: body.name || 'Portal User',
-    aadhaarFull: aadhaar,
-    aadhaarLast4: aadhaar.slice(-4),
+    aadhaarFull: aadhaarValue,
+    aadhaarLast4: aadhaarValue.slice(-4),
     service: body.service || 'Aadhaar Update',
     date,
     deviceId,

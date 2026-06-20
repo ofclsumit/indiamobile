@@ -286,7 +286,21 @@ const DBSync = {
       }
     }
 
-    // Fallback: compute from local bookings max
+    // Fallback: query Firestore directly for max token (avoids local-cache race)
+    try {
+      if (db) {
+        var snap = await db.collection('bookings').get();
+        var maxToken = 0;
+        snap.forEach(function(d) {
+          var t = parseInt(d.data().token);
+          if (t > maxToken) maxToken = t;
+        });
+        return maxToken + 1;
+      }
+    } catch(e) {
+      console.warn('[DBSync] Firestore query fallback failed:', e);
+    }
+    // Absolute fallback: local cache
     var bookings = this.getBookings();
     var max = bookings.reduce(function(m, b) { return Math.max(m, parseInt(b.token) || 0); }, 0);
     return max + 1;
