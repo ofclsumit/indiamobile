@@ -12,36 +12,42 @@ const FIRESTORE_DOC_PATH = 'appData/sync';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
 const BOOKINGS_COLL_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings`;
 async function getNextTokenFromCounter() {
-  // Read current counter from appData/sync (reliable REST path)
-  for (let attempt = 0; attempt < 5; attempt++) {
+  const commitUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents:commit`;
+  const docName = `projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
+
+  for (let attempt = 0; attempt < 10; attempt++) {
     try {
-      const getRes = await fetch(FIRESTORE_URL);
-      let lastToken = 0;
-
-      if (getRes.ok) {
-        const doc = await getRes.json();
-        if (doc.fields && doc.fields.lastIssuedToken) {
-          lastToken = parseInt(doc.fields.lastIssuedToken.integerValue || doc.fields.lastIssuedToken.stringValue) || 0;
-        }
-      }
-
-      const newToken = lastToken + 1;
-
-      // Write back to appData/sync using PATCH
-      const writeRes = await fetch(FIRESTORE_URL + '?updateMask.fieldPaths=lastIssuedToken', {
-        method: 'PATCH',
+      const res = await fetch(commitUrl, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fields: { lastIssuedToken: { integerValue: String(newToken) } } })
+        body: JSON.stringify({
+          writes: [{
+            transform: {
+              document: docName,
+              fieldTransforms: [{
+                fieldPath: "lastIssuedToken",
+                increment: { integerValue: "1" }
+              }]
+            }
+          }]
+        })
       });
 
-      if (writeRes.ok) {
-        return String(newToken);
+      if (!res.ok) {
+        await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
+        continue;
+      }
+
+      const data = await res.json();
+      const result = data.writeResults?.[0]?.transformResults?.[0]?.integerValue;
+      if (result !== undefined) {
+        return String(parseInt(result));
       }
     } catch (e) {
       // Fall through to retry
     }
 
-    if (attempt === 4) break;
+    if (attempt === 9) break;
     await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
   }
 

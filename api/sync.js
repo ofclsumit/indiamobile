@@ -149,7 +149,7 @@ module.exports = async (req, res) => {
     } else if (action === 'setCustomers' && input.customers !== undefined) {
       syncData.customers = input.customers;
     } else if (action === 'reset') {
-      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: [], _lastUpdated: Date.now() };
+      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: [], lastIssuedToken: 0, _lastUpdated: Date.now() };
       try {
         var counterFields = { lastTokenNumber: { integerValue: '0' }, updatedAt: { stringValue: new Date().toISOString() } };
         var counterUrl = COUNTER_URL + '?updateMask.fieldPaths=lastTokenNumber&updateMask.fieldPaths=updatedAt';
@@ -157,7 +157,7 @@ module.exports = async (req, res) => {
       } catch(e) { console.error('Counter reset error:', e); }
     } else if (action === 'resetExceptCustomers') {
       const keptCustomers = syncData.customers || [];
-      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: keptCustomers, _lastUpdated: Date.now() };
+      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: keptCustomers, lastIssuedToken: 0, _lastUpdated: Date.now() };
       // Reset token counter so next booking starts from 1
       try {
         var counterFields = { lastTokenNumber: { integerValue: '0' }, updatedAt: { stringValue: new Date().toISOString() } };
