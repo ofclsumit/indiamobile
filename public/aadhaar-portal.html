@@ -671,42 +671,77 @@ function checkExistingBooking() {
     }
   }
 
-  // Query Firestore for active bookings matching email or aadhaarLast4
-  if (window.__bookingsRef) {
-    var allBookings = [];
-    function tryNext() {
-      if (allBookings.length > 0) {
-        found = allBookings[0];
-      }
-      proceed();
-    }
-    // Query by email
-    window.__bookingsRef.where('email', '==', email).get().then(function(snap) {
-      snap.forEach(function(doc) {
-        var d = { id: doc.id, ...doc.data() };
-        if (d.status === 'pending' || d.status === 'approved' || d.status === 'completed' || d.status === 'cancelled') allBookings.push(d);
-      });
-      // Then query by aadhaarLast4
-      window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get().then(function(snap2) {
-        snap2.forEach(function(doc) {
-          var d = { id: doc.id, ...doc.data() };
-          if ((d.status === 'pending' || d.status === 'approved' || d.status === 'completed' || d.status === 'cancelled') && !allBookings.find(function(b) { return b.id === d.id; })) {
-            allBookings.push(d);
-          }
-        });
-        tryNext();
-      }).catch(function() { tryNext(); });
-    }).catch(function() { tryNext(); });
-  } else {
-    // Fallback: check local DBSync cache
+  function checkLocal() {
     try {
       var local = DBSync.getBookings();
       found = local.find(function(b) {
         return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && (b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled');
       });
     } catch(e) {}
-    proceed();
+    if (found) { proceed(); return true; }
+    return false;
   }
+
+  // Fetch fresh data from server first (appData/sync is authoritative)
+  DBSync.forceFetch().then(function() {
+    if (checkLocal()) return;
+    // Fallback: query Firestore /bookings collection if DBSync had nothing
+    if (window.__bookingsRef) {
+      var allBookings = [];
+      function tryNext() {
+        if (allBookings.length > 0) {
+          found = allBookings[0];
+        }
+        proceed();
+      }
+      window.__bookingsRef.where('email', '==', email).get().then(function(snap) {
+        snap.forEach(function(doc) {
+          var d = { id: doc.id, ...doc.data() };
+          if (d.status === 'pending' || d.status === 'approved' || d.status === 'completed' || d.status === 'cancelled') allBookings.push(d);
+        });
+        window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get().then(function(snap2) {
+          snap2.forEach(function(doc) {
+            var d = { id: doc.id, ...doc.data() };
+            if ((d.status === 'pending' || d.status === 'approved' || d.status === 'completed' || d.status === 'cancelled') && !allBookings.find(function(b) { return b.id === d.id; })) {
+              allBookings.push(d);
+            }
+          });
+          tryNext();
+        }).catch(function() { tryNext(); });
+      }).catch(function() { tryNext(); });
+    } else {
+      proceed();
+    }
+  }).catch(function() {
+    // DBSync fetch failed, fallback to local cache
+    checkLocal();
+    if (!found) {
+      if (window.__bookingsRef) {
+        var allBookings = [];
+        function tryNext() {
+          if (allBookings.length > 0) found = allBookings[0];
+          proceed();
+        }
+        window.__bookingsRef.where('email', '==', email).get().then(function(snap) {
+          snap.forEach(function(doc) {
+            var d = { id: doc.id, ...doc.data() };
+            if (d.status === 'pending' || d.status === 'approved' || d.status === 'completed' || d.status === 'cancelled') allBookings.push(d);
+          });
+          window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get().then(function(snap2) {
+            snap2.forEach(function(doc) {
+              var d = { id: doc.id, ...doc.data() };
+              if ((d.status === 'pending' || d.status === 'approved' || d.status === 'completed' || d.status === 'cancelled') && !allBookings.find(function(b) { return b.id === d.id; })) {
+                allBookings.push(d);
+              }
+            });
+            tryNext();
+          }).catch(function() { tryNext(); });
+        }).catch(function() { tryNext(); });
+      } else {
+        proceed();
+      }
+    }
+  });
 }
 
 function showExistingBookingOverlay(booking) {

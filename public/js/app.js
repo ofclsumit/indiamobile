@@ -47,11 +47,11 @@ const DB = {
   },
 
   getActiveByEmail(email) {
-    return this.bookings.find(b => b.email === email && (b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled'));
+    return DBSync.getBookings().find(b => b.email === email && (b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled'));
   },
 
   getActiveByAadhaar(aadhaar) {
-    return this.bookings.find(b => b.aadhaarLast4 === aadhaar && (b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled'));
+    return DBSync.getBookings().find(b => b.aadhaarLast4 === aadhaar && (b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled'));
   },
 
   getByAadhaar(aadhaar) {
@@ -901,24 +901,46 @@ function lookupByAadhaar() {
   }
 
   if (window.__bookingsRef) {
-    window.__bookingsRef.where('aadhaarLast4', '==', aadhaar).get().then(function(snap) {
-      var bookings = [];
-      snap.forEach(function(doc) { bookings.push({ id: doc.id, ...doc.data() }); });
-      var active = bookings.filter(function(b) { return b.status === 'pending' || b.status === 'approved'; });
-      if (active.length > 0) {
-        redirectToPortal(active[0]);
-      } else if (bookings.length > 0) {
-        body.setAttribute('aria-busy', 'false');
-        renderCheckTokenStep(2);
-      } else {
-        body.setAttribute('aria-busy', 'false');
-        renderCheckTokenStep(2);
+    DBSync.forceFetch().then(function() {
+      var syncBookings = DBSync.getBookings();
+      var matches = syncBookings.filter(function(b) { return b.aadhaarLast4 === aadhaar; });
+      if (matches.length > 0) {
+        redirectToPortal(matches[0]);
+        return;
       }
+      window.__bookingsRef.where('aadhaarLast4', '==', aadhaar).get().then(function(snap) {
+        var bookings = [];
+        snap.forEach(function(doc) { bookings.push({ id: doc.id, ...doc.data() }); });
+        var active = bookings.filter(function(b) { return b.status === 'pending' || b.status === 'approved'; });
+        if (active.length > 0) {
+          redirectToPortal(active[0]);
+        } else {
+          body.setAttribute('aria-busy', 'false');
+          renderCheckTokenStep(2);
+        }
+      }).catch(function() {
+        setTimeout(function() {
+          renderCheckTokenStep(2);
+          body.setAttribute('aria-busy', 'false');
+        }, 300);
+      });
     }).catch(function() {
-      setTimeout(function() {
-        renderCheckTokenStep(2);
-        body.setAttribute('aria-busy', 'false');
-      }, 300);
+      window.__bookingsRef.where('aadhaarLast4', '==', aadhaar).get().then(function(snap) {
+        var bookings = [];
+        snap.forEach(function(doc) { bookings.push({ id: doc.id, ...doc.data() }); });
+        var active = bookings.filter(function(b) { return b.status === 'pending' || b.status === 'approved'; });
+        if (active.length > 0) {
+          redirectToPortal(active[0]);
+        } else {
+          body.setAttribute('aria-busy', 'false');
+          renderCheckTokenStep(2);
+        }
+      }).catch(function() {
+        setTimeout(function() {
+          renderCheckTokenStep(2);
+          body.setAttribute('aria-busy', 'false');
+        }, 300);
+      });
     });
   } else {
     setTimeout(function() {
