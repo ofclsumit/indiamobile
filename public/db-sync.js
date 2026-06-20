@@ -232,20 +232,42 @@ const DBSync = {
   },
 
   _syncBookingStatuses(oldList, newList) {
-    if (!oldList || !newList || !this._firestoreReady || !this._db) return;
+    if (!oldList || !newList) return;
+    const self = this;
     newList.forEach(function(nb) {
       if (!nb.bookingId) return;
       var ob = oldList.find(function(b) { return b.bookingId === nb.bookingId; });
       if (ob && ob.status !== nb.status) {
-        try {
-          DBSync._db.collection('bookings').doc(nb.bookingId).update({
-            status: nb.status,
-            updatedAt: new Date().toISOString()
-          }).catch(function(e) {
-            console.warn('[DBSync] Failed to sync booking status to /bookings:', e);
+        var apiFallback = function() {
+          var manageUrl = self.API.replace('/sync', '/manage');
+          fetch(manageUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'updateStatus', bookingId: nb.bookingId, status: nb.status })
+          }).then(function(res) {
+            return res.json();
+          }).then(function(resData) {
+            console.log('[DBSync] API status sync fallback completed:', resData);
+          }).catch(function(err) {
+            console.warn('[DBSync] API status sync fallback failed:', err);
           });
-        } catch(e) {
-          console.warn('[DBSync] Error syncing booking status:', e);
+        };
+
+        if (self._firestoreReady && self._db) {
+          try {
+            self._db.collection('bookings').doc(nb.bookingId).update({
+              status: nb.status,
+              updatedAt: new Date().toISOString()
+            }).catch(function(e) {
+              console.warn('[DBSync] Failed to sync booking status directly, using API fallback:', e);
+              apiFallback();
+            });
+          } catch(e) {
+            console.warn('[DBSync] Failed to call direct collection update, using API fallback:', e);
+            apiFallback();
+          }
+        } else {
+          apiFallback();
         }
       }
     });

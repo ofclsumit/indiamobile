@@ -104,6 +104,50 @@ module.exports = async (req, res) => {
       return res.json({ success: true, action, bookingId, results });
     }
 
+    if (action === 'updateStatus') {
+      const bookingId = body.bookingId;
+      const status = body.status;
+      if (!bookingId || !status) return res.status(400).json({ success: false, message: 'Missing parameters' });
+      
+      const results = { bookingDoc: null, syncDoc: null };
+      
+      try {
+        await db.collection('bookings').doc(bookingId).update({
+          status: status,
+          updatedAt: new Date().toISOString()
+        });
+        results.bookingDoc = { ok: true };
+        log('Updated booking doc status:', bookingId, '->', status);
+      } catch(e) {
+        results.bookingDoc = { ok: false, error: e.message };
+        log('Failed to update booking status:', e.message);
+      }
+      
+      try {
+        const syncRef = db.doc('appData/sync');
+        const syncSnap = await syncRef.get();
+        if (syncSnap.exists) {
+          const syncData = syncSnap.data() || {};
+          const bookings = syncData.bookings || [];
+          bookings.forEach(b => {
+            if (b.bookingId === bookingId) {
+              b.status = status;
+            }
+          });
+          await syncRef.update({ bookings: bookings, _lastUpdated: Date.now() });
+          results.syncDoc = { ok: true };
+          log('Updated sync doc booking status:', bookingId, '->', status);
+        } else {
+          results.syncDoc = { ok: true, note: 'No sync doc' };
+        }
+      } catch(e) {
+        results.syncDoc = { ok: false, error: e.message };
+        log('Failed to update sync doc:', e.message);
+      }
+      
+      return res.json({ success: true, action, bookingId, status, results });
+    }
+
     if (action === 'findBooking') {
       const email = (body.email || '').trim().toLowerCase();
       if (!email) return res.json({ success: false, message: 'Missing email' });
