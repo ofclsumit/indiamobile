@@ -47,11 +47,11 @@ const DB = {
   },
 
   getActiveByEmail(email) {
-    return this.bookings.find(b => b.email === email && (b.status === 'pending' || b.status === 'approved'));
+    return this.bookings.find(b => b.email === email && (b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled'));
   },
 
   getActiveByAadhaar(aadhaar) {
-    return this.bookings.find(b => b.aadhaarLast4 === aadhaar && (b.status === 'pending' || b.status === 'approved'));
+    return this.bookings.find(b => b.aadhaarLast4 === aadhaar && (b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled'));
   },
 
   getByAadhaar(aadhaar) {
@@ -651,7 +651,7 @@ async function sendBookingOTP() {
 
   const existing = DB.getActiveByEmail(email);
   if (existing) {
-    notify('You already have an active booking (Token #' + existing.token + '). Please cancel it first or check your token.', 'error');
+    notify('This email already has a booking (Token #' + existing.token + '). Only one booking per email is allowed.', 'error');
     return;
   }
 
@@ -734,7 +734,7 @@ async function submitBookingStep2() {
 
   const existingAadhaar = DB.getActiveByAadhaar(aadhaarLast4);
   if (existingAadhaar && existingAadhaar.email !== sessionBookingData.email) {
-    notify('This Aadhaar number already has an active booking.', 'error');
+    notify('This Aadhaar number is already associated with a booking.', 'error');
     return;
   }
 

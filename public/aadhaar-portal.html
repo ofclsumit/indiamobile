@@ -684,13 +684,13 @@ function checkExistingBooking() {
     window.__bookingsRef.where('email', '==', email).get().then(function(snap) {
       snap.forEach(function(doc) {
         var d = { id: doc.id, ...doc.data() };
-        if (d.status === 'pending' || d.status === 'approved') allBookings.push(d);
+        if (d.status === 'pending' || d.status === 'approved' || d.status === 'completed' || d.status === 'cancelled') allBookings.push(d);
       });
       // Then query by aadhaarLast4
       window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get().then(function(snap2) {
         snap2.forEach(function(doc) {
           var d = { id: doc.id, ...doc.data() };
-          if ((d.status === 'pending' || d.status === 'approved') && !allBookings.find(function(b) { return b.id === d.id; })) {
+          if ((d.status === 'pending' || d.status === 'approved' || d.status === 'completed' || d.status === 'cancelled') && !allBookings.find(function(b) { return b.id === d.id; })) {
             allBookings.push(d);
           }
         });
@@ -702,7 +702,7 @@ function checkExistingBooking() {
     try {
       var local = DBSync.getBookings();
       found = local.find(function(b) {
-        return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && (b.status === 'pending' || b.status === 'approved');
+        return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && (b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled');
       });
     } catch(e) {}
     proceed();

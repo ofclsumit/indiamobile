@@ -1,5 +1,5 @@
 function isActive(b) {
-  return b.status === 'pending' || b.status === 'approved';
+  return b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled';
 }
 
 function bookingId() {
