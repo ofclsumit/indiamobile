@@ -647,6 +647,15 @@ async function fetchSyncBookings() {
   }
 }
 
+async function checkActiveBookingByEmail(email) {
+  try {
+    var bookings = await fetchSyncBookings();
+    return bookings.find(function(b) { return b.email === email; }) || null;
+  } catch(e) {
+    return null;
+  }
+}
+
 async function sendBookingOTP() {
   const email = document.getElementById('bookEmail').value.trim();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -660,15 +669,24 @@ async function sendBookingOTP() {
     return;
   }
 
-  const existing = await checkActiveBookingByEmail(email);
-  if (existing) {
-    notify('This email already has a booking (Token #' + existing.token + '). Only one booking per email is allowed.', 'error');
-    return;
-  }
-
   sessionBookingData.email = email;
   sessionBookingData.aadhaarLast4 = aadhaarLast4;
 
+  // Check for existing booking (any status) — show popup if found
+  var existing = await checkActiveBookingByEmail(email);
+  if (existing) {
+    window._existingBookingResume = function() {
+      document.getElementById('existingBookingOverlay').classList.remove('show');
+      doSendOTP(email);
+    };
+    showExistingBookingOverlay(existing);
+    return;
+  }
+
+  doSendOTP(email);
+}
+
+async function doSendOTP(email) {
   const btn = document.querySelector('#bookSendOTPBtn button');
   setBtnLoading(btn, true);
   showPageLoader();

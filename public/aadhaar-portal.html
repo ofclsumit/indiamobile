@@ -723,7 +723,12 @@ window.existingBookingShowToken = function() {
 
 window.existingBookingContinue = function() {
   document.getElementById('existingBookingOverlay').classList.remove('show');
-  showStep2();
+  if (window._existingBookingResume) {
+    window._existingBookingResume();
+    window._existingBookingResume = null;
+  } else {
+    showStep2();
+  }
 };
 
 let resendCooldownTimer = null;
