@@ -6,26 +6,16 @@ function bookingId() {
   return 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100);
 }
 
-function getTodayDateStr() {
-  const d = new Date();
-  return d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
-}
-
-function formatToken(dateStr, counter) {
-  return dateStr + '-' + String(counter).padStart(3, '0');
-}
-
 // --- Firestore REST API helpers ---
 const FIRESTORE_PROJECT = 'india-mobile-17134';
 const FIRESTORE_DOC_PATH = 'appData/sync';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
 const BOOKINGS_COLL_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings`;
-async function getNextDailyToken() {
-  const today = getTodayDateStr();
-  const dailyCounterDocPath = `dailyCounters/${today}`;
+
+async function getNextToken() {
   const commitUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents:commit`;
-  const docName = `projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${dailyCounterDocPath}`;
-  const counterUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${dailyCounterDocPath}`;
+  const docName = `projects/${FIRESTORE_PROJECT}/databases/(default)/documents/counters/tokenCounter`;
+  const counterUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/counters/tokenCounter`;
 
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
@@ -34,7 +24,7 @@ async function getNextDailyToken() {
           transform: {
             document: docName,
             fieldTransforms: [{
-              fieldPath: "lastCounter",
+              fieldPath: "lastToken",
               increment: { integerValue: "1" }
             }]
           }
@@ -54,11 +44,9 @@ async function getNextDailyToken() {
       const data = await res.json();
       const result = data.writeResults?.[0]?.transformResults?.[0]?.integerValue;
       if (result !== undefined) {
-        return formatToken(today, parseInt(result));
+        return parseInt(result);
       }
-    } catch (e) {
-      // Fall through to retry
-    }
+    } catch (e) {}
 
     if (attempt === 9) break;
     await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
@@ -67,13 +55,12 @@ async function getNextDailyToken() {
   // Fallback: initialize counter doc if it doesn't exist, then try transform again
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      await fetch(counterUrl + '?updateMask.fieldPaths=lastCounter&updateMask.fieldPaths=date', {
+      await fetch(counterUrl + '?updateMask.fieldPaths=lastToken', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fields: {
-            lastCounter: { integerValue: '0' },
-            date: { stringValue: today }
+            lastToken: { integerValue: '0' }
           }
         })
       });
@@ -85,7 +72,7 @@ async function getNextDailyToken() {
             transform: {
               document: docName,
               fieldTransforms: [{
-                fieldPath: "lastCounter",
+                fieldPath: "lastToken",
                 increment: { integerValue: "1" }
               }]
             }
@@ -95,13 +82,13 @@ async function getNextDailyToken() {
       if (res.ok) {
         const data = await res.json();
         const result = data.writeResults?.[0]?.transformResults?.[0]?.integerValue;
-        if (result !== undefined) return formatToken(today, parseInt(result));
+        if (result !== undefined) return parseInt(result);
       }
     } catch(e) {}
     await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
   }
 
-  return formatToken(today, 0);
+  return 0;
 }
 
 function firestoreValueToJS(val) {
@@ -157,7 +144,6 @@ async function readBookingsFromFirestore() {
 
 async function writeBookingsToFirestore(bookings) {
   try {
-    // Use PATCH with updateMask to only update the bookings field
     const url = FIRESTORE_URL + '?updateMask.fieldPaths=bookings&updateMask.fieldPaths=_lastUpdated';
     const body = {
       fields: {
@@ -179,7 +165,6 @@ async function writeBookingsToFirestore(bookings) {
   }
 }
 
-// Fallback to sync API
 async function getSyncURL(req) {
   const host = req.headers['x-forwarded-host'] || req.headers.host || '';
   let proto = req.headers['x-forwarded-proto'] || 'https';
@@ -219,6 +204,11 @@ async function createBookingDocument(booking) {
   });
 }
 
+function logServerToken(token, bookingId, name) {
+  var ts = new Date().toISOString();
+  console.log('[SERVER TOKEN] Previous: ' + (token - 1) + ' | Generated: ' + String(token).padStart(2, '0') + ' | Booking ID: ' + (bookingId || 'N/A') + ' | Customer: ' + (name || 'N/A') + ' | Time: ' + ts);
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -240,7 +230,6 @@ module.exports = async (req, res) => {
   if (!deviceId) return res.status(400).json({ success: false, message: 'Missing device ID' });
   if (!date) return res.status(400).json({ success: false, message: 'Missing date' });
 
-  // Try Firestore first, fallback to sync API
   let bookings = await readBookingsFromFirestore();
   let useFirestore = bookings !== null;
   if (!useFirestore) {
@@ -260,23 +249,38 @@ module.exports = async (req, res) => {
   const dupDevice = active.find(b => b.deviceId === deviceId);
   if (dupDevice) return res.json({ success: true, isDuplicate: true, field: 'device', booking: dupDevice });
 
-  let token = await getNextDailyToken();
-  if (!token || token.endsWith('-000')) {
-    const today = getTodayDateStr();
-    const todayTokens = bookings.filter(b => b.token && typeof b.token === 'string' && b.token.startsWith(today));
+  // Generate token from atomic counter
+  let token = await getNextToken();
+  if (!token) {
+    // Fallback: max from existing bookings
     let max = 0;
-    todayTokens.forEach(b => {
-      const parts = b.token.split('-');
-      if (parts.length === 2) {
-        const num = parseInt(parts[1], 10);
-        if (num > max) max = num;
-      }
+    bookings.forEach(function(b) {
+      var t = parseInt(b.token, 10);
+      if (!isNaN(t) && t > max) max = t;
     });
-    token = formatToken(today, max + 1);
+    token = max + 1;
   }
+
+  // DUPLICATE PROTECTION: verify token is not already used
+  var tokenExists = bookings.some(function(b) {
+    return parseInt(b.token, 10) === token;
+  });
+  if (tokenExists) {
+    // Retry with next available
+    let max = 0;
+    bookings.forEach(function(b) {
+      var t = parseInt(b.token, 10);
+      if (!isNaN(t) && t > max) max = t;
+    });
+    token = max + 1;
+  }
+
+  var bId = bookingId();
+  logServerToken(token, bId, body.name || 'Portal User');
+
   const booking = {
-    token,
-    bookingId: bookingId(),
+    token: token,
+    bookingId: bId,
     email,
     name: body.name || 'Portal User',
     aadhaarFull: aadhaarValue,
@@ -290,14 +294,11 @@ module.exports = async (req, res) => {
 
   bookings.push(booking);
 
-  // Write booking to Firestore /bookings collection (public create allowed by rules)
   try { await createBookingDocument(booking); } catch(e) {}
 
-  // Write to Firestore appData/sync (primary) and sync API (fallback)
   if (useFirestore) {
     await writeBookingsToFirestore(bookings);
   }
-  // Also write to sync API for backward compat
   try { await writeBookingsFallback(req, bookings); } catch(e) {}
 
   return res.json({ success: true, isDuplicate: false, booking });

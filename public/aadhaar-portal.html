@@ -698,7 +698,7 @@ function showExistingBookingOverlay(booking) {
   actions.style.display = 'flex';
   doneRow.style.display = 'none';
 
-  msg.textContent = __t('existing_booking_question') + ' (Token #' + booking.token + '). ' + __t('existing_booking_choice');
+  msg.textContent = __t('existing_booking_question') + ' (Token #' + String(booking.token || '').padStart(2, '0') + '). ' + __t('existing_booking_choice');
   window._existingBooking = booking;
 
   overlay.classList.add('show');
@@ -715,7 +715,7 @@ window.existingBookingShowToken = function() {
   var doneRow = document.getElementById('existingBookingDoneRow');
 
   msg.textContent = __t('here_your_token');
-  tokenEl.textContent = booking.token;
+  tokenEl.textContent = String(booking.token || '').padStart(2, '0');
   tokenSection.style.display = 'block';
   actions.style.display = 'none';
   doneRow.style.display = 'flex';
@@ -923,7 +923,7 @@ async function portalConfirmBooking() {
 function showConfirmation(booking) {
   document.getElementById('bookingForm').style.display = 'none';
   document.getElementById('confirmView').style.display = 'block';
-  document.getElementById('confirmToken').textContent = booking.token;
+  document.getElementById('confirmToken').textContent = String(booking.token || '').padStart(2, '0');
   document.getElementById('confirmBookingId').textContent = __t('booking_id') + ': ' + booking.bookingId;
   document.getElementById('confirmName').textContent = booking.name || '-';
   document.getElementById('confirmService').textContent = booking.service;

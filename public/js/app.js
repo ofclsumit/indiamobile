@@ -28,7 +28,10 @@ const DB = {
 
   async addBooking(data) {
     let token;
-    try { token = String(await DBSync.getNextToken()); } catch(e) { token = String(Date.now()).slice(-4) + String(Math.floor(Math.random() * 100)).padStart(2, '0'); }
+    try {
+      token = await DBSync.getNextToken();
+      if (!token || isNaN(token)) token = 0;
+    } catch(e) { token = 0; }
     const bid = 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random()*100);
     const booking = { ...data, token, bookingId: bid, status: 'approved', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this.bookings.push(booking);
@@ -893,7 +896,7 @@ function renderCheckTokenStep(step) {
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
             <div>
               <div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em;">${t('token_num')}</div>
-              <div style="font-family:'Space Grotesk',sans-serif;font-size:42px;font-weight:700;color:var(--accent);line-height:1;">${b.token}</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:42px;font-weight:700;color:var(--accent);line-height:1;">${String(getTokenCounter(b.token)).padStart(2, '0')}</div>
             </div>
             <div class="status-pill ${statusClass}">${statusLabel}</div>
           </div>
@@ -1147,43 +1150,19 @@ function startAdminListeners() {
   }, function() {});
   adminUnsubscribers.push(unsubDates);
 
-  // Listen for Last Issued Token + daily counter info from appData/sync
+  // Listen for token counter info from counters/tokenCounter
   if (window.__db) {
-    var unsubCounter = window.__db.doc('appData/sync').onSnapshot(function(snap) {
+    var unsubCounter = window.__db.doc('counters/tokenCounter').onSnapshot(function(snap) {
       var data = snap.exists ? snap.data() : {};
-      var lastIssued = data.lastIssuedToken || '--';
-      var counterVal = data._lastCounterValue || 0;
-      var counterDate = data._lastCounterDate || '';
-      var today = getTodayDateStr();
-      var el = document.getElementById('kpiLastIssuedToken');
-      if (el) el.textContent = lastIssued;
-      var cEl = document.getElementById('kpiCurrentCounterValue');
-      if (cEl) cEl.textContent = counterDate === today ? counterVal : '0';
+      var lastToken = data.lastToken || 0;
+      var el = document.getElementById('kpiCurrentCounterValue');
+      if (el) el.textContent = lastToken;
+      var lastEl = document.getElementById('kpiLastIssuedToken');
+      if (lastEl) lastEl.textContent = lastToken > 0 ? String(lastToken).padStart(2, '0') : '--';
       var nEl = document.getElementById('kpiNextTokenPreview');
-      if (nEl) {
-        if (counterDate === today && counterVal > 0) {
-          nEl.textContent = formatToken(today, counterVal + 1);
-        } else {
-          nEl.textContent = formatToken(today, 1);
-        }
-      }
+      if (nEl) nEl.textContent = String(lastToken + 1).padStart(2, '0');
     }, function() {});
     adminUnsubscribers.push(unsubCounter);
-
-    // Listen to dailyCounters directly for latest value
-    var unsubDailyCounter = window.__db.collection('dailyCounters').doc(getTodayDateStr()).onSnapshot(function(snap) {
-      if (snap.exists) {
-        var d = snap.data();
-        var cEl = document.getElementById('kpiCurrentCounterValue');
-        if (cEl) cEl.textContent = d.lastCounter || 0;
-        var nEl = document.getElementById('kpiNextTokenPreview');
-        if (nEl) {
-          var cnt = d.lastCounter || 0;
-          nEl.textContent = formatToken(getTodayDateStr(), cnt + 1);
-        }
-      }
-    }, function() {});
-    adminUnsubscribers.push(unsubDailyCounter);
   }
 }
 
@@ -1282,7 +1261,7 @@ function renderBookingsTable(loading) {
     var d = b.date ? new Date(b.date + 'T00:00:00') : null;
     var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var displayDate = d ? d.getDate() + ' ' + months[d.getMonth()] : '--';
-    var token = b.token || b.tokens || '--';
+    var token = String(getTokenCounter(b.token || b.tokens)).padStart(2, '0') || '--';
     var bid = b.bookingId || b.id || '--';
     var name = b.name || b.fullName || '--';
     var email = b.email || b.mobile || '--';
@@ -1388,11 +1367,13 @@ function markNextComplete() {
 }
 
 async function findBookingByToken(tokenStr, dateFilter) {
-  var q = window.__bookingsRef.where('token', '==', tokenStr).where('status', 'in', ['approved','pending','waiting']);
+  var tokenNum = parseInt(tokenStr, 10) || 0;
+  var q = window.__bookingsRef.where('token', '==', tokenNum).where('status', 'in', ['approved','pending','waiting']);
   if (dateFilter) q = q.where('date', '==', dateFilter);
   var snap = await q.get();
   if (!snap.empty) return snap.docs[0];
-  q = window.__bookingsRef.where('token', '==', tokenStr.padStart(2,'0')).where('status', 'in', ['approved','pending','waiting']);
+  // Also try string token for backward compat with old YYYYMMDD-NNN format
+  q = window.__bookingsRef.where('token', '==', tokenStr).where('status', 'in', ['approved','pending','waiting']);
   if (dateFilter) q = q.where('date', '==', dateFilter);
   snap = await q.get();
   if (!snap.empty) return snap.docs[0];

@@ -8,15 +8,26 @@ function getTodayDateStr() {
 }
 
 function getTokenCounter(token) {
-  if (!token) return 0;
-  if (typeof token === 'string' && token.indexOf('-') !== -1) {
-    return parseInt(token.split('-')[1], 10) || 0;
-  }
-  return parseInt(token, 10) || 0;
+  if (token === null || token === undefined) return 0;
+  if (typeof token === 'number') return token;
+  var n = parseInt(token, 10);
+  return isNaN(n) ? 0 : n;
 }
 
-function formatToken(dateStr, counter) {
-  return dateStr + '-' + String(counter).padStart(3, '0');
+function formatToken(counter) {
+  return String(counter);
+}
+
+function logTokenGeneration(counter, bookingId, name) {
+  var ts = new Date().toISOString();
+  var msg = '[TOKEN] Counter: ' + (counter - 1) + ' | Generated Token: ' + String(counter).padStart(2, '0') + ' | Booking ID: ' + (bookingId || 'N/A') + ' | Customer: ' + (name || 'N/A') + ' | Time: ' + ts;
+  console.log(msg);
+  try {
+    var log = JSON.parse(localStorage.getItem('ds_token_log') || '[]');
+    log.push({ counter: counter, token: String(counter).padStart(2, '0'), bookingId: bookingId || '', name: name || '', timestamp: ts });
+    if (log.length > 100) log = log.slice(-100);
+    localStorage.setItem('ds_token_log', JSON.stringify(log));
+  } catch(e) {}
 }
 
 const DBSync = {
@@ -40,7 +51,6 @@ const DBSync = {
 
   FIRESTORE_DOC: 'appData/sync',
 
-  // --- Initialize Firestore ---
   async initFirestore() {
     try {
       if (typeof firebase === 'undefined' || !firebase.firestore) {
@@ -57,7 +67,6 @@ const DBSync = {
     }
   },
 
-  // --- Start real-time Firestore listener ---
   startRealtimeListener() {
     if (!this._firestoreReady || !this._db) {
       console.warn('[DBSync] Firestore not ready, falling back to polling');
@@ -65,7 +74,7 @@ const DBSync = {
       return;
     }
 
-    if (this._unsubFirestore) return; // Already listening
+    if (this._unsubFirestore) return;
 
     const docRef = this._db.doc(this.FIRESTORE_DOC);
     this._unsubFirestore = docRef.onSnapshot((snapshot) => {
@@ -118,7 +127,6 @@ const DBSync = {
     }
   },
 
-  // --- Read (local fallback) ---
   getBookings() {
     try { return JSON.parse(localStorage.getItem(this.KEYS.BOOKINGS)) || []; } catch(e) { return []; }
   },
@@ -141,7 +149,6 @@ const DBSync = {
     try { return JSON.parse(localStorage.getItem(this.KEYS.CUSTOMERS)) || []; } catch(e) { return []; }
   },
 
-  // --- Write (local + Firestore + API fallback) ---
   setBookings(val) {
     const oldBookings = this.getBookings();
     localStorage.setItem(this.KEYS.BOOKINGS, JSON.stringify(val));
@@ -186,7 +193,6 @@ const DBSync = {
     this._notify('customers');
   },
 
-  // --- Firestore write ---
   async _writeToFirestore(data) {
     if (data.bookings !== undefined && (!data.bookings || data.bookings.length === 0)) {
       return;
@@ -207,7 +213,6 @@ const DBSync = {
     }
   },
 
-  // --- API fallback sync ---
   async _syncToServer(payload) {
     try {
       await fetch(this.API, {
@@ -226,7 +231,6 @@ const DBSync = {
     } catch(e) { return null; }
   },
 
-  // --- Sync status changes to /bookings Firestore collection ---
   _syncBookingStatuses(oldList, newList) {
     if (!oldList || !newList || !this._firestoreReady || !this._db) return;
     newList.forEach(function(nb) {
@@ -247,38 +251,29 @@ const DBSync = {
     });
   },
 
-  // --- Get next token from daily counter using Firestore transaction ---
-  async getNextToken() {
+  // --- Get next token from counters/tokenCounter using Firestore transaction ---
+  async getNextToken(bookingId, customerName) {
     var db = this._firestoreReady && this._db ? this._db : (window.__db || null);
     if (db) {
-      var today = getTodayDateStr();
-      var counterRef = db.collection('dailyCounters').doc(today);
+      var counterRef = db.doc('counters/tokenCounter');
 
       for (var attempt = 0; attempt < 3; attempt++) {
         try {
           var newCounter = await db.runTransaction(async function(transaction) {
             var doc = await transaction.get(counterRef);
-            var lastCounter = doc.exists ? (doc.data().lastCounter || 0) : 0;
-            var nextCounter = lastCounter + 1;
+            var lastToken = doc.exists ? (doc.data().lastToken || 0) : 0;
+            var nextToken = lastToken + 1;
             transaction.set(counterRef, {
-              date: today,
-              lastCounter: nextCounter,
+              lastToken: nextToken,
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
-            return nextCounter;
+            return nextToken;
           });
-          var token = formatToken(today, newCounter);
-          try {
-            db.doc('appData/sync').set({
-              lastIssuedToken: token,
-              _lastCounterValue: newCounter,
-              _lastCounterDate: today
-            }, { merge: true }).catch(function() {});
-          } catch(e) {}
-          return token;
+          logTokenGeneration(newCounter, bookingId, customerName);
+          return newCounter;
         } catch (e) {
           if (attempt === 2) {
-            console.warn('[DBSync] Daily counter transaction failed:', e);
+            console.warn('[DBSync] Token counter transaction failed:', e);
             break;
           }
           await new Promise(function(r) { setTimeout(r, 200); });
@@ -286,51 +281,34 @@ const DBSync = {
       }
     }
 
-    return this._fallbackToken();
-  },
-
-  _fallbackToken() {
-    var today = getTodayDateStr();
+    // Fallback: scan existing bookings for max token
     var bookings = this.getBookings();
     var max = 0;
     bookings.forEach(function(b) {
-      if (b.token && typeof b.token === 'string' && b.token.indexOf(today) === 0) {
-        var parts = b.token.split('-');
-        if (parts.length === 2) {
-          var num = parseInt(parts[1], 10);
-          if (num > max) max = num;
-        }
-      } else if (b.token) {
-        var num = parseInt(b.token, 10);
-        if (num > max) max = num;
-      }
+      var t = getTokenCounter(b.token);
+      if (t > max) max = t;
     });
-    return formatToken(today, max + 1);
+    var fallback = max + 1;
+    logTokenGeneration(fallback, bookingId, customerName);
+    return fallback;
   },
 
-  // --- Get daily counter info for dashboard ---
-  async getDailyCounterInfo() {
-    var info = { currentCounter: 0, lastToken: null, nextToken: null, date: getTodayDateStr() };
+  // --- Get current counter info for dashboard ---
+  async getTokenCounterInfo() {
+    var info = { lastToken: 0, nextToken: 1 };
     var db = this._firestoreReady && this._db ? this._db : (window.__db || null);
     if (db) {
       try {
-        var doc = await db.collection('dailyCounters').doc(info.date).get();
+        var doc = await db.doc('counters/tokenCounter').get();
         if (doc.exists) {
-          info.currentCounter = doc.data().lastCounter || 0;
+          info.lastToken = doc.data().lastToken || 0;
+          info.nextToken = info.lastToken + 1;
         }
       } catch(e) {}
-    }
-    if (info.currentCounter > 0) {
-      info.lastToken = formatToken(info.date, info.currentCounter);
-      info.nextToken = formatToken(info.date, info.currentCounter + 1);
-    } else {
-      info.lastToken = '--';
-      info.nextToken = formatToken(info.date, 1);
     }
     return info;
   },
 
-  // --- Subscribe ---
   subscribe(fn) {
     this._listeners.push(fn);
     return () => { this._listeners = this._listeners.filter(l => l !== fn); };
@@ -352,7 +330,6 @@ const DBSync = {
     document.dispatchEvent(new CustomEvent('db-sync', { detail: data }));
   },
 
-  // --- Poll server for changes (fallback) ---
   startPolling(intervalMs) {
     if (this._pollId) return;
     this._lastHash = this._localHash();
@@ -456,14 +433,12 @@ const DBSync = {
   },
 };
 
-// Listen for storage events from other tabs (same-origin fallback)
 window.addEventListener('storage', (e) => {
   if (Object.values(DBSync.KEYS).includes(e.key)) {
     DBSync._notify(e.key === DBSync.KEYS.BOOKINGS ? 'bookings' : 'token');
   }
 });
 
-// Push local data to Firestore (called by app.js after data is ready)
 DBSync.pushToServer = async function () {
   const bookings = this.getBookings();
   const token = this.getToken();
@@ -497,13 +472,10 @@ DBSync.pushToServer = async function () {
   if (tasks.length > 0) await Promise.all(tasks);
 };
 
-// --- Get last reset date from localStorage ---
 DBSync.getLastResetDate = function () {
   return localStorage.getItem('ds_lastReset') || null;
 };
 
-// --- Set last reset date ---
 DBSync.setLastResetDate = function (dateStr) {
   localStorage.setItem('ds_lastReset', dateStr);
 };
-

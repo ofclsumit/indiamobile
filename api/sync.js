@@ -2,13 +2,13 @@ const fs = require('fs');
 
 const DATA_FILE = '/tmp/sync-data.json';
 
-// --- Firestore REST API ---
 const FIRESTORE_PROJECT = 'india-mobile-17134';
 const FIRESTORE_DOC_PATH = 'appData/sync';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
 const QUEUE_CURRENT_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/queue/current`;
 const COUNTER_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/counters/tokenCounter`;
-const DAILY_COUNTER_BASE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/dailyCounters`;
+const BOOKINGS_COLL_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings`;
+const HISTORY_COLL_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/booking_history`;
 
 function firestoreValueToJS(val) {
   if (val.stringValue !== undefined) return val.stringValue;
@@ -48,6 +48,14 @@ function jsToFirestoreValue(val) {
   return { stringValue: String(val) };
 }
 
+function jsToFirestoreDocument(val) {
+  const fields = {};
+  for (const [k, v] of Object.entries(val)) {
+    fields[k] = jsToFirestoreValue(v);
+  }
+  return { fields };
+}
+
 async function readFromFirestore() {
   try {
     const res = await fetch(FIRESTORE_URL);
@@ -82,7 +90,52 @@ async function writeToFirestore(data) {
   }
 }
 
-// --- /tmp file fallback ---
+async function archiveBookingsToFirestore(bookings, archivedBy) {
+  var timestamp = new Date().toISOString();
+  var archiveMeta = {
+    archivedAt: timestamp,
+    archivedBy: archivedBy || 'system',
+    archiveReason: 'System Reset'
+  };
+
+  // Archive each booking individually in booking_history collection
+  for (var i = 0; i < bookings.length; i++) {
+    var b = bookings[i];
+    if (!b.bookingId) continue;
+    try {
+      var docData = Object.assign({}, b, archiveMeta);
+      var body = jsToFirestoreDocument(docData);
+      await fetch(HISTORY_COLL_URL + '?documentId=' + b.bookingId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } catch(e) {
+      console.warn('[Archive] Failed to archive booking ' + (b.bookingId || 'unknown') + ':', e);
+    }
+  }
+
+  // Also archive as a batch array in appData/archive
+  try {
+    var archiveUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/appData/archive`;
+    var archiveBody = {
+      fields: {
+        bookings: jsToFirestoreValue(bookings),
+        archivedAt: { stringValue: timestamp },
+        archivedBy: { stringValue: archivedBy || 'system' },
+        archiveReason: { stringValue: 'System Reset' }
+      }
+    };
+    await fetch(archiveUrl, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(archiveBody)
+    });
+  } catch(e) {
+    console.warn('[Archive] Failed to write batch archive:', e);
+  }
+}
+
 function loadData() {
   try {
     if (fs.existsSync(DATA_FILE)) {
@@ -119,10 +172,8 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method === 'GET') {
-    // Try Firestore first, then /tmp fallback
     const firestoreData = await readFromFirestore();
     if (firestoreData) {
-      // Also save to /tmp as cache
       saveData(firestoreData);
       return res.json(firestoreData);
     }
@@ -130,7 +181,6 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'POST') {
-    // Read current data from Firestore (or /tmp)
     let syncData = await readFromFirestore() || loadData();
     const input = req.body || {};
     const action = input.action || '';
@@ -149,38 +199,38 @@ module.exports = async (req, res) => {
       syncData.cache = input.cache;
     } else if (action === 'setCustomers' && input.customers !== undefined) {
       syncData.customers = input.customers;
-    } else if (action === 'reset') {
-      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: [], lastIssuedToken: '--', _lastUpdated: Date.now() };
+    } else if (action === 'reset' || action === 'archiveAndReset') {
+      // Archive existing bookings
+      var archivedBy = input.adminEmail || 'system';
       try {
-        var counterFields = { lastTokenNumber: { integerValue: '0' }, updatedAt: { stringValue: new Date().toISOString() } };
-        var counterUrl = COUNTER_URL + '?updateMask.fieldPaths=lastTokenNumber&updateMask.fieldPaths=updatedAt';
-        await fetch(counterUrl, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: counterFields }) });
-      } catch(e) { console.error('Counter reset error:', e); }
-      // Reset today's daily counter
+        await archiveBookingsToFirestore(syncData.bookings || [], archivedBy);
+      } catch(e) {
+        console.error('[Reset] Archive failed:', e);
+      }
+      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: (input.keepCustomers ? syncData.customers : []), _lastUpdated: Date.now() };
+      // Reset counter to 0
       try {
-        var today = new Date();
-        var dateStr = today.getFullYear() + String(today.getMonth()+1).padStart(2,'0') + String(today.getDate()).padStart(2,'0');
-        var dcUrl = DAILY_COUNTER_BASE_URL + '/' + dateStr + '?updateMask.fieldPaths=lastCounter&updateMask.fieldPaths=date';
-        await fetch(dcUrl, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { lastCounter: { integerValue: '0' }, date: { stringValue: dateStr } } }) });
-      } catch(e) { console.error('Daily counter reset error:', e); }
-    } else if (action === 'resetExceptCustomers') {
-      const keptCustomers = syncData.customers || [];
-      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: keptCustomers, lastIssuedToken: '--', _lastUpdated: Date.now() };
-      try {
-        var counterFields = { lastTokenNumber: { integerValue: '0' }, updatedAt: { stringValue: new Date().toISOString() } };
-        var counterUrl = COUNTER_URL + '?updateMask.fieldPaths=lastTokenNumber&updateMask.fieldPaths=updatedAt';
-        await fetch(counterUrl, {
+        var counterFields = { lastToken: { integerValue: '0' } };
+        await fetch(COUNTER_URL + '?updateMask.fieldPaths=lastToken', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fields: counterFields })
         });
       } catch(e) { console.error('Counter reset error:', e); }
+    } else if (action === 'resetExceptCustomers') {
       try {
-        var today = new Date();
-        var dateStr = today.getFullYear() + String(today.getMonth()+1).padStart(2,'0') + String(today.getDate()).padStart(2,'0');
-        var dcUrl = DAILY_COUNTER_BASE_URL + '/' + dateStr + '?updateMask.fieldPaths=lastCounter&updateMask.fieldPaths=date';
-        await fetch(dcUrl, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { lastCounter: { integerValue: '0' }, date: { stringValue: dateStr } } }) });
-      } catch(e) { console.error('Daily counter reset error:', e); }
+        await archiveBookingsToFirestore(syncData.bookings || [], archivedBy || 'system');
+      } catch(e) {}
+      const keptCustomers = syncData.customers || [];
+      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: keptCustomers, _lastUpdated: Date.now() };
+      try {
+        var counterFields = { lastToken: { integerValue: '0' } };
+        await fetch(COUNTER_URL + '?updateMask.fieldPaths=lastToken', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: counterFields })
+        });
+      } catch(e) { console.error('Counter reset error:', e); }
     } else {
       ['bookings', 'token', 'dates', 'activity', 'settings', 'otps', 'cache', 'customers'].forEach(k => {
         if (input[k] !== undefined) syncData[k] = input[k];
@@ -189,11 +239,9 @@ module.exports = async (req, res) => {
 
     syncData._lastUpdated = Date.now();
 
-    // Write to both Firestore AND /tmp
     saveData(syncData);
     await writeToFirestore(syncData);
 
-    // Sync token to /queue/current for live-token page
     if (input.token !== undefined) {
       var tokenVal = input.token;
       try {
