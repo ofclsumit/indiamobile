@@ -577,6 +577,43 @@ function stopEligibilityListener() {
   }
 }
 
+function startEligibilityListener(booking) {
+  stopEligibilityListener();
+  if (!window.__bookingsRef || !booking || !booking.bookingId) return;
+  
+  _eligibilityUnsub = window.__bookingsRef.doc(booking.bookingId).onSnapshot(function(doc) {
+    if (doc.exists) {
+      var updated = doc.data();
+      updated.id = doc.id;
+      window._eligibilityBlockedBooking = updated;
+      
+      const status = (updated.status || '').toLowerCase();
+      const active = status === 'pending' || status === 'approved' || status === 'in_queue' || status === 'processing';
+      
+      if (!active) {
+        notify('Your existing booking is now ' + status + '. You can now proceed!', 'success');
+        
+        var primaryBtn = document.querySelector('#existingBookingActions .btn-primary');
+        var secondaryBtn = document.querySelector('#existingBookingActions .btn-secondary');
+        var tokenStatus = document.getElementById('existingBookingStatus');
+        if (tokenStatus) tokenStatus.textContent = updated.status.charAt(0).toUpperCase() + updated.status.slice(1);
+        
+        if (primaryBtn) {
+          primaryBtn.textContent = 'Continue Booking';
+          primaryBtn.onclick = function() { continueFromEligibility(); };
+        }
+        if (secondaryBtn) {
+          secondaryBtn.style.display = 'flex';
+          secondaryBtn.textContent = 'View Token';
+          secondaryBtn.onclick = function() { showEligibilityToken(); };
+        }
+      }
+    }
+  }, function(err) {
+    console.warn('[EligibilityListener] Error:', err);
+  });
+}
+
 function getDeviceId() {
   let id = localStorage.getItem('ds_device_id');
   if (!id) {
@@ -656,6 +693,42 @@ function continueToBooking() {
   });
 }
 
+async function checkExistingBooking(email, aadhaarLast4) {
+  try {
+    if (!window.__bookingsRef) return null;
+
+    // Check by email
+    const emailSnap = await window.__bookingsRef.where('email', '==', email).get();
+    let existing = null;
+    emailSnap.forEach(doc => {
+      const b = doc.data();
+      b.id = doc.id;
+      const status = (b.status || '').toLowerCase();
+      const activeStatus = status === 'pending' || status === 'approved' || status === 'in_queue' || status === 'processing';
+      if (activeStatus) {
+        existing = b;
+      }
+    });
+    if (existing) return existing;
+
+    // Check by Aadhaar last 4
+    const aadhaarSnap = await window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get();
+    aadhaarSnap.forEach(doc => {
+      const b = doc.data();
+      b.id = doc.id;
+      const status = (b.status || '').toLowerCase();
+      const activeStatus = status === 'pending' || status === 'approved' || status === 'in_queue' || status === 'processing';
+      if (activeStatus) {
+        existing = b;
+      }
+    });
+    return existing;
+  } catch (e) {
+    console.warn('[checkExistingBooking] Error:', e);
+    return null;
+  }
+}
+
 function verifyPortalOTP() {
   const inputs = document.querySelectorAll('.portal-otp');
   const otp = [...inputs].map(i => i.value).join('');
@@ -664,110 +737,26 @@ function verifyPortalOTP() {
   setBtnLoading(btn, true);
   showPageLoader();
   window.verifyOTP(otp).then(result => {
-    setBtnLoading(btn, false);
-    hidePageLoader();
     if (result.success) {
-      notify(__t('email_verified'), 'success');
-      startEligibilityCheck();
+      const email = portalData.email;
+      const aadhaarLast4 = portalData.aadhaarLast4;
+      checkExistingBooking(email, aadhaarLast4).then(existing => {
+        setBtnLoading(btn, false);
+        hidePageLoader();
+        if (existing) {
+          notify(__t('active_token_found') || 'You already have an active appointment.', 'error');
+          showEligibilityOverlay(existing);
+          return;
+        }
+        notify(__t('email_verified'), 'success');
+        showStep2();
+      });
     } else {
+      setBtnLoading(btn, false);
+      hidePageLoader();
       notify(result.message || __t('err_incorrect_otp'), 'error');
     }
   });
-}
-
-// ---------- REAL-TIME ELIGIBILITY CHECK ----------
-function startEligibilityCheck() {
-  stopEligibilityListener();
-  var email = portalData.email;
-  var aadhaarLast4 = portalData.aadhaarLast4;
-  console.log('[DBG] Eligibility: starting onSnapshot for email:', email);
-
-  if (window.__bookingsRef) {
-    var q = window.__bookingsRef.where('email', '==', email);
-    _eligibilityUnsub = q.onSnapshot(function(snap) {
-      var docCount = 0;
-      snap.forEach(function() { docCount++; });
-      console.log('[DBG] Eligibility snapshot:', docCount, 'docs for email:', email);
-      processEligibilitySnapshot(snap, email, aadhaarLast4);
-    }, function(err) {
-      console.warn('[DBG] Eligibility listener error:', err.message);
-      oneTimeEligibilityCheck(email, aadhaarLast4);
-    });
-  } else {
-    console.log('[DBG] Eligibility: no __bookingsRef, falling back');
-    oneTimeEligibilityCheck(email, aadhaarLast4);
-  }
-}
-
-function processEligibilitySnapshot(snap, email, aadhaarLast4) {
-  var activeBooking = null;
-  var completedOrCancelled = null;
-  var totalDocs = 0;
-  snap.forEach(function(doc) {
-    totalDocs++;
-    var b = doc.data();
-    b.id = doc.id;
-    console.log('[DBG]   Snapshot doc:', doc.id, 'email:', b.email, 'status:', b.status, 'token:', b.token);
-    if (b.email !== email) {
-      console.log('[DBG]     Skipped - email mismatch:', b.email, '!=', email);
-      return;
-    }
-    if (isActiveStatus(b.status)) {
-      activeBooking = b;
-      console.log('[DBG]     Active booking found:', b.bookingId);
-    } else if (b.status === 'completed' || b.status === 'cancelled') {
-      completedOrCancelled = b;
-      console.log('[DBG]     Completed/cancelled booking:', b.bookingId);
-    }
-  });
-  console.log('[DBG] Eligibility result: totalDocs=' + totalDocs + ' active=' + (activeBooking ? activeBooking.bookingId : 'none') + ' completed=' + (completedOrCancelled ? completedOrCancelled.bookingId : 'none'));
-
-  if (activeBooking) {
-    // Active booking exists — block date selection
-    showEligibilityOverlay(activeBooking);
-  } else if (window._eligibilityBlockedBooking) {
-    // Previously blocked — status changed to completed/cancelled, allow booking
-    notify(__t('existing_booking_resolved') || 'Your previous booking is now complete. You can book a new appointment.', 'success');
-    dismissEligibilityOverlay();
-    showStep2();
-  } else if (!window._eligibilityBlockedBooking) {
-    // No active booking found on first check — also check aadhaar-based matches
-    stopEligibilityListener();
-    oneTimeAadhaarCheck(email, aadhaarLast4);
-  }
-}
-
-function oneTimeEligibilityCheck(email, aadhaarLast4) {
-  fetch('/api/sync').then(function(r) { return r.json(); }).then(function(data) {
-    var active = (data.bookings || []).find(function(b) {
-      return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && isActiveStatus(b.status);
-    });
-    if (active) {
-      showEligibilityOverlay(active);
-    } else {
-      showStep2();
-    }
-  }).catch(function() {
-    try {
-      var localActive = DBSync.getBookings().find(function(b) {
-        return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && isActiveStatus(b.status);
-      });
-      if (localActive) { showEligibilityOverlay(localActive); } else { showStep2(); }
-    } catch(e) { showStep2(); }
-  });
-}
-
-function oneTimeAadhaarCheck(email, aadhaarLast4) {
-  fetch('/api/sync').then(function(r) { return r.json(); }).then(function(data) {
-    var active = (data.bookings || []).find(function(b) {
-      return b.aadhaarLast4 === aadhaarLast4 && b.email !== email && isActiveStatus(b.status);
-    });
-    if (active) {
-      showEligibilityOverlay(active);
-    } else {
-      showStep2();
-    }
-  }).catch(function() { showStep2(); });
 }
 
 function closeExistingBookingOverlay() {
@@ -827,6 +816,7 @@ function showEligibilityOverlay(booking) {
   window._existingBooking = booking;
   overlay.classList.add('show');
   overlay.classList.remove('resolved');
+  startEligibilityListener(booking);
 }
 
 function showEligibilityToken() {
@@ -1083,15 +1073,6 @@ async function portalConfirmBooking() {
       showEligibilityOverlay(result.booking);
       return;
     } else {
-      // Write booking to Firestore using Client SDK (gRPC/WebSocket - works)
-      if (window.__bookingsRef && result.booking && result.booking.bookingId) {
-        try {
-          await window.__bookingsRef.doc(result.booking.bookingId).set(result.booking);
-          console.log('[DBG] Portal booking doc created:', result.booking.bookingId);
-        } catch (e) {
-          console.warn('[DBG] Portal Firestore set failed:', e.message);
-        }
-      }
       sessionStorage.setItem('myBooking', JSON.stringify(result.booking));
       showConfirmation(result.booking);
     }

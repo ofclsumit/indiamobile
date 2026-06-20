@@ -1,97 +1,13 @@
-function isActive(b) {
-  return b.status === 'pending' || b.status === 'approved' || b.status === 'processing' || b.status === 'in_queue';
-}
+const FIRESTORE_PROJECT = 'india-mobile-17134';
+const BOOKINGS_COLL_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings`;
 
 function bookingId() {
   return 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100);
 }
 
-// --- Firestore REST API helpers ---
-const FIRESTORE_PROJECT = 'india-mobile-17134';
-const FIRESTORE_DOC_PATH = 'appData/sync';
-const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
-const BOOKINGS_COLL_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings`;
-
-async function getNextToken() {
-  const commitUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents:commit`;
-  const docName = `projects/${FIRESTORE_PROJECT}/databases/(default)/documents/counters/tokenCounter`;
-  const counterUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/counters/tokenCounter`;
-
-  for (let attempt = 0; attempt < 10; attempt++) {
-    try {
-      const body = JSON.stringify({
-        writes: [{
-          transform: {
-            document: docName,
-            fieldTransforms: [{
-              fieldPath: "lastToken",
-              increment: { integerValue: "1" }
-            }]
-          }
-        }]
-      });
-      const res = await fetch(commitUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body
-      });
-
-      if (!res.ok) {
-        await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
-        continue;
-      }
-
-      const data = await res.json();
-      const result = data.writeResults?.[0]?.transformResults?.[0]?.integerValue;
-      if (result !== undefined) {
-        return parseInt(result);
-      }
-    } catch (e) {}
-
-    if (attempt === 9) break;
-    await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
-  }
-
-  // Fallback: initialize counter doc if it doesn't exist, then try transform again
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      await fetch(counterUrl + '?updateMask.fieldPaths=lastToken', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fields: {
-            lastToken: { integerValue: '0' }
-          }
-        })
-      });
-      const res = await fetch(commitUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          writes: [{
-            transform: {
-              document: docName,
-              fieldTransforms: [{
-                fieldPath: "lastToken",
-                increment: { integerValue: "1" }
-              }]
-            }
-          }]
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const result = data.writeResults?.[0]?.transformResults?.[0]?.integerValue;
-        if (result !== undefined) return parseInt(result);
-      }
-    } catch(e) {}
-    await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
-  }
-
-  return 0;
-}
-
+// REST helper to convert Firestore values
 function firestoreValueToJS(val) {
+  if (!val) return null;
   if (val.stringValue !== undefined) return val.stringValue;
   if (val.integerValue !== undefined) return parseInt(val.integerValue);
   if (val.doubleValue !== undefined) return val.doubleValue;
@@ -129,84 +45,97 @@ function jsToFirestoreValue(val) {
   return { stringValue: String(val) };
 }
 
-async function readBookingsFromFirestore() {
+// Helper to check if a booking is active
+function isActive(b) {
+  const status = (b.status || '').toLowerCase();
+  return status === 'pending' || status === 'approved' || status === 'in_queue' || status === 'processing';
+}
+
+
+// Get admin DB instance if available
+let adminDb = null;
+function getAdminDB() {
+  if (adminDb) return adminDb;
   try {
-    const res = await fetch(FIRESTORE_URL);
-    if (!res.ok) return null;
-    const doc = await res.json();
-    if (!doc.fields || !doc.fields.bookings) return [];
-    return firestoreValueToJS(doc.fields.bookings) || [];
+    const admin = require('firebase-admin');
+    const { getFirestore } = require('firebase-admin/firestore');
+    if (!admin.apps.length) {
+      admin.initializeApp({ projectId: FIRESTORE_PROJECT });
+    }
+    adminDb = getFirestore();
+    return adminDb;
   } catch (e) {
-    console.error('Firestore read failed:', e);
     return null;
   }
 }
 
-async function writeBookingsToFirestore(bookings) {
+// REST fallback: get next token via commit transform
+async function getNextTokenREST() {
+  const commitUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents:commit`;
+  const docName = `projects/${FIRESTORE_PROJECT}/databases/(default)/documents/counters/tokenCounter`;
   try {
-    const url = FIRESTORE_URL + '?updateMask.fieldPaths=bookings&updateMask.fieldPaths=_lastUpdated';
-    const body = {
-      fields: {
-        bookings: jsToFirestoreValue(bookings),
-        _lastUpdated: jsToFirestoreValue(Date.now())
-      }
-    };
-    const res = await fetch(url, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+    const body = JSON.stringify({
+      writes: [{
+        transform: {
+          document: docName,
+          fieldTransforms: [{
+            fieldPath: "lastToken",
+            increment: { integerValue: "1" }
+          }]
+        }
+      }]
     });
-    if (!res.ok) {
-      const text = await res.text();
-      console.error('Firestore write failed:', res.status, text);
+    const res = await fetch(commitUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const result = data.writeResults?.[0]?.transformResults?.[0]?.integerValue;
+      if (result !== undefined) {
+        return parseInt(result);
+      }
     }
   } catch (e) {
-    console.error('Firestore write error:', e);
+    console.error('REST getNextToken error:', e);
+  }
+  return 0;
+}
+
+// REST fallback: read bookings
+async function readBookingsREST() {
+  try {
+    const res = await fetch(BOOKINGS_COLL_URL);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data.documents) return [];
+    return data.documents.map(doc => {
+      const fields = doc.fields || {};
+      const obj = {};
+      for (const [k, v] of Object.entries(fields)) {
+        obj[k] = firestoreValueToJS(v);
+      }
+      obj.id = doc.name.split('/').pop();
+      return obj;
+    });
+  } catch (e) {
+    console.error('REST readBookings error:', e);
+    return [];
   }
 }
 
-async function getSyncURL(req) {
-  const host = req.headers['x-forwarded-host'] || req.headers.host || '';
-  let proto = req.headers['x-forwarded-proto'] || 'https';
-  if (host.includes('localhost') || host.includes('127.0.0.1')) {
-    proto = 'http';
+// REST fallback: create booking doc
+async function createBookingREST(booking) {
+  const fields = {};
+  for (const [k, v] of Object.entries(booking)) {
+    fields[k] = jsToFirestoreValue(v);
   }
-  return `${proto}://${host}/api/sync`;
-}
-
-async function readBookingsFallback(req) {
-  const url = await getSyncURL(req);
-  const res = await fetch(url);
-  const data = await res.json();
-  return data.bookings || [];
-}
-
-async function writeBookingsFallback(req, bookings) {
-  const url = await getSyncURL(req);
-  await fetch(url, {
-    method: 'POST',
+  await fetch(BOOKINGS_COLL_URL + '/' + booking.bookingId, {
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'setBookings', bookings })
+    body: JSON.stringify({ fields })
   });
-}
-
-async function createBookingDocument(booking) {
-  var fields = {};
-  for (var k in booking) {
-    if (booking.hasOwnProperty(k)) {
-      fields[k] = jsToFirestoreValue(booking[k]);
-    }
-  }
-  await fetch(BOOKINGS_COLL_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields: fields })
-  });
-}
-
-function logServerToken(token, bookingId, name) {
-  var ts = new Date().toISOString();
-  console.log('[SERVER TOKEN] Previous: ' + (token - 1) + ' | Generated: ' + String(token).padStart(2, '0') + ' | Booking ID: ' + (bookingId || 'N/A') + ' | Customer: ' + (name || 'N/A') + ' | Time: ' + ts);
 }
 
 module.exports = async (req, res) => {
@@ -219,72 +148,86 @@ module.exports = async (req, res) => {
 
   const body = req.body || {};
   const email = (body.email || '').trim().toLowerCase();
-  const aadhaar = (body.aadhaar || '').replace(/\D/g, '');
-  const aadhaarLast4Only = (body.aadhaarLast4 || '').replace(/\D/g, '');
+  const aadhaarRaw = body.aadhaarLast4 || body.aadhaar || '';
+  const aadhaarLast4 = aadhaarRaw.replace(/\D/g, '').slice(-4);
   const deviceId = (body.deviceId || '').trim();
   const date = (body.date || '').trim();
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, message: 'Invalid email' });
-  const aadhaarValue = aadhaar.length === 12 ? aadhaar : (aadhaarLast4Only.length === 4 ? aadhaarLast4Only : '');
-  if (!aadhaarValue) return res.status(400).json({ success: false, message: 'Invalid Aadhaar' });
+  if (aadhaarLast4.length !== 4) return res.status(400).json({ success: false, message: 'Invalid Aadhaar' });
   if (!deviceId) return res.status(400).json({ success: false, message: 'Missing device ID' });
   if (!date) return res.status(400).json({ success: false, message: 'Missing date' });
 
-  let bookings = await readBookingsFromFirestore();
-  let useFirestore = bookings !== null;
-  if (!useFirestore) {
-    bookings = await readBookingsFallback(req);
+  const db = getAdminDB();
+  let activeBookings = [];
+
+  if (db) {
+    try {
+      // Query bookings directly from Firestore
+      const snap = await db.collection('bookings').get();
+      snap.forEach(doc => {
+        const b = doc.data();
+        if (isActive(b)) {
+          activeBookings.push(b);
+        }
+      });
+    } catch (e) {
+      console.warn('Admin SDK query failed, falling back to REST:', e.message);
+      const all = await readBookingsREST();
+      activeBookings = all.filter(isActive);
+    }
+  } else {
+    const all = await readBookingsREST();
+    activeBookings = all.filter(isActive);
   }
 
-  const active = bookings.filter(isActive);
+  // Check for duplicates
+  const dupEmail = activeBookings.find(b => b.email === email);
+  if (dupEmail) return res.json({ success: true, isDuplicate: true, booking: dupEmail });
 
-  const dupEmail = active.find(b => b.email === email);
-  if (dupEmail) return res.json({ success: true, isDuplicate: true, field: 'email', booking: dupEmail });
+  const dupAadhaar = activeBookings.find(b => b.aadhaarLast4 === aadhaarLast4);
+  if (dupAadhaar) return res.json({ success: true, isDuplicate: true, booking: dupAadhaar });
 
-  if (aadhaar.length === 12) {
-    const dupAadhaar = active.find(b => b.aadhaarFull === aadhaarValue);
-    if (dupAadhaar) return res.json({ success: true, isDuplicate: true, field: 'aadhaar', booking: dupAadhaar });
+  const dupDevice = activeBookings.find(b => b.deviceId === deviceId);
+  if (dupDevice) return res.json({ success: true, isDuplicate: true, booking: dupDevice });
+
+  // Generate Token
+  let token = 0;
+  if (db) {
+    try {
+      const admin = require('firebase-admin');
+      const counterRef = db.doc('counters/tokenCounter');
+      token = await db.runTransaction(async (transaction) => {
+        const doc = await transaction.get(counterRef);
+        const lastToken = doc.exists ? (doc.data().lastToken || 0) : 0;
+        const nextToken = lastToken + 1;
+        transaction.set(counterRef, {
+          lastToken: nextToken,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        return nextToken;
+      });
+    } catch (e) {
+      console.warn('Admin SDK transaction failed, falling back to REST transform:', e.message);
+      token = await getNextTokenREST();
+    }
+  } else {
+    token = await getNextTokenREST();
   }
 
-  const dupDevice = active.find(b => b.deviceId === deviceId);
-  if (dupDevice) return res.json({ success: true, isDuplicate: true, field: 'device', booking: dupDevice });
-
-  // Generate token from atomic counter
-  let token = await getNextToken();
   if (!token) {
-    // Fallback: max from existing bookings
-    let max = 0;
-    bookings.forEach(function(b) {
-      var t = parseInt(b.token, 10);
-      if (!isNaN(t) && t > max) max = t;
-    });
-    token = max + 1;
+    return res.status(500).json({ success: false, message: 'Failed to generate token' });
   }
 
-  // DUPLICATE PROTECTION: verify token is not already used
-  var tokenExists = bookings.some(function(b) {
-    return parseInt(b.token, 10) === token;
-  });
-  if (tokenExists) {
-    // Retry with next available
-    let max = 0;
-    bookings.forEach(function(b) {
-      var t = parseInt(b.token, 10);
-      if (!isNaN(t) && t > max) max = t;
-    });
-    token = max + 1;
-  }
-
-  var bId = bookingId();
-  logServerToken(token, bId, body.name || 'Portal User');
+  const bId = bookingId();
+  const tokenString = String(token).padStart(2, '0');
 
   const booking = {
-    token: token,
+    token: tokenString,
     bookingId: bId,
     email,
     name: body.name || 'Portal User',
-    aadhaarFull: aadhaarValue,
-    aadhaarLast4: aadhaarValue.slice(-4),
+    aadhaarLast4,
     service: body.service || 'Aadhaar Update',
     date,
     deviceId,
@@ -292,14 +235,22 @@ module.exports = async (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  bookings.push(booking);
-
-  createBookingDocument(booking).catch(function() {});
-
-  if (useFirestore) {
-    await writeBookingsToFirestore(bookings);
+  if (db) {
+    try {
+      await db.collection('bookings').doc(bId).set(booking);
+    } catch (e) {
+      await createBookingREST(booking);
+    }
+  } else {
+    await createBookingREST(booking);
   }
-  try { await writeBookingsFallback(req, bookings); } catch(e) {}
+
+  // Also update queue/current token status
+  if (db) {
+    try {
+      await db.collection('queue').doc('current').set({ currentToken: token }, { merge: true });
+    } catch (e) {}
+  }
 
   return res.json({ success: true, isDuplicate: false, booking });
 };

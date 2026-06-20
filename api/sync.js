@@ -105,8 +105,8 @@ async function archiveBookingsToFirestore(bookings, archivedBy) {
     try {
       var docData = Object.assign({}, b, archiveMeta);
       var body = jsToFirestoreDocument(docData);
-      await fetch(HISTORY_COLL_URL + '?documentId=' + b.bookingId, {
-        method: 'POST',
+      await fetch(HISTORY_COLL_URL + '/' + b.bookingId, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });

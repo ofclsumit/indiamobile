@@ -264,7 +264,7 @@ function initReviewDots() {
   const dotsContainer = document.getElementById('reviewDots');
   if (!track || !dotsContainer) return;
   const cards = track.querySelectorAll('.review-card');
-  dotsContainer.innerHTML = cards.map((_, i) => `<div class="review-dot${i === 0 ? ' active' : ''}" data-idx="${i}" onclick="scrollToReview(${i})"></div>`).join('');
+  dotsContainer.innerHTML = Array.from(cards).map((_, i) => `<div class="review-dot${i === 0 ? ' active' : ''}" data-idx="${i}" onclick="scrollToReview(${i})"></div>`).join('');
 }
 
 function scrollToReview(idx) {
@@ -598,30 +598,38 @@ function renderBookingStep(step) {
   }
 }
 
-// Fetch bookings from server API (always fresh, bypasses localStorage cache)
-async function checkActiveBookingByEmail(email) {
+async function checkExistingBooking(email, aadhaarLast4) {
   try {
-    if (window.__bookingsRef) {
-      console.log('[DBG] checkActiveBookingByEmail query email:', email);
-      var snap = await window.__bookingsRef.where('email', '==', email).get();
-      var active = null;
-      var count = 0;
-      snap.forEach(function(doc) {
-        count++;
-        var b = doc.data();
-        b.id = doc.id;
-        console.log('[DBG]   Doc:', doc.id, 'status:', b.status, 'token:', b.token);
-        if (b.status === 'pending' || b.status === 'approved' || b.status === 'processing' || b.status === 'in_queue') {
-          active = b;
-        }
-      });
-      console.log('[DBG] checkActiveBookingByEmail docs:', count, 'active:', active ? active.bookingId : null);
-      return active;
-    }
-    console.log('[DBG] checkActiveBookingByEmail: __bookingsRef not available');
-    return null;
-  } catch(e) {
-    console.warn('[checkActiveBookingByEmail] Error:', e);
+    if (!window.__bookingsRef) return null;
+
+    // Check by email
+    const emailSnap = await window.__bookingsRef.where('email', '==', email).get();
+    let existing = null;
+    emailSnap.forEach(doc => {
+      const b = doc.data();
+      b.id = doc.id;
+      const status = (b.status || '').toLowerCase();
+      const activeStatus = status === 'pending' || status === 'approved' || status === 'in_queue' || status === 'processing';
+      if (activeStatus) {
+        existing = b;
+      }
+    });
+    if (existing) return existing;
+
+    // Check by Aadhaar last 4
+    const aadhaarSnap = await window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get();
+    aadhaarSnap.forEach(doc => {
+      const b = doc.data();
+      b.id = doc.id;
+      const status = (b.status || '').toLowerCase();
+      const activeStatus = status === 'pending' || status === 'approved' || status === 'in_queue' || status === 'processing';
+      if (activeStatus) {
+        existing = b;
+      }
+    });
+    return existing;
+  } catch (e) {
+    console.warn('[checkExistingBooking] Error:', e);
     return null;
   }
 }
@@ -641,14 +649,6 @@ async function sendBookingOTP() {
 
   sessionBookingData.email = email;
   sessionBookingData.aadhaarLast4 = aadhaarLast4;
-
-  // Only block if active booking exists (pending/approved)
-  var existing = await checkActiveBookingByEmail(email);
-  if (existing) {
-    window._existingBookingResume = null;
-    showExistingBookingOverlay(existing);
-    return;
-  }
 
   doSendOTP(email);
 }
@@ -676,11 +676,20 @@ async function verifyBookingOTP() {
   const btn = document.querySelector('#bookingModalBody .btn-primary');
   setBtnLoading(btn, true);
   const result = await verifyOTP(otp);
-  setBtnLoading(btn, false);
   if (result.success) {
+    const email = sessionBookingData.email;
+    const aadhaarLast4 = sessionBookingData.aadhaarLast4;
+    const existing = await checkExistingBooking(email, aadhaarLast4);
+    setBtnLoading(btn, false);
+    if (existing) {
+      notify('You already have an active booking', 'error');
+      showExistingBookingOverlay(existing);
+      return;
+    }
     notify('Email verified successfully!', 'success');
     renderBookingStep(2);
   } else {
+    setBtnLoading(btn, false);
     notify(result.message || 'Incorrect OTP. Please try again.', 'error');
   }
 }
@@ -710,8 +719,6 @@ function handleAadhaarBackspace(input, prevId) {
   }
 }
 
-
-
 async function submitBookingStep2() {
   const service = document.getElementById('bookService') ? document.getElementById('bookService').value : sessionBookingData.service;
 
@@ -726,22 +733,6 @@ async function submitBookingStep2() {
   if (!aadhaarLast4 || aadhaarLast4.length !== 4) {
     notify('Aadhaar not verified. Please start over.', 'error');
     return;
-  }
-
-  // Check Firestore for existing Aadhaar-based bookings
-  if (window.__bookingsRef) {
-    var aadhaarSnap = await window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get();
-    var existingAadhaar = null;
-    aadhaarSnap.forEach(function(doc) {
-      var b = doc.data();
-      if ((b.status === 'pending' || b.status === 'approved' || b.status === 'processing' || b.status === 'in_queue') && b.email !== sessionBookingData.email) {
-        existingAadhaar = b;
-      }
-    });
-    if (existingAadhaar) {
-      notify('This Aadhaar number is already associated with a booking.', 'error');
-      return;
-    }
   }
 
   if (!sessionBookingData.name) {
@@ -775,17 +766,6 @@ async function submitBookingStep2() {
       return;
     }
     booking = result.booking;
-
-    // Write booking to Firestore using Client SDK (gRPC/WebSocket - works)
-    if (window.__bookingsRef && booking.bookingId) {
-      try {
-        await window.__bookingsRef.doc(booking.bookingId).set(booking);
-        console.log('[DBG] Booking doc created in Firestore:', booking.bookingId);
-      } catch (e) {
-        console.warn('[DBG] Firestore set failed:', e.message);
-        // Server already wrote to sync fallback — booking is safe
-      }
-    }
   } catch(e) {
     notify('Network error. Please try again.', 'error');
     return;

@@ -1,18 +1,21 @@
 const nodemailer = require('nodemailer');
 const config = require('./email-config');
 
+const PROJECT_ID = 'india-mobile-17134';
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: config.user, pass: config.pass }
 });
 
-function getSyncURL(req) {
-  const host = req.headers['x-forwarded-host'] || req.headers.host || '';
-  let proto = req.headers['x-forwarded-proto'] || 'https';
-  if (host.includes('localhost') || host.includes('127.0.0.1')) {
-    proto = 'http';
+function jsToFirestoreValue(val) {
+  if (val === null || val === undefined) return { nullValue: null };
+  if (typeof val === 'string') return { stringValue: val };
+  if (typeof val === 'boolean') return { booleanValue: val };
+  if (typeof val === 'number') {
+    if (Number.isInteger(val)) return { integerValue: String(val) };
+    return { doubleValue: val };
   }
-  return `${proto}://${host}/api/sync`;
+  return { stringValue: String(val) };
 }
 
 module.exports = async (req, res) => {
@@ -32,14 +35,26 @@ module.exports = async (req, res) => {
   const expiresAt = Date.now() + 300000; // 5 minutes
 
   try {
-    const syncUrl = getSyncURL(req);
-    await fetch(syncUrl, {
-      method: 'POST',
+    // Write directly to Firestore `/otp` collection
+    const documentName = encodeURIComponent(email.trim().toLowerCase());
+    const otpUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/otp/${documentName}?updateMask.fieldPaths=code&updateMask.fieldPaths=expiresAt`;
+    
+    const fields = {
+      code: jsToFirestoreValue(code),
+      expiresAt: jsToFirestoreValue(expiresAt)
+    };
+
+    const firestoreRes = await fetch(otpUrl, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        otps: { [email]: { code, expiresAt } }
-      })
+      body: JSON.stringify({ fields })
     });
+
+    if (!firestoreRes.ok) {
+      const errText = await firestoreRes.text();
+      console.error('Firestore OTP write failed:', errText);
+      return res.status(500).json({ success: false, message: 'Failed to store OTP in database' });
+    }
 
     const html = `
 <!DOCTYPE html>
