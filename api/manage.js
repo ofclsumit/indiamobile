@@ -1,25 +1,46 @@
-const admin = require('firebase-admin');
+const FIRESTORE_PROJECT = 'india-mobile-17134';
 
-let db = null;
-async function getDb() {
-  if (db) return db;
-  try {
-    if (!admin.apps.length) {
-      await admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
-        projectId: 'india-mobile-17134'
-      });
-    }
-    db = admin.firestore();
-    console.log('[ManageAPI] Firebase Admin initialized with ADC');
-  } catch(e) {
-    console.warn('[ManageAPI] ADC failed, trying without:', e.message);
-    if (!admin.apps.length) {
-      admin.initializeApp({ projectId: 'india-mobile-17134' });
-    }
-    db = admin.firestore();
+function jsToFirestoreValue(val) {
+  if (val === null || val === undefined) return { nullValue: null };
+  if (typeof val === 'string') return { stringValue: val };
+  if (typeof val === 'boolean') return { booleanValue: val };
+  if (typeof val === 'number') {
+    if (Number.isInteger(val)) return { integerValue: String(val) };
+    return { doubleValue: val };
   }
-  return db;
+  if (Array.isArray(val)) {
+    return { arrayValue: { values: val.map(jsToFirestoreValue) } };
+  }
+  if (typeof val === 'object') {
+    const fields = {};
+    for (const [k, v] of Object.entries(val)) {
+      fields[k] = jsToFirestoreValue(v);
+    }
+    return { mapValue: { fields } };
+  }
+  return { stringValue: String(val) };
+}
+
+function firestoreValueToJS(val) {
+  if (val.stringValue !== undefined) return val.stringValue;
+  if (val.integerValue !== undefined) return parseInt(val.integerValue);
+  if (val.doubleValue !== undefined) return val.doubleValue;
+  if (val.booleanValue !== undefined) return val.booleanValue;
+  if (val.nullValue !== undefined) return null;
+  if (val.arrayValue) return (val.arrayValue.values || []).map(firestoreValueToJS);
+  if (val.mapValue) {
+    const obj = {};
+    for (const [k, v] of Object.entries(val.mapValue.fields || {})) {
+      obj[k] = firestoreValueToJS(v);
+    }
+    return obj;
+  }
+  return null;
+}
+
+function log() {
+  var args = ['[ManageAPI]'].concat(Array.prototype.slice.call(arguments));
+  console.log.apply(console, args);
 }
 
 module.exports = async (req, res) => {
@@ -32,28 +53,37 @@ module.exports = async (req, res) => {
 
   const body = req.body || {};
   const action = body.action || '';
+  log('Action:', action);
 
+  // Try Firebase Admin SDK first
   try {
-    const database = await getDb();
+    const admin = require('firebase-admin');
+    if (admin.apps && admin.apps.length > 0) {
+      log('Using existing Firebase Admin app');
+    } else {
+      log('Initializing Firebase Admin...');
+      admin.initializeApp({ projectId: FIRESTORE_PROJECT });
+    }
+    const db = admin.firestore();
 
     if (action === 'forceCancel') {
       const bookingId = body.bookingId || 'Zq539q2yM2kFULgxSvx3';
       const results = { bookingDoc: null, syncDoc: null };
 
-      // Cancel the individual booking document
       try {
-        await database.collection('bookings').doc(bookingId).update({
+        await db.collection('bookings').doc(bookingId).update({
           status: 'cancelled',
           updatedAt: new Date().toISOString()
         });
         results.bookingDoc = { ok: true };
+        log('Cancelled booking doc:', bookingId);
       } catch(e) {
         results.bookingDoc = { ok: false, error: e.message };
+        log('Failed to cancel booking doc:', e.message);
       }
 
-      // Also remove from appData/sync if present
       try {
-        const syncRef = database.doc('appData/sync');
+        const syncRef = db.doc('appData/sync');
         const syncSnap = await syncRef.get();
         if (syncSnap.exists) {
           const syncData = syncSnap.data() || {};
@@ -61,11 +91,13 @@ module.exports = async (req, res) => {
           const filtered = bookings.filter(function(b) { return b.bookingId !== bookingId; });
           await syncRef.update({ bookings: filtered, _lastUpdated: Date.now() });
           results.syncDoc = { ok: true, removed: bookings.length - filtered.length };
+          log('Updated sync doc, removed', bookings.length - filtered.length, 'entries');
         } else {
           results.syncDoc = { ok: true, note: 'No sync doc' };
         }
       } catch(e) {
         results.syncDoc = { ok: false, error: e.message };
+        log('Failed to update sync doc:', e.message);
       }
 
       return res.json({ success: true, action, bookingId, results });
@@ -75,10 +107,7 @@ module.exports = async (req, res) => {
       const email = (body.email || '').trim().toLowerCase();
       if (!email) return res.json({ success: false, message: 'Missing email' });
 
-      const snap = await database.collection('bookings')
-        .where('email', '==', email)
-        .get();
-
+      const snap = await db.collection('bookings').where('email', '==', email).get();
       const docs = [];
       snap.forEach(function(doc) {
         docs.push({
@@ -90,12 +119,50 @@ module.exports = async (req, res) => {
           docId: doc.id
         });
       });
-
+      log('Found bookings:', docs.length);
       return res.json({ success: true, bookings: docs });
     }
 
+    if (action === 'deleteAll') {
+      const email = (body.email || '').trim().toLowerCase();
+      const snap = await db.collection('bookings').where('email', '==', email).get();
+      var count = 0;
+      var batch = db.batch();
+      snap.forEach(function(doc) {
+        batch.delete(doc.ref);
+        count++;
+      });
+      if (count > 0) await batch.commit();
+      log('Deleted', count, 'bookings for', email);
+      return res.json({ success: true, deleted: count });
+    }
+
     return res.status(400).json({ success: false, message: 'Unknown action' });
+
   } catch(e) {
-    return res.json({ success: false, message: e.message });
+    log('Firebase Admin failed:', e.message);
+    // Fallback: try REST API direct
+    try {
+      if (action === 'forceCancel') {
+        const bookingId = body.bookingId || 'Zq539q2yM2kFULgxSvx3';
+        const results = { bookingDoc: null, syncDoc: null };
+        const docUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT + '/databases/(default)/documents/bookings/' + bookingId;
+        const cancelData = {
+          fields: { status: { stringValue: 'cancelled' }, updatedAt: { stringValue: new Date().toISOString() } }
+        };
+        try {
+          const patchRes = await fetch(docUrl + '?updateMask.fieldPaths=status&updateMask.fieldPaths=updatedAt', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cancelData)
+          });
+          results.bookingDoc = { ok: patchRes.ok, status: patchRes.status };
+        } catch(e2) {
+          results.bookingDoc = { ok: false, error: e2.message };
+        }
+        return res.json({ success: true, action, bookingId, results, note: 'REST fallback used' });
+      }
+      return res.status(400).json({ success: false, message: 'Admin SDK + REST fallback both failed: ' + e.message });
+    } catch(e2) {
+      return res.status(500).json({ success: false, message: e2.message });
+    }
   }
 };
