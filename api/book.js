@@ -188,9 +188,6 @@ module.exports = async (req, res) => {
   const dupAadhaar = activeBookings.find(b => b.aadhaarLast4 === aadhaarLast4);
   if (dupAadhaar) return res.json({ success: true, isDuplicate: true, booking: dupAadhaar });
 
-  const dupDevice = activeBookings.find(b => b.deviceId === deviceId);
-  if (dupDevice) return res.json({ success: true, isDuplicate: true, booking: dupDevice });
-
   // Generate Token
   let token = 0;
   if (db) {
