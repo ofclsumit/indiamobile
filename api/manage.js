@@ -58,13 +58,14 @@ module.exports = async (req, res) => {
   // Try Firebase Admin SDK first
   try {
     const admin = require('firebase-admin');
+    const { getFirestore } = require('firebase-admin/firestore');
     if (admin.apps && admin.apps.length > 0) {
       log('Using existing Firebase Admin app');
     } else {
       log('Initializing Firebase Admin...');
       admin.initializeApp({ projectId: FIRESTORE_PROJECT });
     }
-    const db = admin.firestore();
+    const db = getFirestore();
 
     if (action === 'forceCancel') {
       const bookingId = body.bookingId || 'Zq539q2yM2kFULgxSvx3';
@@ -141,28 +142,6 @@ module.exports = async (req, res) => {
 
   } catch(e) {
     log('Firebase Admin failed:', e.message);
-    // Fallback: try REST API direct
-    try {
-      if (action === 'forceCancel') {
-        const bookingId = body.bookingId || 'Zq539q2yM2kFULgxSvx3';
-        const results = { bookingDoc: null, syncDoc: null };
-        const docUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT + '/databases/(default)/documents/bookings/' + bookingId;
-        const cancelData = {
-          fields: { status: { stringValue: 'cancelled' }, updatedAt: { stringValue: new Date().toISOString() } }
-        };
-        try {
-          const patchRes = await fetch(docUrl + '?updateMask.fieldPaths=status&updateMask.fieldPaths=updatedAt', {
-            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cancelData)
-          });
-          results.bookingDoc = { ok: patchRes.ok, status: patchRes.status };
-        } catch(e2) {
-          results.bookingDoc = { ok: false, error: e2.message };
-        }
-        return res.json({ success: true, action, bookingId, results, note: 'REST fallback used' });
-      }
-      return res.status(400).json({ success: false, message: 'Admin SDK + REST fallback both failed: ' + e.message });
-    } catch(e2) {
-      return res.status(500).json({ success: false, message: e2.message });
-    }
+    return res.status(500).json({ success: false, message: e.message });
   }
 };
