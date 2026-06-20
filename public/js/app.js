@@ -653,7 +653,9 @@ async function fetchSyncBookings() {
 async function checkActiveBookingByEmail(email) {
   try {
     var bookings = await fetchSyncBookings();
-    return bookings.find(function(b) { return b.email === email; }) || null;
+    return bookings.find(function(b) {
+      return b.email === email && (b.status === 'pending' || b.status === 'approved');
+    }) || null;
   } catch(e) {
     return null;
   }
@@ -675,13 +677,10 @@ async function sendBookingOTP() {
   sessionBookingData.email = email;
   sessionBookingData.aadhaarLast4 = aadhaarLast4;
 
-  // Check for existing booking (any status) — show popup if found
+  // Only block if active booking exists (pending/approved)
   var existing = await checkActiveBookingByEmail(email);
   if (existing) {
-    window._existingBookingResume = function() {
-      document.getElementById('existingBookingOverlay').classList.remove('show');
-      doSendOTP(email);
-    };
+    window._existingBookingResume = null;
     showExistingBookingOverlay(existing);
     return;
   }
