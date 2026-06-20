@@ -223,7 +223,7 @@ module.exports = async (req, res) => {
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, message: 'Invalid email' });
   const aadhaarValue = aadhaar.length === 12 ? aadhaar : (aadhaarLast4Only.length === 4 ? aadhaarLast4Only : '');
-  if (!fullAadhaar) return res.status(400).json({ success: false, message: 'Invalid Aadhaar' });
+  if (!aadhaarValue) return res.status(400).json({ success: false, message: 'Invalid Aadhaar' });
   if (!deviceId) return res.status(400).json({ success: false, message: 'Missing device ID' });
   if (!date) return res.status(400).json({ success: false, message: 'Missing date' });
 
