@@ -47,11 +47,11 @@ const DB = {
   },
 
   getActiveByEmail(email) {
-    return DBSync.getBookings().find(b => b.email === email && (b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled'));
+    return DBSync.getBookings().find(b => b.email === email && (b.status === 'pending' || b.status === 'approved'));
   },
 
   getActiveByAadhaar(aadhaar) {
-    return DBSync.getBookings().find(b => b.aadhaarLast4 === aadhaar && (b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled'));
+    return DBSync.getBookings().find(b => b.aadhaarLast4 === aadhaar && (b.status === 'pending' || b.status === 'approved'));
   },
 
   getByAadhaar(aadhaar) {

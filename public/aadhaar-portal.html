@@ -675,7 +675,7 @@ function checkExistingBooking() {
     try {
       var local = DBSync.getBookings();
       found = local.find(function(b) {
-        return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && (b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled');
+        return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && (b.status === 'pending' || b.status === 'approved');
       });
     } catch(e) {}
     if (found) { proceed(); return true; }
