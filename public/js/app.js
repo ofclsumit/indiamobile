@@ -636,6 +636,17 @@ function renderBookingStep(step) {
   }
 }
 
+// Fetch bookings from server API (always fresh, bypasses localStorage cache)
+async function fetchSyncBookings() {
+  try {
+    const res = await fetch('/api/sync');
+    const data = await res.json();
+    return data.bookings || [];
+  } catch(e) {
+    return DBSync.getBookings();
+  }
+}
+
 async function sendBookingOTP() {
   const email = document.getElementById('bookEmail').value.trim();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -649,8 +660,7 @@ async function sendBookingOTP() {
     return;
   }
 
-  await DBSync.forceFetch();
-  const existing = DB.getActiveByEmail(email);
+  const existing = await checkActiveBookingByEmail(email);
   if (existing) {
     notify('This email already has a booking (Token #' + existing.token + '). Only one booking per email is allowed.', 'error');
     return;
@@ -733,9 +743,9 @@ async function submitBookingStep2() {
     return;
   }
 
-  await DBSync.forceFetch();
-  const existingAadhaar = DB.getActiveByAadhaar(aadhaarLast4);
-  if (existingAadhaar && existingAadhaar.email !== sessionBookingData.email) {
+  var syncBookings = await fetchSyncBookings();
+  var existingAadhaar = syncBookings.find(function(b) { return b.aadhaarLast4 === aadhaarLast4 && (b.status === 'pending' || b.status === 'approved') && b.email !== sessionBookingData.email; });
+  if (existingAadhaar) {
     notify('This Aadhaar number is already associated with a booking.', 'error');
     return;
   }

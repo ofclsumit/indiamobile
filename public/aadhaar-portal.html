@@ -671,76 +671,22 @@ function checkExistingBooking() {
     }
   }
 
-  function checkLocal() {
+  // Fetch fresh data directly from sync API (reads Firestore appData/sync server-side)
+  fetch('/api/sync').then(function(r) { return r.json(); }).then(function(data) {
+    var bookings = data.bookings || [];
+    found = bookings.find(function(b) {
+      return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && (b.status === 'pending' || b.status === 'approved');
+    });
+    proceed();
+  }).catch(function() {
+    // Fallback: check local DBSync cache
     try {
       var local = DBSync.getBookings();
       found = local.find(function(b) {
         return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && (b.status === 'pending' || b.status === 'approved');
       });
     } catch(e) {}
-    if (found) { proceed(); return true; }
-    return false;
-  }
-
-  // Fetch fresh data from server first (appData/sync is authoritative)
-  DBSync.forceFetch().then(function() {
-    if (checkLocal()) return;
-    // Fallback: query Firestore /bookings collection if DBSync had nothing
-    if (window.__bookingsRef) {
-      var allBookings = [];
-      function tryNext() {
-        if (allBookings.length > 0) {
-          found = allBookings[0];
-        }
-        proceed();
-      }
-      window.__bookingsRef.where('email', '==', email).get().then(function(snap) {
-        snap.forEach(function(doc) {
-          var d = { id: doc.id, ...doc.data() };
-          if (d.status === 'pending' || d.status === 'approved') allBookings.push(d);
-        });
-        window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get().then(function(snap2) {
-          snap2.forEach(function(doc) {
-            var d = { id: doc.id, ...doc.data() };
-            if ((d.status === 'pending' || d.status === 'approved') && !allBookings.find(function(b) { return b.id === d.id; })) {
-              allBookings.push(d);
-            }
-          });
-          tryNext();
-        }).catch(function() { tryNext(); });
-      }).catch(function() { tryNext(); });
-    } else {
-      proceed();
-    }
-  }).catch(function() {
-    // DBSync fetch failed, fallback to local cache
-    checkLocal();
-    if (!found) {
-      if (window.__bookingsRef) {
-        var allBookings = [];
-        function tryNext() {
-          if (allBookings.length > 0) found = allBookings[0];
-          proceed();
-        }
-        window.__bookingsRef.where('email', '==', email).get().then(function(snap) {
-          snap.forEach(function(doc) {
-            var d = { id: doc.id, ...doc.data() };
-            if (d.status === 'pending' || d.status === 'approved') allBookings.push(d);
-          });
-          window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get().then(function(snap2) {
-            snap2.forEach(function(doc) {
-              var d = { id: doc.id, ...doc.data() };
-              if ((d.status === 'pending' || d.status === 'approved') && !allBookings.find(function(b) { return b.id === d.id; })) {
-                allBookings.push(d);
-              }
-            });
-            tryNext();
-          }).catch(function() { tryNext(); });
-        }).catch(function() { tryNext(); });
-      } else {
-        proceed();
-      }
-    }
+    proceed();
   });
 }
 
