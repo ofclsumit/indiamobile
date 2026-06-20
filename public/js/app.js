@@ -876,9 +876,9 @@ function renderCheckTokenStep(step) {
       const d = new Date(b.date + 'T00:00:00');
       const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const displayDate = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-      const myToken = parseInt(b.token);
+      const myToken = getTokenCounter(b.token);
       const ahead = b.status === 'approved' ? DB.bookings.filter(x => {
-        const t = parseInt(x.token);
+        const t = getTokenCounter(x.token);
         return t > ct && t < myToken && (x.status === 'approved' || x.status === 'pending');
       }).length : null;
 
@@ -1147,14 +1147,43 @@ function startAdminListeners() {
   }, function() {});
   adminUnsubscribers.push(unsubDates);
 
-  // Listen for Last Issued Token from appData/sync (reliable read path)
+  // Listen for Last Issued Token + daily counter info from appData/sync
   if (window.__db) {
     var unsubCounter = window.__db.doc('appData/sync').onSnapshot(function(snap) {
-      var val = snap.exists ? (snap.data().lastIssuedToken || '--') : '--';
+      var data = snap.exists ? snap.data() : {};
+      var lastIssued = data.lastIssuedToken || '--';
+      var counterVal = data._lastCounterValue || 0;
+      var counterDate = data._lastCounterDate || '';
+      var today = getTodayDateStr();
       var el = document.getElementById('kpiLastIssuedToken');
-      if (el) el.textContent = val;
+      if (el) el.textContent = lastIssued;
+      var cEl = document.getElementById('kpiCurrentCounterValue');
+      if (cEl) cEl.textContent = counterDate === today ? counterVal : '0';
+      var nEl = document.getElementById('kpiNextTokenPreview');
+      if (nEl) {
+        if (counterDate === today && counterVal > 0) {
+          nEl.textContent = formatToken(today, counterVal + 1);
+        } else {
+          nEl.textContent = formatToken(today, 1);
+        }
+      }
     }, function() {});
     adminUnsubscribers.push(unsubCounter);
+
+    // Listen to dailyCounters directly for latest value
+    var unsubDailyCounter = window.__db.collection('dailyCounters').doc(getTodayDateStr()).onSnapshot(function(snap) {
+      if (snap.exists) {
+        var d = snap.data();
+        var cEl = document.getElementById('kpiCurrentCounterValue');
+        if (cEl) cEl.textContent = d.lastCounter || 0;
+        var nEl = document.getElementById('kpiNextTokenPreview');
+        if (nEl) {
+          var cnt = d.lastCounter || 0;
+          nEl.textContent = formatToken(getTodayDateStr(), cnt + 1);
+        }
+      }
+    }, function() {});
+    adminUnsubscribers.push(unsubDailyCounter);
   }
 }
 
@@ -1214,7 +1243,7 @@ function updateKpiCards() {
   setKpiVal('kpiCompleted', completed);
   setKpiVal('kpiCancelled', cancelled);
   setKpiVal('kpiCurrentToken', ct);
-  // kpiLastIssuedToken is updated by the counter listener in startAdminListeners
+  // kpiLastIssuedToken, kpiCurrentCounterValue, kpiNextTokenPreview updated by listener
 }
 
 function setKpiVal(id, val) {

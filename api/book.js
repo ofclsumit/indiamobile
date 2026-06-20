@@ -6,31 +6,44 @@ function bookingId() {
   return 'DS' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100);
 }
 
+function getTodayDateStr() {
+  const d = new Date();
+  return d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+}
+
+function formatToken(dateStr, counter) {
+  return dateStr + '-' + String(counter).padStart(3, '0');
+}
+
 // --- Firestore REST API helpers ---
 const FIRESTORE_PROJECT = 'india-mobile-17134';
 const FIRESTORE_DOC_PATH = 'appData/sync';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
 const BOOKINGS_COLL_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings`;
-async function getNextTokenFromCounter(maxFromBookings) {
+async function getNextDailyToken() {
+  const today = getTodayDateStr();
+  const dailyCounterDocPath = `dailyCounters/${today}`;
   const commitUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents:commit`;
-  const docName = `projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
+  const docName = `projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${dailyCounterDocPath}`;
+  const counterUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${dailyCounterDocPath}`;
 
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
+      const body = JSON.stringify({
+        writes: [{
+          transform: {
+            document: docName,
+            fieldTransforms: [{
+              fieldPath: "lastCounter",
+              increment: { integerValue: "1" }
+            }]
+          }
+        }]
+      });
       const res = await fetch(commitUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          writes: [{
-            transform: {
-              document: docName,
-              fieldTransforms: [{
-                fieldPath: "lastIssuedToken",
-                increment: { integerValue: "1" }
-              }]
-            }
-          }]
-        })
+        body
       });
 
       if (!res.ok) {
@@ -41,7 +54,7 @@ async function getNextTokenFromCounter(maxFromBookings) {
       const data = await res.json();
       const result = data.writeResults?.[0]?.transformResults?.[0]?.integerValue;
       if (result !== undefined) {
-        return String(parseInt(result));
+        return formatToken(today, parseInt(result));
       }
     } catch (e) {
       // Fall through to retry
@@ -51,44 +64,44 @@ async function getNextTokenFromCounter(maxFromBookings) {
     await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
   }
 
-  // Fallback: try a direct PATCH to initialize the counter, then one more transform attempt
-  if (maxFromBookings > 0) {
+  // Fallback: initialize counter doc if it doesn't exist, then try transform again
+  for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      const initVal = String(maxFromBookings);
-      await fetch(FIRESTORE_URL + '?updateMask.fieldPaths=lastIssuedToken', {
+      await fetch(counterUrl + '?updateMask.fieldPaths=lastCounter&updateMask.fieldPaths=date', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fields: { lastIssuedToken: { integerValue: initVal } }
+          fields: {
+            lastCounter: { integerValue: '0' },
+            date: { stringValue: today }
+          }
         })
       });
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const res = await fetch(commitUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            writes: [{
-              transform: {
-                document: docName,
-                fieldTransforms: [{
-                  fieldPath: "lastIssuedToken",
-                  increment: { integerValue: "1" }
-                }]
-              }
-            }]
-          })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const result = data.writeResults?.[0]?.transformResults?.[0]?.integerValue;
-          if (result !== undefined) return String(parseInt(result));
-        }
-        await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
+      const res = await fetch(commitUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          writes: [{
+            transform: {
+              document: docName,
+              fieldTransforms: [{
+                fieldPath: "lastCounter",
+                increment: { integerValue: "1" }
+              }]
+            }
+          }]
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const result = data.writeResults?.[0]?.transformResults?.[0]?.integerValue;
+        if (result !== undefined) return formatToken(today, parseInt(result));
       }
     } catch(e) {}
+    await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
   }
 
-  return '0';
+  return formatToken(today, 0);
 }
 
 function firestoreValueToJS(val) {
@@ -247,10 +260,19 @@ module.exports = async (req, res) => {
   const dupDevice = active.find(b => b.deviceId === deviceId);
   if (dupDevice) return res.json({ success: true, isDuplicate: true, field: 'device', booking: dupDevice });
 
-  let token = await getNextTokenFromCounter(bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0));
-  if (!token || token === '0') {
-    const max = bookings.reduce((m, b) => Math.max(m, parseInt(b.token) || 0), 0);
-    token = String(max + 1);
+  let token = await getNextDailyToken();
+  if (!token || token.endsWith('-000')) {
+    const today = getTodayDateStr();
+    const todayTokens = bookings.filter(b => b.token && typeof b.token === 'string' && b.token.startsWith(today));
+    let max = 0;
+    todayTokens.forEach(b => {
+      const parts = b.token.split('-');
+      if (parts.length === 2) {
+        const num = parseInt(parts[1], 10);
+        if (num > max) max = num;
+      }
+    });
+    token = formatToken(today, max + 1);
   }
   const booking = {
     token,

@@ -8,6 +8,7 @@ const FIRESTORE_DOC_PATH = 'appData/sync';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/${FIRESTORE_DOC_PATH}`;
 const QUEUE_CURRENT_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/queue/current`;
 const COUNTER_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/counters/tokenCounter`;
+const DAILY_COUNTER_BASE_URL = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/dailyCounters`;
 
 function firestoreValueToJS(val) {
   if (val.stringValue !== undefined) return val.stringValue;
@@ -149,16 +150,22 @@ module.exports = async (req, res) => {
     } else if (action === 'setCustomers' && input.customers !== undefined) {
       syncData.customers = input.customers;
     } else if (action === 'reset') {
-      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: [], lastIssuedToken: 0, _lastUpdated: Date.now() };
+      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: [], lastIssuedToken: '--', _lastUpdated: Date.now() };
       try {
         var counterFields = { lastTokenNumber: { integerValue: '0' }, updatedAt: { stringValue: new Date().toISOString() } };
         var counterUrl = COUNTER_URL + '?updateMask.fieldPaths=lastTokenNumber&updateMask.fieldPaths=updatedAt';
         await fetch(counterUrl, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: counterFields }) });
       } catch(e) { console.error('Counter reset error:', e); }
+      // Reset today's daily counter
+      try {
+        var today = new Date();
+        var dateStr = today.getFullYear() + String(today.getMonth()+1).padStart(2,'0') + String(today.getDate()).padStart(2,'0');
+        var dcUrl = DAILY_COUNTER_BASE_URL + '/' + dateStr + '?updateMask.fieldPaths=lastCounter&updateMask.fieldPaths=date';
+        await fetch(dcUrl, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { lastCounter: { integerValue: '0' }, date: { stringValue: dateStr } } }) });
+      } catch(e) { console.error('Daily counter reset error:', e); }
     } else if (action === 'resetExceptCustomers') {
       const keptCustomers = syncData.customers || [];
-      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: keptCustomers, lastIssuedToken: 0, _lastUpdated: Date.now() };
-      // Reset token counter so next booking starts from 1
+      syncData = { bookings: [], token: 0, dates: [], activity: [], settings: [], otps: {}, cache: [], customers: keptCustomers, lastIssuedToken: '--', _lastUpdated: Date.now() };
       try {
         var counterFields = { lastTokenNumber: { integerValue: '0' }, updatedAt: { stringValue: new Date().toISOString() } };
         var counterUrl = COUNTER_URL + '?updateMask.fieldPaths=lastTokenNumber&updateMask.fieldPaths=updatedAt';
@@ -168,6 +175,12 @@ module.exports = async (req, res) => {
           body: JSON.stringify({ fields: counterFields })
         });
       } catch(e) { console.error('Counter reset error:', e); }
+      try {
+        var today = new Date();
+        var dateStr = today.getFullYear() + String(today.getMonth()+1).padStart(2,'0') + String(today.getDate()).padStart(2,'0');
+        var dcUrl = DAILY_COUNTER_BASE_URL + '/' + dateStr + '?updateMask.fieldPaths=lastCounter&updateMask.fieldPaths=date';
+        await fetch(dcUrl, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { lastCounter: { integerValue: '0' }, date: { stringValue: dateStr } } }) });
+      } catch(e) { console.error('Daily counter reset error:', e); }
     } else {
       ['bookings', 'token', 'dates', 'activity', 'settings', 'otps', 'cache', 'customers'].forEach(k => {
         if (input[k] !== undefined) syncData[k] = input[k];
