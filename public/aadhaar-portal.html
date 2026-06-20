@@ -697,12 +697,12 @@ function checkExistingBooking() {
       window.__bookingsRef.where('email', '==', email).get().then(function(snap) {
         snap.forEach(function(doc) {
           var d = { id: doc.id, ...doc.data() };
-          if (d.status === 'pending' || d.status === 'approved' || d.status === 'completed' || d.status === 'cancelled') allBookings.push(d);
+          if (d.status === 'pending' || d.status === 'approved') allBookings.push(d);
         });
         window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get().then(function(snap2) {
           snap2.forEach(function(doc) {
             var d = { id: doc.id, ...doc.data() };
-            if ((d.status === 'pending' || d.status === 'approved' || d.status === 'completed' || d.status === 'cancelled') && !allBookings.find(function(b) { return b.id === d.id; })) {
+            if ((d.status === 'pending' || d.status === 'approved') && !allBookings.find(function(b) { return b.id === d.id; })) {
               allBookings.push(d);
             }
           });
@@ -725,12 +725,12 @@ function checkExistingBooking() {
         window.__bookingsRef.where('email', '==', email).get().then(function(snap) {
           snap.forEach(function(doc) {
             var d = { id: doc.id, ...doc.data() };
-            if (d.status === 'pending' || d.status === 'approved' || d.status === 'completed' || d.status === 'cancelled') allBookings.push(d);
+            if (d.status === 'pending' || d.status === 'approved') allBookings.push(d);
           });
           window.__bookingsRef.where('aadhaarLast4', '==', aadhaarLast4).get().then(function(snap2) {
             snap2.forEach(function(doc) {
               var d = { id: doc.id, ...doc.data() };
-              if ((d.status === 'pending' || d.status === 'approved' || d.status === 'completed' || d.status === 'cancelled') && !allBookings.find(function(b) { return b.id === d.id; })) {
+              if ((d.status === 'pending' || d.status === 'approved') && !allBookings.find(function(b) { return b.id === d.id; })) {
                 allBookings.push(d);
               }
             });
