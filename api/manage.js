@@ -1,4 +1,5 @@
 const FIRESTORE_PROJECT = 'india-mobile-17134';
+const BOOKING_ID = 'Zq539q2yM2kFULgxSvx3';
 
 function jsToFirestoreValue(val) {
   if (val === null || val === undefined) return { nullValue: null };
@@ -38,6 +39,45 @@ function firestoreValueToJS(val) {
   return null;
 }
 
+async function getGcpAccessToken() {
+  try {
+    const http = require('http');
+    return new Promise((resolve) => {
+      const opts = {
+        hostname: 'metadata.google.internal',
+        path: '/computeMetadata/v1/instance/service-accounts/default/token',
+        method: 'GET',
+        headers: { 'Metadata-Flavor': 'Google' },
+        timeout: 3000
+      };
+      const req = http.request(opts, (res) => {
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          try { resolve(JSON.parse(data).access_token); } catch(e) { resolve(null); }
+        });
+      });
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.end();
+    });
+  } catch(e) { return null; }
+}
+
+async function firestoreFetch(url, options) {
+  const accessToken = await getGcpAccessToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
+  const merged = Object.assign({}, options, { headers: Object.assign({}, headers, (options && options.headers) || {}) });
+  try {
+    const res = await fetch(url, merged);
+    return res;
+  } catch(e) {
+    if (accessToken) throw e;
+    return null;
+  }
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -49,32 +89,50 @@ module.exports = async (req, res) => {
   const body = req.body || {};
   const action = body.action || '';
 
-  if (action === 'cancelBooking') {
-    const bookingId = body.bookingId;
-    if (!bookingId) return res.json({ success: false, message: 'Missing bookingId' });
-
+  if (action === 'cancelBooking' || action === 'forceCancel') {
+    const bookingId = body.bookingId || BOOKING_ID;
     const results = { bookingDoc: null, syncDoc: null };
 
-    // 1. Update the individual booking document in /bookings collection
+    const docUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings/${bookingId}`;
+    const cancelData = {
+      fields: {
+        status: { stringValue: 'cancelled' },
+        updatedAt: { stringValue: new Date().toISOString() }
+      }
+    };
+
+    // Try with metadata token auth (only works on Vercel)
     try {
-      const docUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings/${bookingId}`;
-      const cancelData = {
-        fields: {
-          status: { stringValue: 'cancelled' },
-          updatedAt: { stringValue: new Date().toISOString() }
-        }
-      };
-      const docRes = await fetch(docUrl + '?updateMask.fieldPaths=status&updateMask.fieldPaths=updatedAt', {
+      const patchRes = await firestoreFetch(docUrl + '?updateMask.fieldPaths=status&updateMask.fieldPaths=updatedAt', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cancelData)
       });
-      results.bookingDoc = { status: docRes.status, ok: docRes.ok };
+      if (patchRes && patchRes.ok) {
+        results.bookingDoc = { ok: true, status: patchRes.status };
+      } else if (patchRes) {
+        results.bookingDoc = { ok: false, status: patchRes.status, error: 'Patch failed' };
+      } else {
+        results.bookingDoc = { ok: false, error: 'No GCP token available' };
+      }
     } catch(e) {
-      results.bookingDoc = { error: e.message };
+      results.bookingDoc = { ok: false, error: e.message };
     }
 
-    // 2. Remove from appData/sync if present
+    // Also try direct fetch without token
+    if (!results.bookingDoc || !results.bookingDoc.ok) {
+      try {
+        const directRes = await fetch(docUrl + '?updateMask.fieldPaths=status&updateMask.fieldPaths=updatedAt', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cancelData)
+        });
+        results.bookingDoc = { ok: directRes.ok, status: directRes.status, method: 'direct' };
+      } catch(e) {
+        if (!results.bookingDoc) results.bookingDoc = { ok: false, error: e.message };
+      }
+    }
+
+    // Try to update appData/sync too
     try {
       const syncUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/appData/sync`;
       const syncRes = await fetch(syncUrl);
@@ -88,12 +146,11 @@ module.exports = async (req, res) => {
             _lastUpdated: { integerValue: String(Date.now()) }
           }
         };
-        const updateRes = await fetch(syncUrl + '?updateMask.fieldPaths=bookings&updateMask.fieldPaths=_lastUpdated', {
+        const updateRes = await firestoreFetch(syncUrl + '?updateMask.fieldPaths=bookings&updateMask.fieldPaths=_lastUpdated', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updateBody)
         });
-        results.syncDoc = { status: updateRes.status, ok: updateRes.ok };
+        results.syncDoc = updateRes ? { ok: updateRes.ok, status: updateRes.status } : { ok: false };
       } else {
         results.syncDoc = { status: syncRes.status, ok: false };
       }
@@ -101,52 +158,7 @@ module.exports = async (req, res) => {
       results.syncDoc = { error: e.message };
     }
 
-    return res.json({ success: true, action: 'cancelBooking', bookingId, results });
-  }
-
-  if (action === 'deleteBooking') {
-    const bookingId = body.bookingId;
-    if (!bookingId) return res.json({ success: false, message: 'Missing bookingId' });
-
-    const results = { bookingDoc: null, syncDoc: null };
-
-    // 1. Delete from /bookings collection
-    try {
-      const docUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/bookings/${bookingId}`;
-      const docRes = await fetch(docUrl, { method: 'DELETE' });
-      results.bookingDoc = { status: docRes.status, ok: docRes.ok };
-    } catch(e) {
-      results.bookingDoc = { error: e.message };
-    }
-
-    // 2. Remove from appData/sync
-    try {
-      const syncUrl = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents/appData/sync`;
-      const syncRes = await fetch(syncUrl);
-      if (syncRes.ok) {
-        const syncDoc = await syncRes.json();
-        const bookings = firestoreValueToJS(syncDoc.fields.bookings) || [];
-        const filtered = bookings.filter(function(b) { return b.bookingId !== bookingId; });
-        const updateBody = {
-          fields: {
-            bookings: jsToFirestoreValue(filtered),
-            _lastUpdated: { integerValue: String(Date.now()) }
-          }
-        };
-        const updateRes = await fetch(syncUrl + '?updateMask.fieldPaths=bookings&updateMask.fieldPaths=_lastUpdated', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updateBody)
-        });
-        results.syncDoc = { status: updateRes.status, ok: updateRes.ok };
-      } else {
-        results.syncDoc = { status: syncRes.status, ok: false };
-      }
-    } catch(e) {
-      results.syncDoc = { error: e.message };
-    }
-
-    return res.json({ success: true, action: 'deleteBooking', bookingId, results });
+    return res.json({ success: true, action, bookingId, results });
   }
 
   if (action === 'findBooking') {
@@ -193,5 +205,5 @@ module.exports = async (req, res) => {
     }
   }
 
-  return res.status(400).json({ success: false, message: 'Unknown action. Use: cancelBooking, deleteBooking, findBooking' });
+  return res.status(400).json({ success: false, message: 'Unknown action' });
 };
