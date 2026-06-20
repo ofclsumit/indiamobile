@@ -529,10 +529,10 @@ resetInactivityTimer();
     </div>
     <div class="btn-row" id="existingBookingActions">
       <button class="btn-primary" onclick="existingBookingShowToken()" data-t="existing_booking_yes">Yes, Show My Token</button>
-      <button class="btn-secondary" onclick="existingBookingGoHome()" data-t="existing_booking_no">No, Go to Home</button>
+      <button class="btn-secondary" onclick="existingBookingContinue()" data-t="existing_booking_continue">Continue Booking</button>
     </div>
     <div class="btn-row" id="existingBookingDoneRow" style="display:none;">
-      <button class="btn-secondary" onclick="existingBookingGoHome()"><i class="fas fa-arrow-left"></i> <span data-t="existing_back_home">Back to Home</span></button>
+      <button class="btn-secondary" onclick="existingBookingContinue()"><i class="fas fa-arrow-right"></i> <span data-t="existing_continue_booking">Continue Booking</span></button>
     </div>
   </div>
 </div>
@@ -661,32 +661,28 @@ function verifyPortalOTP() {
 function checkExistingBooking() {
   var email = portalData.email;
   var aadhaarLast4 = portalData.aadhaarLast4;
-  var found = null;
 
-  function proceed() {
-    if (found) {
-      showExistingBookingOverlay(found);
+  function showStep2OrPopup(bookings) {
+    var existing = bookings.find(function(b) {
+      return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && (b.status === 'pending' || b.status === 'approved' || b.status === 'completed' || b.status === 'cancelled');
+    });
+    if (existing) {
+      showExistingBookingOverlay(existing);
     } else {
       showStep2();
     }
   }
 
-  // Fetch fresh data directly from sync API (reads Firestore appData/sync server-side)
+  // Fetch fresh data from sync API (reads Firestore appData/sync server-side)
   fetch('/api/sync').then(function(r) { return r.json(); }).then(function(data) {
-    var bookings = data.bookings || [];
-    found = bookings.find(function(b) {
-      return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && (b.status === 'pending' || b.status === 'approved');
-    });
-    proceed();
+    showStep2OrPopup(data.bookings || []);
   }).catch(function() {
     // Fallback: check local DBSync cache
     try {
-      var local = DBSync.getBookings();
-      found = local.find(function(b) {
-        return (b.email === email || b.aadhaarLast4 === aadhaarLast4) && (b.status === 'pending' || b.status === 'approved');
-      });
-    } catch(e) {}
-    proceed();
+      showStep2OrPopup(DBSync.getBookings());
+    } catch(e) {
+      showStep2();
+    }
   });
 }
 
@@ -702,7 +698,7 @@ function showExistingBookingOverlay(booking) {
   actions.style.display = 'flex';
   doneRow.style.display = 'none';
 
-  msg.textContent = __t('active_booking_token') + booking.token + __t('show_existing_token');
+  msg.textContent = __t('existing_booking_question') + ' (Token #' + booking.token + '). ' + __t('existing_booking_choice');
   window._existingBooking = booking;
 
   overlay.classList.add('show');
@@ -725,8 +721,9 @@ window.existingBookingShowToken = function() {
   doneRow.style.display = 'flex';
 };
 
-window.existingBookingGoHome = function() {
-  window.location.href = 'index.html';
+window.existingBookingContinue = function() {
+  document.getElementById('existingBookingOverlay').classList.remove('show');
+  showStep2();
 };
 
 let resendCooldownTimer = null;
@@ -1008,8 +1005,12 @@ function showConfirmation(booking) {
       print_btn: "प्रिंट करें",
       existing_booking_title: "बुकिंग पहले से मौजूद है",
       existing_booking_yes: "हां, मेरा टोकन दिखाएं",
-      existing_booking_no: "नहीं, होम पर जाएं",
-      existing_back_home: "होम पर वापस जाएं",
+      existing_booking_no: "बुकिंग जारी रखें",
+      existing_back_home: "बुकिंग जारी रखें",
+      existing_booking_continue: "बुकिंग जारी रखें",
+      existing_continue_booking: "बुकिंग जारी रखें",
+      existing_booking_question: "आपकी पहले से एक बुकिंग मौजूद है",
+      existing_booking_choice: "क्या आप इसे देखना चाहते हैं या नई बुकिंग करना चाहते हैं?",
       your_token: "आपका टोकन",
       here_your_token: "यह रहा आपका मौजूदा टोकन:",
       already_booked: "पहले से बुक है? अपना टोकन खोजें",
@@ -1071,10 +1072,14 @@ function showConfirmation(booking) {
       instructions: "Please bring your Aadhaar card and supporting documents. Arrive 10 minutes before your token is called.",
       back_to_home: "Back to Home",
       print_btn: "Print",
-      existing_booking_title: "Booking Already Exists",
+      existing_booking_title: "Existing Booking Found",
       existing_booking_yes: "Yes, Show My Token",
-      existing_booking_no: "No, Go to Home",
-      existing_back_home: "Back to Home",
+      existing_booking_no: "Continue Booking",
+      existing_back_home: "Continue Booking",
+      existing_booking_continue: "Continue Booking",
+      existing_continue_booking: "Continue Booking",
+      existing_booking_question: "You have an existing booking",
+      existing_booking_choice: "Would you like to view it or make a new booking?",
       your_token: "Your Token",
       here_your_token: "Here is your existing token:",
       already_booked: "Already booked? Find your token",
