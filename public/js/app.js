@@ -649,6 +649,7 @@ async function sendBookingOTP() {
     return;
   }
 
+  await DBSync.forceFetch();
   const existing = DB.getActiveByEmail(email);
   if (existing) {
     notify('This email already has a booking (Token #' + existing.token + '). Only one booking per email is allowed.', 'error');
@@ -732,6 +733,7 @@ async function submitBookingStep2() {
     return;
   }
 
+  await DBSync.forceFetch();
   const existingAadhaar = DB.getActiveByAadhaar(aadhaarLast4);
   if (existingAadhaar && existingAadhaar.email !== sessionBookingData.email) {
     notify('This Aadhaar number is already associated with a booking.', 'error');
