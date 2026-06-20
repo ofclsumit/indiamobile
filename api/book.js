@@ -1,5 +1,5 @@
 function isActive(b) {
-  return b.status === 'pending' || b.status === 'approved';
+  return b.status === 'pending' || b.status === 'approved' || b.status === 'processing' || b.status === 'in_queue';
 }
 
 function bookingId() {

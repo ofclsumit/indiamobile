@@ -928,6 +928,31 @@ window.hidePageLoader = function() {
 <div id="notif" style="display:none;" class="notification"></div>
 <div id="recaptcha-container" style="position:fixed;bottom:0;left:0;width:0;height:0;overflow:hidden;"></div>
 
+<!-- EXISTING BOOKING OVERLAY -->
+<div class="existing-booking-overlay" id="existingBookingOverlay">
+  <div class="existing-booking-card">
+    <div class="warning-icon"><i class="fas fa-exclamation-triangle"></i></div>
+    <h2>EXISTING BOOKING FOUND</h2>
+    <p id="existingBookingMsg">An active appointment already exists for your details.</p>
+    <div id="existingBookingTokenSection" style="display:none;">
+      <div class="existing-token" id="existingBookingToken">--</div>
+      <div class="existing-badge"><i class="fas fa-ticket"></i> Your Token</div>
+      <div style="margin-top:12px;font-size:13px;color:var(--text2);">
+        <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Booking ID</span><span id="existingBookingId" style="font-weight:600;font-family:monospace;">--</span></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Status</span><span id="existingBookingStatus" style="font-weight:600;color:var(--accent);">--</span></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Appointment Date</span><span id="existingBookingDate" style="font-weight:600;">--</span></div>
+      </div>
+    </div>
+    <div class="btn-row" id="existingBookingActions">
+      <button class="btn-primary" onclick="showExistingBookingToken()">View Existing Token</button>
+      <button class="btn-secondary" onclick="document.getElementById('existingBookingOverlay').classList.remove('show')">Close</button>
+    </div>
+    <div class="btn-row" id="existingBookingDoneRow" style="display:none;">
+      <button class="btn-secondary"><i class="fas fa-arrow-right"></i> Continue Booking</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/firebase-init.js"></script>
 <script src="db-sync.js"></script>
 <script>

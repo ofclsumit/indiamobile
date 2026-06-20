@@ -1,5 +1,5 @@
 // ============================================
-// DATA STORE (localStorage-based for demo)
+// DATA STORE (Firestore-backed)
 // ============================================
 const DB = {
   bookings: [],
@@ -797,10 +797,18 @@ async function submitBookingStep2() {
       return;
     }
     if (result.isDuplicate) {
-      notify('You already have an active booking (Token #' + result.booking.token + ').', 'info');
-      booking = result.booking;
-    } else {
-      booking = result.booking;
+      showExistingBookingOverlay(result.booking);
+      return;
+    }
+    booking = result.booking;
+
+    // Verify booking exists in Firestore before showing success
+    if (window.__bookingsRef && booking.bookingId) {
+      var docSnap = await window.__bookingsRef.doc(booking.bookingId).get().catch(function() { return null; });
+      if (!docSnap || !docSnap.exists) {
+        notify('Booking creation failed. Please try again.', 'error');
+        return;
+      }
     }
   } catch(e) {
     notify('Network error. Please try again.', 'error');
@@ -812,6 +820,32 @@ async function submitBookingStep2() {
   updateHeroDisplay();
   renderBookingStep(3);
 }
+
+function showExistingBookingOverlay(booking) {
+  var overlay = document.getElementById('existingBookingOverlay');
+  if (!overlay) return;
+  var msg = document.getElementById('existingBookingMsg');
+  var tokenSection = document.getElementById('existingBookingTokenSection');
+  var tokenEl = document.getElementById('existingBookingToken');
+  var tokenStatus = document.getElementById('existingBookingStatus');
+  var tokenBookingId = document.getElementById('existingBookingId');
+  var tokenDate = document.getElementById('existingBookingDate');
+
+  msg.textContent = 'An active appointment already exists for your details.';
+  tokenEl.textContent = String(booking.token || '').padStart(2, '0');
+  if (tokenStatus) tokenStatus.textContent = (booking.status || 'approved').charAt(0).toUpperCase() + (booking.status || 'approved').slice(1);
+  if (tokenBookingId) tokenBookingId.textContent = booking.bookingId || '--';
+  if (tokenDate) {
+    var d = booking.date ? new Date(booking.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '--';
+    tokenDate.textContent = d;
+  }
+  tokenSection.style.display = 'block';
+  overlay.classList.add('show');
+}
+
+window.showExistingBookingToken = function() {
+  document.getElementById('existingBookingOverlay').classList.remove('show');
+};
 
 function selectDate(dateStr, el) {
   document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('selected'));

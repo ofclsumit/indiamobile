@@ -28,7 +28,6 @@
     window.__queueRef = db.collection('queue');
     window.__adminsRef = db.collection('admins');
     window.__activityRef = db.collection('activity_logs');
-    window.__dailyCountersRef = db.collection('dailyCounters');
     window.__countersRef = db.collection('counters');
     console.log('[FirebaseInit] Firestore ready');
   }

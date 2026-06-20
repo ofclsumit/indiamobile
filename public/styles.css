@@ -3052,3 +3052,65 @@ a.live-item-link:hover {
   }
 }
 
+/* ============================================
+   EXISTING BOOKING OVERLAY
+   ============================================ */
+.existing-booking-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(12px);
+  display: none; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.existing-booking-overlay.show { display: flex; }
+.existing-booking-card {
+  background: var(--bg2);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 40px 32px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  animation: fadeScaleIn 0.3s ease;
+}
+@keyframes fadeScaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.existing-booking-card .warning-icon {
+  font-size: 48px; color: var(--warning);
+  margin-bottom: 16px;
+}
+.existing-booking-card h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px; margin-bottom: 8px;
+}
+.existing-booking-card p { font-size: 15px; color: var(--text2); margin-bottom: 24px; }
+.existing-booking-card .existing-token {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 72px; font-weight: 700;
+  background: linear-gradient(135deg, var(--neon), var(--neon2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+  margin: 8px 0;
+}
+.existing-booking-card .existing-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(45,212,191,0.1); color: var(--neon2);
+  padding: 4px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 500; margin-bottom: 20px;
+}
+.existing-booking-card .btn-row {
+  display: flex; gap: 12px; margin-top: 24px;
+}
+.existing-booking-card .btn-row .btn-primary,
+.existing-booking-card .btn-row .btn-secondary {
+  flex: 1; justify-content: center;
+}
+@media (max-width: 480px) {
+  .existing-booking-card { padding: 28px 20px; }
+  .existing-booking-card .existing-token { font-size: 56px; }
+}
+
