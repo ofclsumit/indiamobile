@@ -146,6 +146,7 @@ window.hidePageLoader = function() {
     </a>
     <ul class="nav-links">
       <li><a href="#services" data-translate="nav_services">Services</a></li>
+      <li><a href="#live-updates" data-translate="nav_live_updates">Live Updates</a></li>
       <li><a href="#about" data-translate="nav_about">About</a></li>
       <li><a href="#location" data-translate="nav_location">Location</a></li>
       <li><a href="#contact" data-translate="nav_contact">Contact</a></li>
@@ -170,6 +171,7 @@ window.hidePageLoader = function() {
 <!-- MOBILE MENU -->
 <div class="mobile-menu" id="mobileMenu">
   <a href="#services" onclick="closeMobileMenu()" data-translate="nav_services">Services</a>
+  <a href="#live-updates" onclick="closeMobileMenu()" data-translate="nav_live_updates">Live Updates</a>
   <a href="#about" onclick="closeMobileMenu()" data-translate="nav_about">About</a>
   <a href="#location" onclick="closeMobileMenu()" data-translate="nav_location">Location</a>
   <a href="#contact" onclick="closeMobileMenu()" data-translate="nav_contact">Contact</a>
@@ -215,66 +217,102 @@ window.hidePageLoader = function() {
       </div>
       <div id="inlineBookingFields" style="display:none;"></div>
       <div class="guidelines-section">
-        <div class="guidelines-header">
-          <i class="fas fa-file-alt"></i> <span data-translate="guidelines_header">Document Guidelines</span>
+        <div class="guidelines-grid">
+          <div>
+            <div class="guidelines-header">
+              <i class="fas fa-book"></i> <span data-translate="how_to_book_title">How to Book</span>
+            </div>
+            <div class="guidelines-item" style="border-bottom:none; padding: 4px 0 0;">
+              <ul class="guidelines-list how-to-book-list" data-translate="how_to_book_steps">
+                <li class="how-to-book-item">
+                  <img src="step1_select_service.png" alt="Step 1" class="how-to-book-img">
+                  <span class="step-text">Select your service from the list above</span>
+                </li>
+                <li class="how-to-book-item">
+                  <img src="step2_verify_otp.png" alt="Step 2" class="how-to-book-img">
+                  <span class="step-text">Enter your email and verify with OTP</span>
+                </li>
+                <li class="how-to-book-item">
+                  <img src="step3_fill_details.png" alt="Step 3" class="how-to-book-img">
+                  <span class="step-text">Fill in your details and choose a date</span>
+                </li>
+                <li class="how-to-book-item">
+                  <img src="step4_get_token.png" alt="Step 4" class="how-to-book-img">
+                  <span class="step-text">Confirm your booking and note your token number</span>
+                </li>
+                <li class="how-to-book-item">
+                  <div class="step-placeholder-icon"><i class="fas fa-clock"></i></div>
+                  <span class="step-text">Visit the center before your token is called</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div>
+            <div class="guidelines-header">
+              <i class="fas fa-file-alt"></i> <span data-translate="guidelines_header">Document to Carry</span>
+            </div>
+            <div class="guidelines-item">
+              <div class="guidelines-item-title"><i class="fas fa-id-card"></i> <span data-translate="guide_aadhaar_title">Aadhaar Update</span></div>
+              <ul class="guidelines-list" data-translate="guide_aadhaar_text">
+                <li>Original Aadhaar card + self-attested copy</li>
+                <li>Valid photo ID (Voter ID / Driving License / Passport)</li>
+                <li>2 recent passport-size photographs</li>
+                <li>Supporting document for change (marriage certificate, address proof, etc.) if applicable</li>
+              </ul>
+            </div>
+          </div>
         </div>
-        <div class="guidelines-item">
-          <div class="guidelines-item-title"><i class="fas fa-id-card"></i> <span data-translate="guide_aadhaar_title">Aadhaar Update</span></div>
-          <ul class="guidelines-list" data-translate="guide_aadhaar_text">
-            <li>Original Aadhaar card + self-attested copy</li>
-            <li>Valid photo ID (Voter ID / Driving License / Passport)</li>
-            <li>2 recent passport-size photographs</li>
-            <li>Supporting document for change (marriage certificate, address proof, etc.) if applicable</li>
-          </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- LIVE UPDATES SECTION -->
+<section class="live-updates-section" id="live-updates">
+  <div class="section-inner">
+    <div class="text-center reveal">
+      <div class="section-tag" data-translate="live_tag"><i class="fas fa-bolt" style="margin-right:6px;"></i> Live Updates</div>
+      <h2 class="section-title" data-translate="live_title">Latest Govt Jobs, Results & Admit Cards</h2>
+      <p class="section-subtitle" data-translate="live_subtitle">Auto-refreshed real-time updates — Results, Admit Cards, and Job Openings across India.</p>
+    </div>
+    <div class="live-box glass-card reveal">
+      <div class="live-updates-grid" id="liveUpdatesGrid">
+        <div class="live-column" style="--col-accent:#3b82f6;">
+          <div class="live-column-header" onclick="toggleMobileColumn(this)" role="button" tabindex="0">
+            <i class="fas fa-list-check"></i>
+            <span data-translate="live_result_head">Result</span>
+            <i class="fas fa-chevron-down live-chevron"></i>
+          </div>
+          <div class="live-column-body" id="liveResultBody">
+            <div class="live-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+          </div>
         </div>
-        <div class="guidelines-item">
-          <div class="guidelines-item-title"><i class="fas fa-credit-card"></i> <span data-translate="guide_pan_title">PAN Services</span></div>
-          <ul class="guidelines-list" data-translate="guide_pan_text">
-            <li>Aadhaar card</li>
-            <li>Existing PAN card (for re-issue/correction)</li>
-            <li>Proof of address (utility bill / bank statement / rent agreement)</li>
-            <li>2 passport-size photos</li>
-            <li>Self-declaration form</li>
-          </ul>
+        <div class="live-column" style="--col-accent:#f59e0b;">
+          <div class="live-column-header" onclick="toggleMobileColumn(this)" role="button" tabindex="0">
+            <i class="fas fa-id-card"></i>
+            <span data-translate="live_admit_head">Admit Card</span>
+            <i class="fas fa-chevron-down live-chevron"></i>
+          </div>
+          <div class="live-column-body" id="liveAdmitBody">
+            <div class="live-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+          </div>
         </div>
-        <div class="guidelines-item">
-          <div class="guidelines-item-title"><i class="fas fa-passport"></i> <span data-translate="guide_passport_title">Passport Services</span></div>
-          <ul class="guidelines-list" data-translate="guide_passport_text">
-            <li>Aadhaar card</li>
-            <li>Proof of address (utility bill / Aadhaar / bank statement)</li>
-            <li>Birth certificate or class 10 mark sheet</li>
-            <li>10 passport-size photos</li>
-            <li>Filled annexure forms (Annexure A / E / F as applicable)</li>
-          </ul>
+        <div class="live-column" style="--col-accent:#22c55e;">
+          <div class="live-column-header" onclick="toggleMobileColumn(this)" role="button" tabindex="0">
+            <i class="fas fa-briefcase"></i>
+            <span data-translate="live_job_head">Latest Job</span>
+            <i class="fas fa-chevron-down live-chevron"></i>
+          </div>
+          <div class="live-column-body" id="liveJobBody">
+            <div class="live-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+          </div>
         </div>
-        <div class="guidelines-item">
-          <div class="guidelines-item-title"><i class="fas fa-file-invoice"></i> <span data-translate="guide_online_title">Online Applications</span></div>
-          <ul class="guidelines-list" data-translate="guide_online_text">
-            <li>Aadhaar card</li>
-            <li>PAN card</li>
-            <li>Recent passport-size photo</li>
-            <li>Income certificate &amp; caste certificate (if required)</li>
-            <li>Scanned copies of documents in PDF/JPEG format</li>
-            <li>Valid mobile number for OTP verification</li>
-          </ul>
-        </div>
-        <div class="guidelines-item">
-          <div class="guidelines-item-title"><i class="fas fa-ticket-alt"></i> <span data-translate="guide_ticket_title">Ticket Booking</span></div>
-          <ul class="guidelines-list" data-translate="guide_ticket_text">
-            <li>Valid government-issued photo ID (Aadhaar / Voter ID / Driving License / Passport)</li>
-            <li>Mobile number for confirmation</li>
-            <li>Payment method (cash / UPI / card)</li>
-          </ul>
-        </div>
-        <div class="guidelines-item">
-          <div class="guidelines-item-title"><i class="fas fa-info-circle"></i> <span data-translate="guide_tips_title">General Tips</span></div>
-          <ul class="guidelines-list" data-translate="guide_tips_text">
-            <li>Carry original documents + at least 2 self-attested copies of each</li>
-            <li>Photos should be white background, recent (within 6 months)</li>
-            <li>Reach 15 minutes early</li>
-            <li>For any correction/change, bring relevant supporting certificate</li>
-          </ul>
-        </div>
+      </div>
+      <div class="live-footer-note">
+        <i class="fas fa-rotate" style="margin-right:6px;"></i>
+        <span data-translate="live_auto_update">Updates auto-refresh every 10 minutes. Powered by Sarkari Result.</span>
       </div>
     </div>
   </div>
@@ -287,7 +325,7 @@ window.hidePageLoader = function() {
   <div class="section-inner">
     <div class="about-inner">
       <div class="about-image reveal">
-        <img src="https://t4.ftcdn.net/jpg/10/77/40/35/360_F_1077403598_HLkTA0SOLunXAVGA1Viwp4eeBsSxZQQD.jpg" alt="India Mobile Center" style="width:100%;height:100%;object-fit:cover;border-radius:16px;">
+        <img src="21960.png" alt="India Mobile Center" style="width:100%;height:auto;display:block;">
       </div>
       <div class="reveal">
         <div class="about-badge" data-translate="about_tag">Established 2018</div>
@@ -401,66 +439,79 @@ window.hidePageLoader = function() {
       <div class="section-tag" data-translate="reviews_tag">Customer Reviews</div>
       <h2 class="section-title" data-translate="reviews_title">What Our Customers Say</h2>
     </div>
-    <div class="reviews-track" id="reviewsTrack">
-      <div class="review-card glass-card">
-        <div class="review-stars">★★★★★</div>
-        <p class="review-text">"I booked my Aadhaar address update online and got a token in minutes. The process was smooth and the staff was very helpful. My update was done in one visit."</p>
-        <div class="reviewer">
-          <div class="reviewer-avatar">R</div>
-          <div>
-            <div class="reviewer-name">Ramesh Kumar</div>
-            <div class="reviewer-loc">Patna, Bihar</div>
+    <div class="reviews-track-wrap">
+      <div class="reviews-track" id="reviewsTrack">
+        <div class="review-card">
+          <div class="review-card-bg"></div>
+          <div class="review-quote-icon"><i class="fas fa-quote-left"></i></div>
+          <div class="review-stars">★★★★★</div>
+          <p class="review-text">"I booked my Aadhaar address update online and got a token in minutes. The process was smooth and the staff was very helpful. My update was done in one visit."</p>
+          <div class="reviewer">
+            <div class="reviewer-avatar" style="background:linear-gradient(135deg,#3b82f6,#6366f1);">R</div>
+            <div>
+              <div class="reviewer-name">Ramesh Kumar</div>
+              <div class="reviewer-loc">Patna, Bihar</div>
+            </div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-card-bg"></div>
+          <div class="review-quote-icon"><i class="fas fa-quote-left"></i></div>
+          <div class="review-stars">★★★★★</div>
+          <p class="review-text">"The online token system saved me so much time. I knew exactly when to arrive and my biometric update was completed quickly. Very professional service."</p>
+          <div class="reviewer">
+            <div class="reviewer-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">P</div>
+            <div>
+              <div class="reviewer-name">Priya Singh</div>
+              <div class="reviewer-loc">Patna, Bihar</div>
+            </div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-card-bg"></div>
+          <div class="review-quote-icon"><i class="fas fa-quote-left"></i></div>
+          <div class="review-stars">★★★★★</div>
+          <p class="review-text">"My father is elderly and was worried about the process. The staff here was patient and guided him through everything. Excellent service and very clean office."</p>
+          <div class="reviewer">
+            <div class="reviewer-avatar" style="background:linear-gradient(135deg,#22c55e,#06b6d4);">A</div>
+            <div>
+              <div class="reviewer-name">Amit Sharma</div>
+              <div class="reviewer-loc">Patna, Bihar</div>
+            </div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-card-bg"></div>
+          <div class="review-quote-icon"><i class="fas fa-quote-left"></i></div>
+          <div class="review-stars">★★★★★</div>
+          <p class="review-text">"I had my mobile number linked to Aadhaar in under an hour. The queue tracking on the website is very useful. I will recommend this center to everyone I know."</p>
+          <div class="reviewer">
+            <div class="reviewer-avatar" style="background:linear-gradient(135deg,#f97316,#eab308);">S</div>
+            <div>
+              <div class="reviewer-name">Sunita Devi</div>
+              <div class="reviewer-loc">Hajipur, Bihar</div>
+            </div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-card-bg"></div>
+          <div class="review-quote-icon"><i class="fas fa-quote-left"></i></div>
+          <div class="review-stars">★★★★★</div>
+          <p class="review-text">"Booked the token late in the evening and came the next morning. The process was fast and professional. The digital booking system is a great idea."</p>
+          <div class="reviewer">
+            <div class="reviewer-avatar" style="background:linear-gradient(135deg,#8b5cf6,#ec4899);">M</div>
+            <div>
+              <div class="reviewer-name">Mohammad Raza</div>
+              <div class="reviewer-loc">Patna, Bihar</div>
+            </div>
           </div>
         </div>
       </div>
-      <div class="review-card glass-card">
-        <div class="review-stars">★★★★★</div>
-        <p class="review-text">"The online token system saved me so much time. I knew exactly when to arrive and my biometric update was completed quickly. Very professional service."</p>
-        <div class="reviewer">
-          <div class="reviewer-avatar">P</div>
-          <div>
-            <div class="reviewer-name">Priya Singh</div>
-            <div class="reviewer-loc">Patna, Bihar</div>
-          </div>
-        </div>
+      <div class="review-controls">
+        <button class="review-ctrl-btn" onclick="scrollReviews(-1)" aria-label="Previous review"><i class="fas fa-chevron-left"></i></button>
+        <div class="review-dots" id="reviewDots"></div>
+        <button class="review-ctrl-btn" onclick="scrollReviews(1)" aria-label="Next review"><i class="fas fa-chevron-right"></i></button>
       </div>
-      <div class="review-card glass-card">
-        <div class="review-stars">★★★★★</div>
-        <p class="review-text">"My father is elderly and was worried about the process. The staff here was patient and guided him through everything. Excellent service and very clean office."</p>
-        <div class="reviewer">
-          <div class="reviewer-avatar">A</div>
-          <div>
-            <div class="reviewer-name">Amit Sharma</div>
-            <div class="reviewer-loc">Patna, Bihar</div>
-          </div>
-        </div>
-      </div>
-      <div class="review-card glass-card">
-        <div class="review-stars">★★★★★</div>
-        <p class="review-text">"I had my mobile number linked to Aadhaar in under an hour. The queue tracking on the website is very useful. I will recommend this center to everyone I know."</p>
-        <div class="reviewer">
-          <div class="reviewer-avatar">S</div>
-          <div>
-            <div class="reviewer-name">Sunita Devi</div>
-            <div class="reviewer-loc">Hajipur, Bihar</div>
-          </div>
-        </div>
-      </div>
-      <div class="review-card glass-card">
-        <div class="review-stars">★★★★★</div>
-        <p class="review-text">"Booked the token late in the evening and came the next morning. The process was fast and professional. The digital booking system is a great idea."</p>
-        <div class="reviewer">
-          <div class="reviewer-avatar">M</div>
-          <div>
-            <div class="reviewer-name">Mohammad Raza</div>
-            <div class="reviewer-loc">Patna, Bihar</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="review-controls">
-      <button class="review-ctrl-btn" onclick="scrollReviews(-1)"><i class="fas fa-chevron-left"></i></button>
-      <button class="review-ctrl-btn" onclick="scrollReviews(1)"><i class="fas fa-chevron-right"></i></button>
     </div>
   </div>
 </section>
@@ -490,20 +541,7 @@ window.hidePageLoader = function() {
         <div class="team-exp" data-translate="team_exp_founder"><i class="fas fa-calendar-check" style="font-size:11px;"></i> 12+ years experience</div>
         <div class="team-desc" data-translate="team_desc_founder">Founded India Mobile Center with a vision to make government services accessible. Over a decade of experience in digital service delivery and community support.</div>
       </div>
-      <div class="team-card">
-        <div class="team-avatar" style="background:linear-gradient(135deg,#22c55e,#06b6d4);"><i class="fas fa-headset" style="font-size:28px;color:#fff;"></i></div>
-        <div class="team-name">Priya Verma</div>
-        <div class="team-role" data-translate="team_role_support">Customer Support Lead</div>
-        <div class="team-exp" data-translate="team_exp_support"><i class="fas fa-calendar-check" style="font-size:11px;"></i> 6+ years experience</div>
-        <div class="team-desc" data-translate="team_desc_support">Leads the customer support team ensuring every visitor gets prompt assistance and a smooth experience from booking to service completion.</div>
-      </div>
-      <div class="team-card">
-        <div class="team-avatar" style="background:linear-gradient(135deg,#f97316,#eab308);"><i class="fas fa-fingerprint" style="font-size:28px;color:#fff;"></i></div>
-        <div class="team-name">Sunita Devi</div>
-        <div class="team-role" data-translate="team_role_biometric">Biometric Operator</div>
-        <div class="team-exp" data-translate="team_exp_biometric"><i class="fas fa-calendar-check" style="font-size:11px;"></i> 4+ years experience</div>
-        <div class="team-desc" data-translate="team_desc_biometric">Certified biometric operator handling Aadhaar enrollments and updates. Known for patient and thorough service with every customer.</div>
-      </div>
+
     </div>
   </div>
 </section>
@@ -526,24 +564,16 @@ window.hidePageLoader = function() {
           <div class="contact-icon">📍</div>
           <div>
             <div class="contact-info-label" data-translate="addr_lbl">Address</div>
-            <div class="contact-info-value" data-translate="addr_val">Shop No. 12, Main Market Road</div>
-            <div class="contact-info-sub" data-translate="addr_sub">Patna, Bihar — 800001</div>
+            <div class="contact-info-value" data-translate="addr_val">Nonadih More, Piro-Bihta Road</div>
+            <div class="contact-info-sub" data-translate="addr_sub">Near Hanuman Mandir, 802222</div>
           </div>
         </div>
         <div class="contact-info-item glass-card">
           <div class="contact-icon"><i class="fas fa-phone"></i></div>
           <div>
             <div class="contact-info-label" data-translate="phone_lbl">Phone</div>
-            <div class="contact-info-value"><a href="tel:+919876543210" style="color:var(--text); text-decoration:none;">+91 98765 43210</a></div>
+            <div class="contact-info-value"><a href="tel:+918873810674" style="color:var(--text); text-decoration:none;">+91 88738 10674</a></div>
             <div class="contact-info-sub" data-translate="call_hours">Call us during working hours</div>
-          </div>
-        </div>
-        <div class="contact-info-item glass-card">
-          <div class="contact-icon">💬</div>
-          <div>
-            <div class="contact-info-label" data-translate="whatsapp_lbl">WhatsApp</div>
-            <div class="contact-info-value"><a href="https://wa.me/919876543210" target="_blank" style="color:var(--text); text-decoration:none;">+91 98765 43210</a></div>
-            <div class="contact-info-sub" data-translate="msg_anytime">Message us anytime</div>
           </div>
         </div>
         <div class="contact-info-item glass-card">
@@ -558,7 +588,7 @@ window.hidePageLoader = function() {
           <div class="contact-icon">📧</div>
           <div>
             <div class="contact-info-label" data-translate="email_lbl">Email</div>
-            <div class="contact-info-value"><a href="mailto:info@digiseva.in" style="color:var(--text); text-decoration:none;">info@digiseva.in</a></div>
+            <div class="contact-info-value"><a href="mailto:official.sumit.1001@gmail.com" style="color:var(--text); text-decoration:none;">official.sumit.1001@gmail.com</a></div>
             <div class="contact-info-sub" data-translate="email_sub">We reply within 24 hours</div>
           </div>
         </div>
@@ -673,9 +703,8 @@ window.hidePageLoader = function() {
       <div class="footer-col">
         <h4 data-translate="footer_contact_title">Contact</h4>
         <ul>
-          <li><a href="tel:+919876543210">+91 98765 43210</a></li>
-          <li><a href="https://wa.me/919876543210" data-translate="footer_whatsapp">WhatsApp Us</a></li>
-          <li><a href="mailto:info@digiseva.in">info@digiseva.in</a></li>
+          <li><a href="tel:+918873810674">+91 88738 10674</a></li>
+          <li><a href="mailto:official.sumit.1001@gmail.com">official.sumit.1001@gmail.com</a></li>
           <li><a href="#" data-translate="footer_hours">Mon–Sat, 9AM–5PM</a></li>
         </ul>
       </div>
@@ -683,6 +712,10 @@ window.hidePageLoader = function() {
     <div class="footer-bottom">
       <span data-translate="footer_copyright">© 2025 India Mobile Center. All rights reserved.</span>
       <span style="color:var(--text3); font-size:12px;" data-translate="footer_auth">Authorized Aadhaar Service Provider</span>
+    </div>
+    <div class="footer-software-strip">
+      <span data-translate="software_strip_prefix">Buy this software for your business —</span>
+      <a href="mailto:official.sumit.1001@gmail.com" class="software-strip-link">official.sumit.1001@gmail.com</a>
     </div>
   </div>
 </footer>
@@ -899,6 +932,7 @@ window.hidePageLoader = function() {
     if (ok) DBSync.startRealtimeListener();
   });
 </script>
+
 <script defer src="js/app.js"></script>
 </body>
 </html>

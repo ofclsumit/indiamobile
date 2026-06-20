@@ -297,6 +297,40 @@ function scrollReviews(dir) {
   track.scrollBy({ left: dir * 340, behavior: 'smooth' });
 }
 
+function initReviewDots() {
+  const track = document.getElementById('reviewsTrack');
+  const dotsContainer = document.getElementById('reviewDots');
+  if (!track || !dotsContainer) return;
+  const cards = track.querySelectorAll('.review-card');
+  dotsContainer.innerHTML = cards.map((_, i) => `<div class="review-dot${i === 0 ? ' active' : ''}" data-idx="${i}" onclick="scrollToReview(${i})"></div>`).join('');
+}
+
+function scrollToReview(idx) {
+  const track = document.getElementById('reviewsTrack');
+  const card = track.querySelectorAll('.review-card')[idx];
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+}
+
+function updateReviewDots() {
+  const track = document.getElementById('reviewsTrack');
+  const dotsContainer = document.getElementById('reviewDots');
+  if (!track || !dotsContainer) return;
+  const cards = track.querySelectorAll('.review-card');
+  if (!cards.length) return;
+  const scrollLeft = track.scrollLeft;
+  const cardWidth = cards[0].offsetWidth + parseInt(getComputedStyle(track).gap) || 340;
+  const activeIdx = Math.round(scrollLeft / cardWidth);
+  dotsContainer.querySelectorAll('.review-dot').forEach((dot, i) => {
+    dot.classList.toggle('active', i === activeIdx);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  initReviewDots();
+  const track = document.getElementById('reviewsTrack');
+  if (track) track.addEventListener('scroll', updateReviewDots);
+});
+
 // ============================================
 // SERVICE DROPDOWN
 // ============================================
@@ -1534,8 +1568,8 @@ const translations = {
     addr_lbl: "पता",
     phone_lbl: "फोन",
     whatsapp_lbl: "व्हाट्सएप",
-    addr_val: "दुकान नंबर 12, मेन मार्केट रोड",
-    addr_sub: "पटना, बिहार — 800001",
+    addr_val: "नोनाडीह मोड़, पीरो-बिहटा रोड",
+    addr_sub: "हनुमान मंदिर के पास, 802222",
     call_hours: "वर्किंग आवर्स में कॉल करें",
     msg_anytime: "हमें कभी भी मैसेज करें",
     hours_lbl: "काम के घंटे",
@@ -1564,7 +1598,9 @@ const translations = {
     form_message: "मैसेज",
     form_message_placeholder: "अपना सवाल या ज़रूरत बताएं...",
     form_send: "मैसेज भेजें",
-    guidelines_header: "डॉक्यूमेंट गाइडलाइन",
+    guidelines_header: "साथ लाने वाले दस्तावेज़",
+    how_to_book_title: "कैसे बुक करें",
+    how_to_book_steps: "ऊपर दी गई लिस्ट से अपनी सर्विस चुनें|अपना ईमेल डालें और OTP से वेरिफाई करें|अपनी जानकारी भरें और तारीख चुनें|बुकिंग कन्फर्म करें और अपना टोकन नंबर नोट करें|अपना टोकन कॉल होने से पहले केंद्र पर पहुंचें",
     guide_aadhaar_title: "आधार अपडेट",
     guide_aadhaar_text: "असली आधार कार्ड + सेल्फ-अटेस्टेड कॉपी|वैलिड फोटो आईडी (वोटर आईडी / ड्राइविंग लाइसेंस / पासपोर्ट)|2 हालिया पासपोर्ट साइज़ फोटो|बदलाव के लिए सपोर्टिंग डॉक्यूमेंट (शादी का सर्टिफिकेट, पता प्रूफ, वगैरह)",
     guide_pan_title: "पैन सर्विस",
@@ -1585,6 +1621,14 @@ const translations = {
     footer_live_token: "लाइव टोकन",
     footer_location: "लोकेशन",
     footer_contact: "कॉन्टैक्ट",
+    nav_live_updates: "लाइव अपडेट",
+    live_tag: "लाइव अपडेट",
+    live_title: "नवीनतम सरकारी नौकरी, रिजल्ट और एडमिट कार्ड",
+    live_subtitle: "ऑटो-रिफ्रेश रीयल-टाइम अपडेट — पूरे भारत के रिजल्ट, एडमिट कार्ड और जॉब ओपनिंग्स।",
+    live_result_head: "रिजल्ट",
+    live_admit_head: "एडमिट कार्ड",
+    live_job_head: "नवीनतम जॉब",
+    live_auto_update: "अपडेट हर 10 मिनट में ऑटो-रिफ्रेश होते हैं। सरकारी रिजल्ट द्वारा।",
     footer_serv_title: "सर्विस",
     footer_mobile_link: "मोबाइल लिंक",
     footer_addr_update: "पता अपडेट",
@@ -1595,6 +1639,7 @@ const translations = {
     footer_hours: "सोम–शनि, सुबह 9–शाम 5",
     footer_copyright: "© 2025 इंडिया मोबाइल सेंटर। सभी अधिकार सुरक्षित।",
     footer_auth: "अधिकृत आधार सेवा प्रदाता",
+    software_strip_prefix: "अपने व्यवसाय के लिए यह सॉफ्टवेयर खरीदें —",
     booking_modal_title: "आधार टोकन बुक करें",
     book_title: "अपना टोकन बुक करें",
     choose_date_title: "तारीख चुनें",
@@ -1775,8 +1820,8 @@ const translations = {
     addr_lbl: "Address",
     phone_lbl: "Phone",
     whatsapp_lbl: "WhatsApp",
-    addr_val: "Shop No. 12, Main Market Road",
-    addr_sub: "Patna, Bihar — 800001",
+    addr_val: "Nonadih More, Piro-Bihta Road",
+    addr_sub: "Near Hanuman Mandir, 802222",
     call_hours: "Call us during working hours",
     msg_anytime: "Message us anytime",
     hours_lbl: "Working Hours",
@@ -1805,7 +1850,9 @@ const translations = {
     form_message: "Message",
     form_message_placeholder: "Describe your query or requirement...",
     form_send: "Send Message",
-    guidelines_header: "Document Guidelines",
+    guidelines_header: "Document to Carry",
+    how_to_book_title: "How to Book",
+    how_to_book_steps: "Select your service from the list above|Enter your email and verify with OTP|Fill in your details and choose a date|Confirm your booking and note your token number|Visit the center before your token is called",
     guide_aadhaar_title: "Aadhaar Update",
     guide_aadhaar_text: "Original Aadhaar card + self-attested copy|Valid photo ID (Voter ID / Driving License / Passport)|2 recent passport-size photographs|Supporting document for change (marriage certificate, address proof, etc.) if applicable",
     guide_pan_title: "PAN Services",
@@ -1940,7 +1987,16 @@ const translations = {
     est_wait: "Est. Wait",
     wait_min: "min",
     cancel_booking: "Cancel Booking",
-    check_another: "Check Another"
+    check_another: "Check Another",
+    nav_live_updates: "Live Updates",
+    live_tag: "Live Updates",
+    live_title: "Latest Govt Jobs, Results & Admit Cards",
+    live_subtitle: "Auto-refreshed real-time updates — Results, Admit Cards, and Job Openings across India.",
+    live_result_head: "Result",
+    live_admit_head: "Admit Card",
+    live_job_head: "Latest Job",
+    live_auto_update: "Updates auto-refresh every 10 minutes. Powered by Sarkari Result.",
+    software_strip_prefix: "Buy this software for your business —"
   }
 };
 
@@ -1963,7 +2019,16 @@ window.setLanguage = function(lang) {
       } else if (el.tagName === 'UL') {
         const parts = translations[lang][key].split('|');
         const items = el.querySelectorAll('li');
-        items.forEach((li, i) => { if (parts[i]) li.textContent = parts[i]; });
+        items.forEach((li, i) => {
+          if (parts[i]) {
+            const textEl = li.querySelector('.step-text');
+            if (textEl) {
+              textEl.textContent = parts[i];
+            } else {
+              li.textContent = parts[i];
+            }
+          }
+        });
       } else {
         el.textContent = translations[lang][key];
       }
@@ -2037,3 +2102,118 @@ window.setLanguage(currentLang);
     }
   }
 })();
+
+// ============================================
+// LIVE UPDATES — Sarkari Result Feed
+// ============================================
+async function fetchLiveUpdates() {
+  const bodies = {
+    result: document.getElementById('liveResultBody'),
+    admitCard: document.getElementById('liveAdmitBody'),
+    latestJob: document.getElementById('liveJobBody')
+  };
+
+  try {
+    const res = await fetch('/api/sarkari-feed', { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+
+    const hasData = Object.values(data).some(v => Array.isArray(v) && v.length > 0);
+
+    if (!hasData) {
+      renderFallback(bodies);
+      return;
+    }
+
+    for (const key of ['result', 'admitCard', 'latestJob']) {
+      const items = data[key] || [];
+      const body = bodies[key];
+
+      if (!body) continue;
+
+      if (items.length === 0) {
+        body.innerHTML = '<div class="live-empty">No updates available</div>';
+        continue;
+      }
+
+      body.innerHTML = items.map(item => {
+        if (item && typeof item === 'object' && item.url) {
+          return '<a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener noreferrer" class="live-item live-item-link">' + escapeHtml(item.text) + '</a>';
+        }
+        const text = typeof item === 'string' ? item : (item && item.text) || '';
+        return '<div class="live-item">' + escapeHtml(text) + '</div>';
+      }).join('');
+    }
+  } catch (e) {
+    renderFallback(bodies);
+  }
+}
+
+function renderFallback(bodies) {
+  const fallback = {
+    result: [
+      'OFSS Bihar 11th 3rd Merit List 2026',
+      'BRABU UG 1st Merit List 2026-30',
+      'Bihar Polytechnic Result 2026',
+      'Bihar ITI Rank Card 2026',
+      'Bihar Board Inter 2nd Merit List 2026',
+      'Bihar Board 12th Compartment Result 2026',
+      'Bihar Board 12th Scrutiny Result 2026',
+      'Bihar Board 10th Scrutiny Result 2026',
+      'UP Board Result 2026',
+      'Bihar B.Ed Answer Key 2026'
+    ],
+    admitCard: [
+      'Bihar Police Constable Admit Card 2026',
+      'CUET UG Admit Card 2026',
+      'SSC GD Constable Admit Card 2026',
+      'Bihar DELED Admit Card 2026',
+      'Bihar Havildar Clerk Admit Card 2026',
+      'RRB NTPC UG City Intimation 2026',
+      'Bihar Police Madhya Nishedh Admit Card 2026',
+      'Bihar Polytechnic Result 2026',
+      'Bihar Prohibition Constable Admit Card 2026',
+      'SSC GD 2026 Slot Booking'
+    ],
+    latestJob: [
+      'Central Bank Apprentice Vacancy 2026',
+      'RRB ALP Vacancy 2026',
+      'SBI Apprentice Vacancy 2026',
+      'SSC CGL Vacancy 2026',
+      'UPSC CDS 2 Online Form 2026',
+      'Indian Navy 10+2 B.Tech Cadet Entry Jan 2027',
+      'BRO Vacancy 2026',
+      'Bihar District Court Parichari Vacancy 2026',
+      'Bihar Support Persons Vacancy 2026',
+      'Punjab and Haryana High Court Vacancy 2026'
+    ]
+  };
+
+  for (const key of ['result', 'admitCard', 'latestJob']) {
+    const body = bodies[key];
+    if (!body) continue;
+    const items = fallback[key] || [];
+    body.innerHTML = items.map(item =>
+      '<div class="live-item">' + escapeHtml(item) + '</div>'
+    ).join('');
+  }
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+function toggleMobileColumn(header) {
+  if (window.innerWidth > 600) return;
+  const col = header.parentElement;
+  col.classList.toggle('open');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (document.getElementById('liveUpdatesGrid')) {
+    fetchLiveUpdates();
+    setInterval(fetchLiveUpdates, 10 * 60 * 1000);
+  }
+});

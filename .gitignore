@@ -1,19 +1,39 @@
-# Sensitive config (contains API keys)
-data/sms-config.json
-.vercel
-# Auto-generated OTP & SMS data
-data/otps.json
-data/sms-counter.json
-data/sms-outbox.json
-data/sms-log.txt
+# Dependencies
+node_modules/
+
+# Platform tools (Android binaries)
+platform-tools/
+platform-tools-latest-windows.zip
+
 # PHP runtime (large binary, download separately)
 php/
+
+# Sensitive config
+data/sms-config.json
+api/email-config.js
+.env*
+
+# Auto-generated OTP & SMS data
+data/
+
+# Local dev files
+.vercel
+dev-server.js
+deploy-tomorrow.bat
+sms-bridge.ps1
+
 # Test files
 test_php.php
 test_api.php
+
 # OS files
 Thumbs.db
 .DS_Store
-.vercel
-.env*
+
+# Root duplicates (live in public/)
+apple-touch-icon.png
+web-app-manifest-192x192.png
+web-app-manifest-512x512.png
+
+# Separate admin repo
 indiamobile-admin

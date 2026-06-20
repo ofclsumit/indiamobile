@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "node dev-server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -20,6 +21,7 @@
   "homepage": "https://github.com/ofclsumit/indiamobile#readme",
   "dependencies": {
     "@vercel/blob": "^2.4.0",
+    "express": "^4.19.2",
     "firebase": "^12.15.0",
     "nodemailer": "^9.0.0"
   }

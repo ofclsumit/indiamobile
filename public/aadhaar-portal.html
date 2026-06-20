@@ -7,7 +7,7 @@
 <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="site.webmanifest">
-<title>Aadhaar Update Booking — India Mobile</title>
+<title data-t="portal_title">Aadhaar Update Booking — India Mobile</title>
 <meta name="description" content="Book your Aadhaar update appointment online at India Mobile Center. Fast and secure booking.">
 <script>
 (function() {
@@ -302,7 +302,7 @@ resetInactivityTimer();
     India Mobile<span style="color:var(--accent)"> Center</span>
     <span class="loading-dots"><span></span><span></span><span></span></span>
   </div>
-  <div class="loading-sub">Preparing booking portal...</div>
+  <div class="loading-sub" data-t="loading_sub">Preparing booking portal...</div>
 </div>
 
 <script>
@@ -380,42 +380,42 @@ resetInactivityTimer();
               <path d="M24 42l12 12 22-24" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="56" stroke-dashoffset="56" class="anim-check"/>
             </svg>
           </div>
-          <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px;">Booking Confirmed</h3>
-          <p style="font-size:14px;color:var(--text2);margin-bottom:24px;">Your appointment is booked successfully.</p>
+          <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px;" data-t="booking_confirmed">Booking Confirmed</h3>
+          <p style="font-size:14px;color:var(--text2);margin-bottom:24px;" data-t="booking_success_msg">Your appointment is booked successfully.</p>
           <div style="text-align:center;margin-bottom:24px;">
-            <div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">Token Number</div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;" data-t="token_number">Token Number</div>
             <div id="confirmToken" style="font-family:'Space Grotesk',sans-serif;font-size:72px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 30px rgba(56,189,248,0.3);"></div>
           </div>
           <div class="booking-id-badge" id="confirmBookingId"></div>
           <div class="booking-detail-grid">
             <div class="booking-detail-row">
-              <span class="booking-detail-key">Name</span>
+              <span class="booking-detail-key" data-t="name_label">Name</span>
               <span class="booking-detail-val" id="confirmName"></span>
             </div>
             <div class="booking-detail-row">
-              <span class="booking-detail-key">Service</span>
+              <span class="booking-detail-key" data-t="service_label">Service</span>
               <span class="booking-detail-val" id="confirmService"></span>
             </div>
             <div class="booking-detail-row">
-              <span class="booking-detail-key">Aadhaar</span>
+              <span class="booking-detail-key" data-t="aadhaar_label">Aadhaar</span>
               <span class="booking-detail-val" id="confirmAadhaar" style="font-family:'Space Grotesk',sans-serif;letter-spacing:0.1em;"></span>
             </div>
             <div class="booking-detail-row">
-              <span class="booking-detail-key">Appointment Date</span>
+              <span class="booking-detail-key" data-t="appointment_date">Appointment Date</span>
               <span class="booking-detail-val" id="confirmDate"></span>
             </div>
             <div class="booking-detail-row">
-              <span class="booking-detail-key">Status</span>
-              <span class="booking-detail-val text-success">Approved</span>
+              <span class="booking-detail-key" data-t="status_label">Status</span>
+              <span class="booking-detail-val text-success" data-t="approved">Approved</span>
             </div>
           </div>
         </div>
-        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px 16px;margin-top:16px;font-size:13px;color:#fbbf24;text-align:left;">
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px 16px;margin-top:16px;font-size:13px;color:#fbbf24;text-align:left;" data-t="instructions">
           Please bring your Aadhaar card and supporting documents. Arrive 10 minutes before your token is called.
         </div>
         <div style="display:flex;gap:10px;margin-top:16px;">
-          <a href="index.html" class="btn-primary btn-full" style="justify-content:center;text-decoration:none;flex:1;"><i class="fas fa-arrow-left" style="font-size:14px;"></i> Back to Home</a>
-          <button onclick="window.print()" class="btn-primary btn-full" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);justify-content:center;flex:1;"><i class="fas fa-print" style="font-size:14px;"></i> Print</button>
+          <a href="index.html" class="btn-primary btn-full" style="justify-content:center;text-decoration:none;flex:1;"><i class="fas fa-arrow-left" style="font-size:14px;"></i> <span data-t="back_to_home">Back to Home</span></a>
+          <button onclick="window.print()" class="btn-primary btn-full" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);justify-content:center;flex:1;"><i class="fas fa-print" style="font-size:14px;"></i> <span data-t="print_btn">Print</span></button>
         </div>
       </div>
     </div>
@@ -425,54 +425,54 @@ resetInactivityTimer();
   <div id="bookingForm">
     <div class="portal-header">
       <div class="icon"><i class="fas fa-id-card"></i></div>
-      <h1>Aadhaar Update Booking</h1>
-      <p>Book your appointment for Aadhaar updates</p>
+      <h1 data-t="portal_title">Aadhaar Update Booking</h1>
+      <p data-t="portal_desc">Book your appointment for Aadhaar updates</p>
     </div>
 
     <!-- Step 1: Details -->
     <div id="portalStep1" class="form-card">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:24px;">
         <span style="width:28px;height:28px;background:linear-gradient(135deg,var(--neon),var(--neon3));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;"><i class="fas fa-user" style="font-size:13px;"></i></span>
-        <span style="font-weight:600;font-size:15px;">Your Details</span>
+        <span style="font-weight:600;font-size:15px;" data-t="step_1">Your Details</span>
       </div>
 
       <div class="form-group">
-        <label class="form-label">Email Address</label>
-        <input type="email" class="form-input" id="portalEmail" placeholder="your@email.com"
+        <label class="form-label" data-t="your_email">Email Address</label>
+        <input type="email" class="form-input" id="portalEmail" placeholder="your@email.com" data-t="email_placeholder"
           style="width:100%;padding:13px 14px;background:transparent;border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s;"
           onfocus="this.style.borderColor='rgba(59,130,246,0.5)'"
           onblur="this.style.borderColor='var(--glass-border)'">
       </div>
 
       <div class="form-group">
-        <label class="form-label">Full Name</label>
-        <input type="text" class="form-input" id="portalName" placeholder="Enter your full name" maxlength="50"
+        <label class="form-label" data-t="full_name">Full Name</label>
+        <input type="text" class="form-input" id="portalName" placeholder="Enter your full name" data-t="name_placeholder" maxlength="50"
           style="width:100%;padding:13px 14px;background:transparent;border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s;"
           onfocus="this.style.borderColor='rgba(59,130,246,0.5)'"
           onblur="this.style.borderColor='var(--glass-border)'">
       </div>
 
       <div class="form-group">
-        <label class="form-label">Aadhaar Number</label>
+        <label class="form-label" data-t="aadhaar_number">Aadhaar Number</label>
         <div class="aadhaar-group-wrap">
           <div class="aadhaar-group">
-            <input type="text" id="aad1" maxlength="4" placeholder="XXXX" inputmode="numeric">
+            <input type="text" id="aad1" maxlength="4" placeholder="XXXX" inputmode="numeric" data-t="aadhaar_placeholder">
             <span class="aadhaar-dash">-</span>
-            <input type="text" id="aad2" maxlength="4" placeholder="XXXX" inputmode="numeric">
+            <input type="text" id="aad2" maxlength="4" placeholder="XXXX" inputmode="numeric" data-t="aadhaar_placeholder">
             <span class="aadhaar-dash">-</span>
-            <input type="text" id="aad3" maxlength="4" placeholder="XXXX" inputmode="numeric">
+            <input type="text" id="aad3" maxlength="4" placeholder="XXXX" inputmode="numeric" data-t="aadhaar_placeholder">
           </div>
         </div>
-        <p style="font-size:12px;color:var(--text3);margin-top:6px;">Enter your 12-digit Aadhaar number as shown on your card</p>
+        <p style="font-size:12px;color:var(--text3);margin-top:6px;" data-t="aadhaar_hint">Enter your 12-digit Aadhaar number as shown on your card</p>
         <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:12px;color:#fbbf24;display:flex;align-items:center;gap:8px;">
           <i class="fas fa-exclamation-triangle" style="font-size:14px;flex-shrink:0;"></i>
-          <span>Please enter your correct Aadhaar number as per your Aadhaar card. Wrong details may lead to rejection at the center.</span>
+          <span data-t="aadhaar_warning">Please enter your correct Aadhaar number as per your Aadhaar card. Wrong details may lead to rejection at the center.</span>
         </div>
       </div>
 
       <div id="portalOTPSection" style="display:none; margin-top: 20px;">
         <div style="height:1px;background:var(--glass-border);margin:4px 0 20px;"></div>
-        <p style="font-size:13px;color:var(--text3);margin-bottom:16px;">Enter the 6-digit OTP sent to your email</p>
+        <p style="font-size:13px;color:var(--text3);margin-bottom:16px;" data-t="otp_hint">Enter the 6-digit OTP sent to your email</p>
         <div class="otp-grid">
           <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
           <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
@@ -481,18 +481,18 @@ resetInactivityTimer();
           <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
           <input type="text" class="otp-input portal-otp" maxlength="1" inputmode="numeric">
         </div>
-        <button class="btn-primary btn-full" onclick="verifyPortalOTP()" style="margin-top:12px;">Verify OTP &amp; Continue</button>
+        <button class="btn-primary btn-full" onclick="verifyPortalOTP()" style="margin-top:12px;" data-t="verify_continue">Verify OTP &amp; Continue</button>
         <div style="display:flex;justify-content:center;margin-top:12px;">
-          <button id="resendOtpBtn" class="btn-secondary" onclick="resendPortalOTP()" style="font-size:12px;padding:8px 20px;justify-content:center;" disabled>Resend OTP (<span id="resendCountdown">30</span>s)</button>
+          <button id="resendOtpBtn" class="btn-secondary" onclick="resendPortalOTP()" style="font-size:12px;padding:8px 20px;justify-content:center;" disabled data-t="resend_otp">Resend OTP (<span id="resendCountdown">30</span>s)</button>
         </div>
       </div>
 
       <div id="portalSendBtn">
-        <button class="btn-primary btn-full" onclick="continueToBooking()">Send OTP</button>
+        <button class="btn-primary btn-full" onclick="continueToBooking()" data-t="send_otp">Send OTP</button>
       </div>
       <div style="text-align:center;margin-top:16px;">
         <a href="index.html?checkToken=1" style="color:var(--text3);font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">
-          Already booked? <strong style="color:var(--accent);">Find your token</strong> <i class="fas fa-arrow-right" style="font-size:11px;"></i>
+          <span data-t="already_booked">Already booked? Find your token</span> <i class="fas fa-arrow-right" style="font-size:11px;"></i>
         </a>
       </div>
     </div>
@@ -501,13 +501,13 @@ resetInactivityTimer();
     <div id="portalStep2" style="display:none;" class="form-card">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:24px;">
         <span style="width:28px;height:28px;background:linear-gradient(135deg,var(--neon),var(--neon3));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;"><i class="fas fa-calendar" style="font-size:13px;"></i></span>
-        <span style="font-weight:600;font-size:15px;">Choose Appointment Date</span>
+        <span style="font-weight:600;font-size:15px;" data-t="select_date">Choose Appointment Date</span>
       </div>
-      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;">Select your preferred appointment date.</p>
+      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;" data-t="select_date_hint">Select your preferred appointment date.</p>
       <div class="date-grid" id="portalDateGrid"></div>
       <div style="display:flex;gap:12px;margin-top:24px;">
-        <button class="btn-secondary" onclick="portalGoBack()" style="flex:1;justify-content:center;">Back</button>
-        <button class="btn-primary" onclick="portalConfirmBooking()" style="flex:2;justify-content:center;">Confirm Booking</button>
+        <button class="btn-secondary" onclick="portalGoBack()" style="flex:1;justify-content:center;" data-t="back_btn">Back</button>
+        <button class="btn-primary" onclick="portalConfirmBooking()" style="flex:2;justify-content:center;" data-t="confirm_booking">Confirm Booking</button>
       </div>
       <div id="portalSubmitStatus" style="margin-top:12px;text-align:center;font-size:13px;color:var(--text3);display:none;"></div>
     </div>
@@ -521,18 +521,18 @@ resetInactivityTimer();
 <div class="existing-booking-overlay" id="existingBookingOverlay">
   <div class="existing-booking-card">
     <div class="warning-icon"><i class="fas fa-exclamation-triangle"></i></div>
-    <h2>Booking Already Exists</h2>
+    <h2 data-t="existing_booking_title">Booking Already Exists</h2>
     <p id="existingBookingMsg">You already have an active booking. What would you like to do?</p>
     <div id="existingBookingTokenSection" style="display:none;">
       <div class="existing-token" id="existingBookingToken">--</div>
-      <div class="existing-badge"><i class="fas fa-ticket"></i> Your Token</div>
+      <div class="existing-badge"><i class="fas fa-ticket"></i> <span data-t="your_token">Your Token</span></div>
     </div>
     <div class="btn-row" id="existingBookingActions">
-      <button class="btn-primary" onclick="existingBookingShowToken()">Yes, Show My Token</button>
-      <button class="btn-secondary" onclick="existingBookingGoHome()">No, Go to Home</button>
+      <button class="btn-primary" onclick="existingBookingShowToken()" data-t="existing_booking_yes">Yes, Show My Token</button>
+      <button class="btn-secondary" onclick="existingBookingGoHome()" data-t="existing_booking_no">No, Go to Home</button>
     </div>
     <div class="btn-row" id="existingBookingDoneRow" style="display:none;">
-      <button class="btn-secondary" onclick="existingBookingGoHome()"><i class="fas fa-arrow-left"></i> Back to Home</button>
+      <button class="btn-secondary" onclick="existingBookingGoHome()"><i class="fas fa-arrow-left"></i> <span data-t="existing_back_home">Back to Home</span></button>
     </div>
   </div>
 </div>
@@ -607,17 +607,17 @@ function getFullAadhaar() {
 function continueToBooking() {
   const email = document.getElementById('portalEmail').value.trim();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    notify('Please enter a valid email address', 'error');
+    notify(__t('err_valid_email'), 'error');
     return;
   }
   const name = document.getElementById('portalName').value.trim();
   if (!name) {
-    notify('Please enter your full name', 'error');
+    notify(__t('err_full_name'), 'error');
     return;
   }
   const aadhaar = getFullAadhaar();
   if (aadhaar.length !== 12) {
-    notify('Please enter your complete 12-digit Aadhaar number', 'error');
+    notify(__t('err_full_aadhaar'), 'error');
     return;
   }
   portalData = { email, name, aadhaarFull: aadhaar, aadhaarLast4: aadhaar.slice(-4), service: 'Aadhaar Update' };
@@ -628,13 +628,13 @@ function continueToBooking() {
     setBtnLoading(btn, false);
     hidePageLoader();
     if (res.success) {
-      notify('OTP sent to ' + email, 'success');
+      notify(__t('otp_sent_to') + ' ' + email, 'success');
       document.getElementById('portalSendBtn').style.display = 'none';
       document.getElementById('portalOTPSection').style.display = 'block';
       setTimeout(() => setupPortalOTPInputs(), 100);
       startResendCooldown();
     } else {
-      notify(res.message || 'Failed to send OTP', 'error');
+      notify(res.message || __t('err_send_otp'), 'error');
     }
   });
 }
@@ -642,7 +642,7 @@ function continueToBooking() {
 function verifyPortalOTP() {
   const inputs = document.querySelectorAll('.portal-otp');
   const otp = [...inputs].map(i => i.value).join('');
-  if (otp.length !== 6) { notify('Enter the complete 6-digit OTP', 'error'); return; }
+  if (otp.length !== 6) { notify(__t('err_complete_otp'), 'error'); return; }
   const btn = document.querySelector('#portalOTPSection button');
   setBtnLoading(btn, true);
   showPageLoader();
@@ -650,10 +650,10 @@ function verifyPortalOTP() {
     setBtnLoading(btn, false);
     hidePageLoader();
     if (result.success) {
-      notify('Email verified successfully!', 'success');
+      notify(__t('email_verified'), 'success');
       checkExistingBooking();
     } else {
-      notify(result.message || 'Incorrect OTP. Please try again.', 'error');
+      notify(result.message || __t('err_incorrect_otp'), 'error');
     }
   });
 }
@@ -721,7 +721,7 @@ function showExistingBookingOverlay(booking) {
   actions.style.display = 'flex';
   doneRow.style.display = 'none';
 
-  msg.textContent = 'You already have an active booking (Token #' + booking.token + '). Would you like to view it?';
+  msg.textContent = __t('active_booking_token') + booking.token + __t('show_existing_token');
   window._existingBooking = booking;
 
   overlay.classList.add('show');
@@ -737,7 +737,7 @@ window.existingBookingShowToken = function() {
   var actions = document.getElementById('existingBookingActions');
   var doneRow = document.getElementById('existingBookingDoneRow');
 
-  msg.textContent = 'Here is your existing token:';
+  msg.textContent = __t('here_your_token');
   tokenEl.textContent = booking.token;
   tokenSection.style.display = 'block';
   actions.style.display = 'none';
@@ -752,18 +752,23 @@ let resendCooldownTimer = null;
 
 function startResendCooldown() {
   const btn = document.getElementById('resendOtpBtn');
-  const span = document.getElementById('resendCountdown');
   let sec = 30;
   btn.disabled = true;
+  function updateBtn() {
+    const label = typeof __t !== 'undefined' ? __t('resend_otp') : 'Resend OTP';
+    btn.innerHTML = label + ' (<span id="resendCountdown">' + sec + '</span>s)';
+  }
+  updateBtn();
   if (resendCooldownTimer) clearInterval(resendCooldownTimer);
   resendCooldownTimer = setInterval(() => {
     sec--;
-    span.textContent = sec;
+    var span = document.getElementById('resendCountdown');
+    if (span) span.textContent = sec;
     if (sec <= 0) {
       clearInterval(resendCooldownTimer);
       resendCooldownTimer = null;
       btn.disabled = false;
-      span.textContent = '0';
+      updateBtn();
     }
   }, 1000);
 }
@@ -772,17 +777,17 @@ function resendPortalOTP() {
   if (!portalData.email) return;
   const btn = document.getElementById('resendOtpBtn');
   setBtnLoading(btn, true);
-  btn.textContent = 'Sending...';
+  btn.textContent = __t('sending');
   window.sendOTP(portalData.email).then(res => {
     setBtnLoading(btn, false);
     if (res.success) {
-      notify('OTP resent to ' + portalData.email, 'success');
+      notify(__t('otp_resent_to') + ' ' + portalData.email, 'success');
       document.querySelectorAll('.portal-otp').forEach(i => i.value = '');
       document.querySelectorAll('.portal-otp')[0].focus();
     } else {
-      notify(res.message || 'Failed to resend OTP', 'error');
+      notify(res.message || __t('err_resent_otp'), 'error');
     }
-    btn.innerHTML = 'Resend OTP (<span id="resendCountdown">30</span>s)';
+    btn.innerHTML = __t('resend_otp') + ' (<span id="resendCountdown">30</span>s)';
     startResendCooldown();
   });
 }
@@ -815,7 +820,7 @@ function showStep2() {
 
   if (dates.length > 0) { renderDateGrid(dates); return; }
 
-  grid.innerHTML = '<p style="color:var(--text3);font-size:14px;text-align:center;padding:20px;grid-column:1/-1;">Loading dates...</p>';
+  grid.innerHTML = '<p style="color:var(--text3);font-size:14px;text-align:center;padding:20px;grid-column:1/-1;">' + __t('loading_dates') + '</p>';
 
   if (window.__bookingsRef) {
     window.__bookingsRef.where('__type', '==', 'date_config').get().then(snap => {
@@ -885,12 +890,12 @@ function portalSelectDate(dateStr, el) {
 
 async function portalConfirmBooking() {
   if (!portalSelectedDate) {
-    notify('Please select an appointment date', 'error');
+    notify(__t('err_select_date'), 'error');
     return;
   }
   const statusEl = document.getElementById('portalSubmitStatus');
   statusEl.style.display = 'block';
-  statusEl.innerHTML = '<span class="btn-loading" style="color:var(--text3);display:inline-block;padding-left:24px;">Submitting</span>';
+  statusEl.innerHTML = '<span class="btn-loading" style="color:var(--text3);display:inline-block;padding-left:24px;">' + __t('submitting') + '</span>';
   const btn = document.querySelector('#portalStep2 .btn-primary');
   setBtnLoading(btn, true);
   showPageLoader();
@@ -911,13 +916,13 @@ async function portalConfirmBooking() {
     hidePageLoader();
     const result = await res.json();
     if (!result.success) {
-      notify(result.message || 'Booking failed', 'error');
+      notify(result.message || __t('err_booking_failed'), 'error');
       statusEl.style.display = 'none';
       return;
     }
     statusEl.style.display = 'none';
     if (result.isDuplicate) {
-      notify('You already have an active booking. Showing your existing token.', 'info');
+      notify(__t('already_active'), 'info');
       sessionStorage.setItem('myBooking', JSON.stringify(result.booking));
       showConfirmation(result.booking);
     } else {
@@ -927,7 +932,7 @@ async function portalConfirmBooking() {
   } catch(e) {
     setBtnLoading(btn, false);
     hidePageLoader();
-    notify('Network error. Please try again.', 'error');
+    notify(__t('err_network'), 'error');
     statusEl.style.display = 'none';
   }
 }
@@ -936,7 +941,7 @@ function showConfirmation(booking) {
   document.getElementById('bookingForm').style.display = 'none';
   document.getElementById('confirmView').style.display = 'block';
   document.getElementById('confirmToken').textContent = booking.token;
-  document.getElementById('confirmBookingId').textContent = 'Booking ID: ' + booking.bookingId;
+  document.getElementById('confirmBookingId').textContent = __t('booking_id') + ': ' + booking.bookingId;
   document.getElementById('confirmName').textContent = booking.name || '-';
   document.getElementById('confirmService').textContent = booking.service;
   const aad = booking.aadhaarFull || '';
@@ -987,47 +992,143 @@ function showConfirmation(booking) {
       portal_title: "आधार अपडेट बुकिंग",
       portal_desc: "अपना आधार अपडेट अपॉइंटमेंट ऑनलाइन बुक करें। तेज़ और सुरक्षित।",
       back_home: "होम पर वापस जाएं",
-      step_1: "विवरण",
-      step_2: "तारीख",
+      step_1: "आपका विवरण",
+      step_2: "तारीख चुनें",
       step_3: "पुष्टि",
-      your_email: "आपका ईमेल",
+      your_email: "ईमेल एड्रेस",
+      email_placeholder: "your@email.com",
       full_name: "पूरा नाम",
+      name_placeholder: "अपना पूरा नाम लिखें",
       aadhaar_number: "आधार नंबर",
+      aadhaar_placeholder: "XXXX",
+      aadhaar_hint: "अपना 12 अंकों का आधार नंबर अपने कार्ड के अनुसार दर्ज करें",
+      aadhaar_warning: "अपने आधार कार्ड के अनुसार सही आधार नंबर दर्ज करें। गलत जानकारी पर केंद्र पर रिजेक्ट किया जा सकता है।",
       send_otp: "OTP भेजें",
+      otp_hint: "आपके ईमेल पर भेजा गया 6-अंकों का OTP डालें",
       verify_continue: "OTP वेरिफाई करें और आगे बढ़ें",
-      select_date: "तारीख चुनें",
-      confirm_booking: "बुकिंग कन्फर्म करें",
-      booking_confirmed: "बुकिंग कन्फर्म हुई",
-      token_number: "आपका टोकन नंबर",
-
       resend_otp: "दोबारा OTP भेजें",
-      otp_sent: "OTP भेज दिया गया है",
-      verifying: "वेरिफाई हो रहा है...",
-      processing: "प्रोसेस हो रहा है..."
+      select_date: "अपॉइंटमेंट तारीख चुनें",
+      select_date_hint: "अपनी पसंदीदा अपॉइंटमेंट तारीख चुनें।",
+      back_btn: "वापस जाएं",
+      confirm_booking: "बुकिंग कन्फर्म करें",
+      submitting: "सबमिट हो रहा है...",
+      booking_confirmed: "बुकिंग कन्फर्म हुई",
+      booking_success_msg: "आपका अपॉइंटमेंट सफलतापूर्वक बुक हो गया है।",
+      token_number: "टोकन नंबर",
+      booking_id: "बुकिंग आईडी",
+      name_label: "नाम",
+      service_label: "सर्विस",
+      aadhaar_label: "आधार",
+      appointment_date: "अपॉइंटमेंट तारीख",
+      status_label: "स्टेटस",
+      approved: "अप्रूव्ड",
+      instructions: "कृपया अपना आधार कार्ड और सहायक दस्तावेज़ लेकर आएं। अपना टोकन कॉल होने से 10 मिनट पहले पहुंचें।",
+      back_to_home: "होम पर वापस जाएं",
+      print_btn: "प्रिंट करें",
+      existing_booking_title: "बुकिंग पहले से मौजूद है",
+      existing_booking_yes: "हां, मेरा टोकन दिखाएं",
+      existing_booking_no: "नहीं, होम पर जाएं",
+      existing_back_home: "होम पर वापस जाएं",
+      your_token: "आपका टोकन",
+      here_your_token: "यह रहा आपका मौजूदा टोकन:",
+      already_booked: "पहले से बुक है? अपना टोकन खोजें",
+      err_valid_email: "कृपया एक वैध ईमेल एड्रेस दर्ज करें",
+      err_full_name: "कृपया अपना पूरा नाम दर्ज करें",
+      err_full_aadhaar: "कृपया पूरा 12 अंकों का आधार नंबर दर्ज करें",
+      otp_sent_to: "OTP भेज दिया गया है",
+      err_send_otp: "OTP भेजने में विफल",
+      err_complete_otp: "पूरा 6 अंकों का OTP दर्ज करें",
+      email_verified: "ईमेल सफलतापूर्वक वेरिफाई हो गया!",
+      err_incorrect_otp: "गलत OTP। कृपया फिर से प्रयास करें।",
+      otp_resent_to: "OTP दोबारा भेज दिया गया है",
+      err_resent_otp: "दोबारा OTP भेजने में विफल",
+      sending: "भेजा जा रहा है...",
+      err_select_date: "कृपया एक अपॉइंटमेंट तारीख चुनें",
+      err_booking_failed: "बुकिंग विफल रही",
+      err_network: "नेटवर्क त्रुटि। कृपया फिर से प्रयास करें।",
+      loading_dates: "तारीखें लोड हो रही हैं...",
+      active_booking_token: "आपकी पहले से एक सक्रिय बुकिंग है (टोकन #",
+      show_existing_token: "। क्या आप इसे देखना चाहेंगे?",
+      already_active: "आपकी पहले से सक्रिय बुकिंग है। आपका मौजूदा टोकन दिखाया जा रहा है।",
+      back_to_home_btn: "होम पर वापस जाएं",
+      loading_sub: "बुकिंग पोर्टल तैयार हो रहा है..."
     },
     en: {
       portal_title: "Aadhaar Update Booking",
       portal_desc: "Book your Aadhaar update appointment online. Fast and secure.",
       back_home: "Back to Home",
-      step_1: "Details",
-      step_2: "Date",
+      step_1: "Your Details",
+      step_2: "Choose Appointment Date",
       step_3: "Confirmation",
-      your_email: "Your Email",
+      your_email: "Email Address",
+      email_placeholder: "your@email.com",
       full_name: "Full Name",
+      name_placeholder: "Enter your full name",
       aadhaar_number: "Aadhaar Number",
+      aadhaar_placeholder: "XXXX",
+      aadhaar_hint: "Enter your 12-digit Aadhaar number as shown on your card",
+      aadhaar_warning: "Please enter your correct Aadhaar number as per your Aadhaar card. Wrong details may lead to rejection at the center.",
       send_otp: "Send OTP",
+      otp_hint: "Enter the 6-digit OTP sent to your email",
       verify_continue: "Verify OTP & Continue",
-      select_date: "Select Date",
-      confirm_booking: "Confirm Booking",
-      booking_confirmed: "Booking Confirmed",
-      token_number: "Your Token Number",
       resend_otp: "Resend OTP",
-      otp_sent: "OTP has been sent",
-      verifying: "Verifying...",
-      processing: "Processing..."
+      select_date: "Choose Appointment Date",
+      select_date_hint: "Select your preferred appointment date.",
+      back_btn: "Back",
+      confirm_booking: "Confirm Booking",
+      submitting: "Submitting...",
+      booking_confirmed: "Booking Confirmed",
+      booking_success_msg: "Your appointment is booked successfully.",
+      token_number: "Token Number",
+      booking_id: "Booking ID",
+      name_label: "Name",
+      service_label: "Service",
+      aadhaar_label: "Aadhaar",
+      appointment_date: "Appointment Date",
+      status_label: "Status",
+      approved: "Approved",
+      instructions: "Please bring your Aadhaar card and supporting documents. Arrive 10 minutes before your token is called.",
+      back_to_home: "Back to Home",
+      print_btn: "Print",
+      existing_booking_title: "Booking Already Exists",
+      existing_booking_yes: "Yes, Show My Token",
+      existing_booking_no: "No, Go to Home",
+      existing_back_home: "Back to Home",
+      your_token: "Your Token",
+      here_your_token: "Here is your existing token:",
+      already_booked: "Already booked? Find your token",
+      err_valid_email: "Please enter a valid email address",
+      err_full_name: "Please enter your full name",
+      err_full_aadhaar: "Please enter your complete 12-digit Aadhaar number",
+      otp_sent_to: "OTP sent to",
+      err_send_otp: "Failed to send OTP",
+      err_complete_otp: "Enter the complete 6-digit OTP",
+      email_verified: "Email verified successfully!",
+      err_incorrect_otp: "Incorrect OTP. Please try again.",
+      otp_resent_to: "OTP resent to",
+      err_resent_otp: "Failed to resend OTP",
+      sending: "Sending...",
+      err_select_date: "Please select an appointment date",
+      err_booking_failed: "Booking failed",
+      err_network: "Network error. Please try again.",
+      loading_dates: "Loading dates...",
+      active_booking_token: "You already have an active booking (Token #",
+      show_existing_token: "). Would you like to view it?",
+      already_active: "You already have an active booking. Showing your existing token.",
+      back_to_home_btn: "Back to Home",
+      loading_sub: "Preparing booking portal..."
     }
   };
   let currentLang = localStorage.getItem('site_lang') || 'hi';
+  window.__t = function(key) {
+    if (translations[currentLang] && translations[currentLang][key] !== undefined) {
+      return translations[currentLang][key];
+    }
+    if (translations.en && translations.en[key] !== undefined) {
+      return translations.en[key];
+    }
+    return key;
+  };
   function applyLang(lang) {
     currentLang = lang;
     localStorage.setItem('site_lang', lang);
@@ -1035,8 +1136,15 @@ function showConfirmation(booking) {
     document.querySelectorAll('[data-t]').forEach(function(el) {
       var key = el.getAttribute('data-t');
       if (translations[lang] && translations[lang][key]) {
-        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') { el.placeholder = translations[lang][key]; }
-        else { el.textContent = translations[lang][key]; }
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+          el.placeholder = translations[lang][key];
+        } else if (el.tagName === 'UL') {
+          var parts = translations[lang][key].split('|');
+          var items = el.querySelectorAll('li');
+          items.forEach(function(li, i) { if (parts[i]) li.textContent = parts[i]; });
+        } else {
+          el.textContent = translations[lang][key];
+        }
       }
     });
     var wrapper = document.getElementById('langSwitchPortal');

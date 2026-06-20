@@ -1,6 +1,9 @@
 function getSyncURL(req) {
   const host = req.headers['x-forwarded-host'] || req.headers.host || '';
-  const proto = req.headers['x-forwarded-proto'] || 'https';
+  let proto = req.headers['x-forwarded-proto'] || 'https';
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    proto = 'http';
+  }
   return `${proto}://${host}/api/sync`;
 }
 

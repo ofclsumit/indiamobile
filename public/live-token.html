@@ -7,7 +7,7 @@
 <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="site.webmanifest">
-<title>Live Token — India Mobile Center</title>
+<title data-t="live_token_title">Live Token — India Mobile Center</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
@@ -169,7 +169,7 @@ body { display: flex; flex-direction: column; }
     India Mobile<span style="color:var(--accent)"> Center</span>
     <span class="loading-dots"><span></span><span></span><span></span></span>
   </div>
-  <div class="loading-sub">Connecting to live feed...</div>
+  <div class="loading-sub" data-t="connecting">Connecting to live feed...</div>
 </div>
 
 <script>
@@ -206,18 +206,18 @@ body { display: flex; flex-direction: column; }
       <div class="lang-option active" id="langOptHiLive"><span class="lang-opt-text">HI</span></div>
       <div class="lang-option" id="langOptEnLive"><span class="lang-opt-text">EN</span></div>
     </div>
-    <a href="index.html" class="live-header-back"><i class="fas fa-arrow-left"></i> Home</a>
+    <a href="index.html" class="live-header-back"><i class="fas fa-arrow-left"></i> <span data-t="home_link">Home</span></a>
   </div>
 </div>
 
 <main class="live-page-main">
   <div class="live-card">
     <div class="live-badge">
-      <span class="live-dot"></span> LIVE
+      <span class="live-dot"></span> <span data-t="live_badge">LIVE</span>
     </div>
 
-    <div class="live-token-number" id="ltToken" style="font-size:20px;transition:all 0.5s ease;">TOKEN NOT STARTED</div>
-    <div class="live-token-label" id="ltLabel">Current Serving Token</div>
+    <div class="live-token-number" id="ltToken" style="font-size:20px;transition:all 0.5s ease;" data-t="token_not_started">TOKEN NOT STARTED</div>
+    <div class="live-token-label" id="ltLabel" data-t-dynamic="current_serving">Current Serving Token</div>
 
     <div class="live-divider"></div>
 
@@ -231,13 +231,13 @@ body { display: flex; flex-direction: column; }
 
     <div class="live-actions">
       <div class="live-actions-row">
-        <button class="btn-secondary" style="justify-content:center; font-size:13px;" onclick="location.href='index.html'">Home</button>
-        <button class="btn-primary" style="justify-content:center; font-size:13px;" onclick="location.href='index.html'">Book Appointment</button>
+        <button class="btn-secondary" style="justify-content:center; font-size:13px;" onclick="location.href='index.html'" data-t="home_btn">Home</button>
+        <button class="btn-primary" style="justify-content:center; font-size:13px;" onclick="location.href='index.html'" data-t="book_appointment">Book Appointment</button>
       </div>
-      <button class="btn-secondary" style="justify-content:center; font-size:13px;" onclick="location.href='index.html#services'">Check My Token</button>
+      <button class="btn-secondary" style="justify-content:center; font-size:13px;" onclick="location.href='index.html#services'" data-t="check_my_token">Check My Token</button>
     </div>
 
-    <div class="live-status-text">
+    <div class="live-status-text" id="ltStatusText" data-t-dynamic="status_text">
       Token numbers are updated in real-time. Visit our center before your token is called.
     </div>
   </div>
@@ -283,19 +283,19 @@ setInterval(updateClock, 1000);
   function setTokenDisplay(val) {
     var el = document.getElementById('ltToken');
     var label = document.getElementById('ltLabel');
-    var status = document.querySelector('.live-status-text');
+    var status = document.getElementById('ltStatusText');
     if (val > 0) {
       el.style.fontSize = '';
       el.textContent = String(val).padStart(2, '0');
       el.classList.add('live-pulse-ring');
-      label.textContent = 'Current Serving Token';
-      if (status) status.textContent = 'Token numbers are updated in real-time. Visit our center before your token is called.';
+      label.textContent = typeof __t !== 'undefined' ? __t('current_serving') : 'Current Serving Token';
+      if (status) status.textContent = typeof __t !== 'undefined' ? __t('status_text') : 'Token numbers are updated in real-time. Visit our center before your token is called.';
     } else {
       el.style.fontSize = '20px';
-      el.textContent = 'TOKEN NOT STARTED';
+      el.textContent = typeof __t !== 'undefined' ? __t('token_not_started') : 'TOKEN NOT STARTED';
       el.classList.remove('live-pulse-ring');
-      label.textContent = 'Queue Status';
-      if (status) status.textContent = 'The queue has not started yet. Please check back later.';
+      label.textContent = typeof __t !== 'undefined' ? __t('queue_status') : 'Queue Status';
+      if (status) status.textContent = typeof __t !== 'undefined' ? __t('status_text_not_started') : 'The queue has not started yet. Please check back later.';
     }
     hidePageLoader();
   }
@@ -308,7 +308,8 @@ setInterval(updateClock, 1000);
         var d = new Date(snapData.servingDate + 'T00:00:00');
         var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-        el.textContent = 'Serving: ' + days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+        var servingPrefix = typeof __t !== 'undefined' ? __t('serving_prefix') : 'Serving:';
+        el.textContent = servingPrefix + ' ' + days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
       } else {
         el.textContent = '';
       }
@@ -358,17 +359,75 @@ setInterval(updateClock, 1000);
 <!-- Language Toggle -->
 <script>
 (function() {
+  const translations = {
+    hi: {
+      live_token_title: "लाइव टोकन — इंडिया मोबाइल सेंटर",
+      connecting: "लाइव फीड से कनेक्ट हो रहा है...",
+      home_link: "होम",
+      live_badge: "लाइव",
+      token_not_started: "टोकन शुरू नहीं हुआ",
+      current_serving: "अभी जिसकी बारी है",
+      queue_status: "कतार की स्थिति",
+      serving_prefix: "सर्विस:",
+      home_btn: "होम",
+      book_appointment: "अपॉइंटमेंट बुक करें",
+      check_my_token: "मेरा टोकन चेक करें",
+      status_text: "टोकन नंबर रियल-टाइम में अपडेट होते हैं। अपना टोकन कॉल होने से पहले हमारे सेंटर पर आएं।",
+      status_text_not_started: "कतार अभी शुरू नहीं हुई है। कृपया बाद में देखें।"
+    },
+    en: {
+      live_token_title: "Live Token — India Mobile Center",
+      connecting: "Connecting to live feed...",
+      home_link: "Home",
+      live_badge: "LIVE",
+      token_not_started: "TOKEN NOT STARTED",
+      current_serving: "Current Serving Token",
+      queue_status: "Queue Status",
+      serving_prefix: "Serving:",
+      home_btn: "Home",
+      book_appointment: "Book Appointment",
+      check_my_token: "Check My Token",
+      status_text: "Token numbers are updated in real-time. Visit our center before your token is called.",
+      status_text_not_started: "The queue has not started yet. Please check back later."
+    }
+  };
   var currentLang = localStorage.getItem('site_lang') || 'hi';
+  window.__t = function(key) {
+    if (translations[currentLang] && translations[currentLang][key] !== undefined) {
+      return translations[currentLang][key];
+    }
+    if (translations.en && translations.en[key] !== undefined) {
+      return translations.en[key];
+    }
+    return key;
+  };
   function applyLang(lang) {
     currentLang = lang;
     localStorage.setItem('site_lang', lang);
     document.documentElement.lang = lang;
+    document.querySelectorAll('[data-t]').forEach(function(el) {
+      var key = el.getAttribute('data-t');
+      if (translations[lang] && translations[lang][key]) {
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+          el.placeholder = translations[lang][key];
+        } else {
+          el.textContent = translations[lang][key];
+        }
+      }
+    });
     var wrapper = document.getElementById('langSwitchLive');
     if (wrapper) wrapper.classList.toggle('en', lang === 'en');
     var hiOpt = document.getElementById('langOptHiLive');
     var enOpt = document.getElementById('langOptEnLive');
     if (hiOpt) hiOpt.classList.toggle('active', lang === 'hi');
     if (enOpt) enOpt.classList.toggle('active', lang === 'en');
+    // Re-apply dynamic content
+    document.querySelectorAll('[data-t-dynamic]').forEach(function(el) {
+      var key = el.getAttribute('data-t-dynamic');
+      if (translations[lang] && translations[lang][key]) {
+        el.textContent = translations[lang][key];
+      }
+    });
   }
   window.toggleLanguageLive = function() {
     applyLang(currentLang === 'hi' ? 'en' : 'hi');
