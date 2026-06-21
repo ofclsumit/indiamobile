@@ -3132,6 +3132,10 @@ a.live-item-link:hover {
   color: #fbbf24;
   animation: marquee-gap 25s linear infinite;
 }
+
+.live-loading,
+.live-empty,
+.live-error {
   color: var(--text3);
   font-size: 14px;
 }
