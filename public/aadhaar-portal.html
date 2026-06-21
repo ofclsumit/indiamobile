@@ -410,8 +410,25 @@ resetInactivityTimer();
             </div>
           </div>
         </div>
-        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px 16px;margin-top:16px;font-size:13px;color:#fbbf24;text-align:left;" data-t="instructions">
-          Please bring your Aadhaar card and supporting documents. Arrive 10 minutes before your token is called.
+        <div style="margin-top:24px;text-align:left;">
+          <h4 style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px;text-align:center;border-bottom:2px solid var(--accent);padding-bottom:6px;">महत्वपूर्ण निर्देश</h4>
+          <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:16px;margin-bottom:16px;text-align:left;">
+            <div style="font-size:15px;font-weight:800;color:#ef4444;margin-bottom:6px;">⚠️ टोकन बुकिंग शुल्क: ₹5 (पाँच रुपये)</div>
+            <div style="font-size:13px;font-weight:700;color:#f87171;line-height:1.5;">कृपया ध्यान दें: टोकन बुकिंग के लिए ₹5 शुल्क केंद्र पर अनिवार्य रूप से जमा करना होगा। बिना शुल्क जमा किए सेवा प्रदान नहीं की जाएगी।</div>
+          </div>
+          <ol style="margin:0;padding-left:20px;font-size:13px;color:var(--text2);line-height:1.8;text-align:left;">
+            <li>कृपया अपना मूल आधार कार्ड तथा आवश्यक दस्तावेज साथ लेकर आएँ।</li>
+            <li>निर्धारित समय से कम से कम 10 मिनट पहले केंद्र पर पहुँचें।</li>
+            <li>यह टोकन रसीद (मोबाइल या प्रिंट कॉपी) अपने साथ अवश्य रखें।</li>
+            <li>गलत, अधूरी या भ्रामक जानकारी देने पर सेवा में विलंब या आवेदन अस्वीकार किया जा सकता है।</li>
+            <li>टोकन बुकिंग केवल आपकी कतार (Queue) सुनिश्चित करती है। सेवा मिलने का समय भीड़ एवं कार्यभार के अनुसार बदल सकता है।</li>
+            <li>अपना Booking ID एवं Token Number भविष्य के संदर्भ हेतु सुरक्षित रखें।</li>
+            <li>किसी अन्य व्यक्ति का टोकन उपयोग करना मान्य नहीं होगा।</li>
+            <li>यदि आपके दस्तावेज अधूरे पाए जाते हैं, तो आपको पुनः टोकन लेना पड़ सकता है।</li>
+            <li>किसी भी प्रकार की सहायता, जानकारी या समस्या के लिए सीधे केंद्र से संपर्क करें।</li>
+            <li>टोकन बुकिंग के बाद निर्धारित तिथि एवं समय पर उपस्थित होना आवेदक की जिम्मेदारी होगी।</li>
+          </ol>
+          <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--glass-border);font-size:12px;font-weight:600;color:var(--text3);text-align:center;">कृपया इस रसीद को सुरक्षित रखें। आवश्यकता पड़ने पर इसे केंद्र में दिखाना अनिवार्य हो सकता है।</div>
         </div>
         <div style="display:flex;gap:10px;margin-top:16px;">
           <a href="index.html" class="btn-primary btn-full" style="justify-content:center;text-decoration:none;flex:1;"><i class="fas fa-arrow-left" style="font-size:14px;"></i> <span data-t="back_to_home">Back to Home</span></a>
@@ -676,6 +693,16 @@ function continueToBooking() {
     hidePageLoader();
     if (res.success) {
       notify(__t('otp_sent_to') + ' ' + email, 'success');
+      const emailEl = document.getElementById('portalEmail');
+      const nameEl = document.getElementById('portalName');
+      const aad1 = document.getElementById('aad1');
+      const aad2 = document.getElementById('aad2');
+      const aad3 = document.getElementById('aad3');
+      if (emailEl) emailEl.disabled = true;
+      if (nameEl) nameEl.disabled = true;
+      if (aad1) aad1.disabled = true;
+      if (aad2) aad2.disabled = true;
+      if (aad3) aad3.disabled = true;
       document.getElementById('portalSendBtn').style.display = 'none';
       document.getElementById('portalOTPSection').style.display = 'block';
       setTimeout(() => setupPortalOTPInputs(), 100);

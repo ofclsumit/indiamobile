@@ -76,6 +76,7 @@ const DBSync = {
 
     if (this._unsubFirestore) return;
 
+    let firstRun = true;
     const docRef = this._db.doc(this.FIRESTORE_DOC);
     this._unsubFirestore = docRef.onSnapshot((snapshot) => {
       if (!snapshot.exists) {
@@ -106,7 +107,8 @@ const DBSync = {
         }
       }
 
-      if (changed) {
+      if (changed || firstRun) {
+        firstRun = false;
         this._lastHash = this._localHash();
         this._notify('firestore');
         console.log('[DBSync] Received real-time update from Firestore');

@@ -2234,14 +2234,7 @@ footer {
   button, .no-print { display: none !important; }
   .booking-confirm { box-shadow: none; border: 1px solid #ddd; padding: 20px; max-width: 600px; margin: 20px auto; }
   .booking-confirm * { color: #000 !important; }
-  .confirm-stamp { opacity: 1 !important; }
-  .confirm-stamp-svg circle.bg { fill: rgba(21,128,61,0.08) !important; }
-  .confirm-stamp-svg circle.outer,
-  .confirm-stamp-svg circle.inner,
-  .confirm-stamp-svg line.star,
-  .confirm-stamp-svg circle.center-dot { stroke: #15803d !important; opacity: 0.5 !important; }
-  .confirm-stamp-text .main,
-  .confirm-stamp-text .sub { color: #15803d !important; opacity: 0.6 !important; }
+  .confirm-stamp { display: none !important; }
   .form-card { box-shadow: none; border: 1px solid #ddd; }
   @page { margin: 15mm; }
 }
@@ -3139,6 +3132,201 @@ a.live-item-link:hover {
   color: #fbbf24;
   animation: marquee-gap 25s linear infinite;
 }
+  color: var(--text3);
+  font-size: 14px;
+}
+
+.live-loading i {
+  margin-right: 8px;
+}
+
+.live-error {
+  color: var(--danger);
+}
+
+.live-footer-note {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 13px;
+  color: var(--text3);
+}
+
+.live-footer-note i {
+  font-size: 12px;
+}
+
+/* Mobile optimizations for Live Updates */
+@media (max-width: 600px) {
+  .live-updates-section {
+    padding: 48px 0;
+  }
+
+  .live-box {
+    margin-top: 24px;
+    padding: 14px;
+    border-radius: var(--radius);
+  }
+
+  .live-updates-grid {
+    gap: 10px;
+  }
+
+  .live-column-header {
+    padding: 12px 18px;
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .live-column-header i {
+    font-size: 13px;
+  }
+
+  .live-column-header:active {
+    opacity: 0.8;
+  }
+
+  .live-column-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease, padding 0.35s ease;
+    padding: 0;
+  }
+
+  .live-column.open .live-column-body {
+    max-height: 600px;
+    padding: 6px 0;
+  }
+
+  .live-item,
+  a.live-item-link {
+    padding: 12px 18px;
+    font-size: 13px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  a.live-item-link {
+    min-height: 44px;
+  }
+
+  .live-chevron {
+    display: inline-block;
+  }
+
+  .live-loading,
+  .live-empty,
+  .live-error {
+    padding: 20px 14px;
+    font-size: 13px;
+  }
+
+  .live-footer-note {
+    font-size: 12px;
+    margin-top: 16px;
+    padding: 0 16px;
+  }
+}
+
+@media (min-width: 601px) {
+  .live-chevron {
+    display: none;
+  }
+
+  .live-column-header {
+    cursor: default;
+  }
+}
+
+/* ============================================
+   EXISTING BOOKING OVERLAY
+   ============================================ */
+.existing-booking-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(12px);
+  display: none; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.existing-booking-overlay.show { display: flex; }
+.existing-booking-card {
+  background: var(--bg2);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 40px 32px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  animation: fadeScaleIn 0.3s ease;
+}
+@keyframes fadeScaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.existing-booking-card .warning-icon {
+  font-size: 48px; color: var(--warning);
+  margin-bottom: 16px;
+}
+.existing-booking-card h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px; margin-bottom: 8px;
+}
+.existing-booking-card p { font-size: 15px; color: var(--text2); margin-bottom: 24px; }
+.existing-booking-card .existing-token {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 72px; font-weight: 700;
+  background: linear-gradient(135deg, var(--neon), var(--neon2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+  margin: 8px 0;
+}
+.existing-booking-card .existing-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(45,212,191,0.1); color: var(--neon2);
+  padding: 4px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 500; margin-bottom: 20px;
+}
+.existing-booking-card .btn-row {
+  display: flex; gap: 12px; margin-top: 24px;
+}
+.existing-booking-card .btn-row .btn-primary,
+.existing-booking-card .btn-row .btn-secondary {
+  flex: 1; justify-content: center;
+}
+@media (max-width: 480px) {
+  .existing-booking-card { padding: 28px 20px; }
+  .existing-booking-card .existing-token { font-size: 56px; }
+}
+/* Announcement Ribbon Wrap */
+.announcement-ribbon-wrap {
+  margin: 16px 0;
+}
+.announcement-ribbon {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(245,158,11,0.15), rgba(239,68,68,0.1), rgba(245,158,11,0.15));
+  border-top: 1px solid rgba(245,158,11,0.2);
+  border-bottom: 1px solid rgba(245,158,11,0.2);
+  position: relative;
+}
+.announcement-ribbon-track {
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+}
+.announcement-ribbon-text {
+  display: inline-block;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fbbf24;
+  animation: marquee-gap 25s linear infinite;
+}
 @keyframes marquee-gap {
   0% { transform: translateX(100vw); }
   92% { transform: translateX(calc(-100vw - 100%)); }
@@ -3148,3 +3336,43 @@ a.live-item-link:hover {
   .announcement-ribbon-text { font-size: 12px; padding: 8px 0; }
 }
 
+/* How to Book section modern icon wrappers */
+.how-to-book-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  list-style: none;
+  padding: 0;
+}
+.how-to-book-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.step-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(45,212,191,0.1), rgba(99,102,241,0.05));
+  border: 1px solid rgba(45,212,191,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(45,212,191,0.05);
+}
+.how-to-book-item:hover .step-icon-wrap {
+  transform: scale(1.08);
+  border-color: var(--accent);
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #6366f1);
+  box-shadow: 0 0 16px rgba(45,212,191,0.3);
+}
+.step-text {
+  font-size: 14px;
+  color: var(--text2);
+}

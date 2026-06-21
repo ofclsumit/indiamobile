@@ -154,16 +154,13 @@ initPublicFirestoreListeners();
   }
 
   function tryInit() {
-    if (typeof firebase !== 'undefined' && firebase.firestore) {
-      firebase.firestore().doc('appData/sync').onSnapshot(function(snap) {
-        if (snap.exists) {
-          updateRibbon(snap.data().settings);
-        } else {
-          updateRibbon(null);
-        }
+    if (typeof DBSync !== 'undefined') {
+      updateRibbon(DBSync.getSettings());
+      DBSync.subscribe(function(data) {
+        updateRibbon(data.settings);
       });
     } else {
-      setTimeout(tryInit, 500);
+      setTimeout(tryInit, 200);
     }
   }
   tryInit();
@@ -696,6 +693,12 @@ async function doSendOTP(email) {
   hidePageLoader();
   if (res.success) {
     notify('OTP sent to ' + email, 'success');
+    const svcEl = document.getElementById('bookService');
+    const emailEl = document.getElementById('bookEmail');
+    const aadhaarEl = document.getElementById('bookAadhaarLast4');
+    if (svcEl) svcEl.disabled = true;
+    if (emailEl) emailEl.disabled = true;
+    if (aadhaarEl) aadhaarEl.disabled = true;
     document.getElementById('bookSendOTPBtn').style.display = 'none';
     document.getElementById('bookOTPSection').style.display = 'block';
     setTimeout(() => setupOTPInputs('book'), 100);
@@ -1730,12 +1733,12 @@ const translations = {
     footer_contact: "कॉन्टैक्ट",
     nav_live_updates: "लाइव अपडेट",
     live_tag: "लाइव अपडेट",
-    live_title: "नवीनतम सरकारी नौकरी, रिजल्ट और एडमिट कार्ड",
-    live_subtitle: "ऑटो-रिफ्रेश रीयल-टाइम अपडेट — पूरे भारत के रिजल्ट, एडमिट कार्ड और जॉब ओपनिंग्स।",
+    live_title: "नवीनतम रिजल्ट, सरकारी योजनाएं और जॉब अपडेट",
+    live_subtitle: "ऑटो-रिफ्रेश रीयल-टाइम अपडेट — एग्जाम रिजल्ट, सरकारी योजनाओं और नवीनतम जॉब ओपनिंग्स।",
     live_result_head: "रिजल्ट",
-    live_admit_head: "एडमिट कार्ड",
+    live_admit_head: "सरकारी योजनाएं",
     live_job_head: "नवीनतम जॉब",
-    live_auto_update: "अपडेट हर 10 मिनट में ऑटो-रिफ्रेश होते हैं। सरकारी रिजल्ट द्वारा।",
+    live_auto_update: "अपडेट हर 10 मिनट में ऑटो-रिफ्रेश होते हैं। लाइव सरकारी समाचार फ़ीड द्वारा।",
     footer_serv_title: "सर्विस",
     footer_mobile_link: "मोबाइल लिंक",
     footer_addr_update: "पता अपडेट",
@@ -1837,7 +1840,7 @@ const translations = {
     status_label: "स्टेटस",
     approved: "अप्रूव्ड",
     instructions_title: "महत्वपूर्ण निर्देश",
-    instructions_body: '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:14px 16px;margin-bottom:12px;font-size:13px;font-weight:700;color:#fc8181;text-align:left;">महत्वपूर्ण: टोकन बुकिंग/प्रबंधन शुल्क ₹5 केंद्र पर भुगतान करना अनिवार्य है। कृपया संभव हो तो सही राशि साथ लेकर आएं।</div><ol style="margin:0;padding-left:20px;font-size:13px;color:var(--text2);line-height:1.8;"><li>कृपया निर्धारित समय से कम से कम 15 मिनट पहले केंद्र पर पहुंचें।</li><li>अपना मूल आधार कार्ड तथा आवश्यक दस्तावेज साथ लेकर आएं।</li><li>यात्रा के समय अपना बुकिंग आईडी और टोकन नंबर उपलब्ध रखें।</li><li>अधूरे या गलत दस्तावेज होने पर सेवा में देरी या अस्वीकृति हो सकती है।</li><li>विशेष परिस्थितियों में केंद्र टोकन क्रम में परिवर्तन कर सकता है।</li><li>केंद्र कर्मचारियों द्वारा दिए गए निर्देशों का पालन करें।</li><li>आवश्यक दस्तावेजों के बिना यह बुकिंग सेवा की गारंटी नहीं देती है।</li><li>केंद्र आने से पहले लाइव कतार की स्थिति अवश्य जांच लें।</li><li>सत्यापन हेतु इस पुष्टि पृष्ठ या डाउनलोड की गई पीडीएफ को सुरक्षित रखें।</li></ol>',
+    instructions_body: '<div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:16px;margin-bottom:16px;text-align:left;"><div style="font-size:15px;font-weight:800;color:#ef4444;margin-bottom:6px;">⚠️ टोकन बुकिंग शुल्क: ₹5 (पाँच रुपये)</div><div style="font-size:13px;font-weight:700;color:#f87171;line-height:1.5;">कृपया ध्यान दें: टोकन बुकिंग के लिए ₹5 शुल्क केंद्र पर अनिवार्य रूप से जमा करना होगा। बिना शुल्क जमा किए सेवा प्रदान नहीं की जाएगी।</div></div><ol style="margin:0;padding-left:20px;font-size:13px;color:var(--text2);line-height:1.8;text-align:left;"><li>कृपया अपना मूल आधार कार्ड तथा आवश्यक दस्तावेज साथ लेकर आएँ।</li><li>निर्धारित समय से कम से कम 10 मिनट पहले केंद्र पर पहुँचें।</li><li>यह टोकन रसीद (मोबाइल या प्रिंट कॉपी) अपने साथ अवश्य रखें।</li><li>गलत, अधूरी या भ्रामक जानकारी देने पर सेवा में विलंब या आवेदन अस्वीकार किया जा सकता है।</li><li>टोकन बुकिंग केवल आपकी कतार (Queue) सुनिश्चित करती है। सेवा मिलने का समय भीड़ एवं कार्यभार के अनुसार बदल सकता है।</li><li>अपना Booking ID एवं Token Number भविष्य के संदर्भ हेतु सुरक्षित रखें।</li><li>किसी अन्य व्यक्ति का टोकन उपयोग करना मान्य नहीं होगा।</li><li>यदि आपके दस्तावेज अधूरे पाए जाते हैं, तो आपको पुनः टोकन लेना पड़ सकता है।</li><li>किसी भी प्रकार की सहायता, जानकारी या समस्या के लिए सीधे केंद्र से संपर्क करें।</li><li>टोकन बुकिंग के बाद निर्धारित तिथि एवं समय पर उपस्थित होना आवेदक की जिम्मेदारी होगी।</li></ol><div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--glass-border);font-size:12px;font-weight:600;color:var(--text3);text-align:center;">कृपया इस रसीद को सुरक्षित रखें। आवश्यकता पड़ने पर इसे केंद्र में दिखाना अनिवार्य हो सकता है।</div>',
     done_btn: "हो गया",
     print_btn: "प्रिंट करें",
     // Check token modal keys
@@ -2078,8 +2081,8 @@ const translations = {
     appt_date: "Appointment Date",
     status_label: "Status",
     approved: "Approved",
-    instructions_title: "Important Instructions",
-    instructions_body: '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:14px 16px;margin-bottom:12px;font-size:13px;font-weight:700;color:#fc8181;text-align:left;">IMPORTANT: A booking/token management charge of ₹5 must be paid at the centre during your visit. Please keep the exact amount ready if possible.</div><ol style="margin:0;padding-left:20px;font-size:13px;color:var(--text2);line-height:1.8;"><li>Please arrive at the centre at least 15 minutes before your scheduled time.</li><li>Carry your original Aadhaar Card and all required supporting documents.</li><li>Keep your Booking ID and Token Number available during your visit.</li><li>Incomplete or incorrect documents may result in service delay or rejection.</li><li>The centre reserves the right to change token sequence in exceptional circumstances.</li><li>Follow all instructions provided by the centre staff.</li><li>This booking confirmation does not guarantee service if mandatory documents are missing.</li><li>Please check the live queue status before visiting the centre.</li><li>Keep this confirmation page or downloaded PDF available for verification.</li></ol>',
+    instructions_title: "महत्वपूर्ण निर्देश",
+    instructions_body: '<div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:16px;margin-bottom:16px;text-align:left;"><div style="font-size:15px;font-weight:800;color:#ef4444;margin-bottom:6px;">⚠️ टोकन बुकिंग शुल्क: ₹5 (पाँच रुपये)</div><div style="font-size:13px;font-weight:700;color:#f87171;line-height:1.5;">कृपया ध्यान दें: टोकन बुकिंग के लिए ₹5 शुल्क केंद्र पर अनिवार्य रूप से जमा करना होगा। बिना शुल्क जमा किए सेवा प्रदान नहीं की जाएगी।</div></div><ol style="margin:0;padding-left:20px;font-size:13px;color:var(--text2);line-height:1.8;text-align:left;"><li>कृपया अपना मूल आधार कार्ड तथा आवश्यक दस्तावेज साथ लेकर आएँ।</li><li>निर्धारित समय से कम से कम 10 मिनट पहले केंद्र पर पहुँचें।</li><li>यह टोकन रसीद (मोबाइल या प्रिंट कॉपी) अपने साथ अवश्य रखें।</li><li>गलत, अधूरी या भ्रामक जानकारी देने पर सेवा में विलंब या आवेदन अस्वीकार किया जा सकता है।</li><li>टोकन बुकिंग केवल आपकी कतार (Queue) सुनिश्चित करती है। सेवा मिलने का समय भीड़ एवं कार्यभार के अनुसार बदल सकता है।</li><li>अपना Booking ID एवं Token Number भविष्य के संदर्भ हेतु सुरक्षित रखें।</li><li>किसी अन्य व्यक्ति का टोकन उपयोग करना मान्य नहीं होगा।</li><li>यदि आपके दस्तावेज अधूरे पाए जाते हैं, तो आपको पुनः टोकन लेना पड़ सकता है।</li><li>किसी भी प्रकार की सहायता, जानकारी या समस्या के लिए सीधे केंद्र से संपर्क करें।</li><li>टोकन बुकिंग के बाद निर्धारित तिथि एवं समय पर उपस्थित होना आवेदक की जिम्मेदारी होगी।</li></ol><div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--glass-border);font-size:12px;font-weight:600;color:var(--text3);text-align:center;">कृपया इस रसीद को सुरक्षित रखें। आवश्यकता पड़ने पर इसे केंद्र में दिखाना अनिवार्य हो सकता है।</div>',
     done_btn: "Done",
     print_btn: "Print",
     check_aadhaar_hint: "Enter the last 4 digits of the Aadhaar number used at the time of booking.",
@@ -2097,12 +2100,12 @@ const translations = {
     check_another: "Check Another",
     nav_live_updates: "Live Updates",
     live_tag: "Live Updates",
-    live_title: "Latest Govt Jobs, Results & Admit Cards",
-    live_subtitle: "Auto-refreshed real-time updates — Results, Admit Cards, and Job Openings across India.",
+    live_title: "Latest Results, Govt Schemes & Job Openings",
+    live_subtitle: "Auto-refreshed real-time updates — Exam Results, Government Schemes, and Job Openings across India.",
     live_result_head: "Result",
-    live_admit_head: "Admit Card",
+    live_admit_head: "Govt Schemes",
     live_job_head: "Latest Job",
-    live_auto_update: "Updates auto-refresh every 10 minutes. Powered by Sarkari Result.",
+    live_auto_update: "Updates auto-refresh every 10 minutes. Powered by Live Govt News Feed.",
     software_strip_prefix: "Buy this software for your business —"
   }
 };
