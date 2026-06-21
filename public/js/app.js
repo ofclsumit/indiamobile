@@ -142,7 +142,7 @@ initPublicFirestoreListeners();
   function tryInit() {
     if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
       const db = firebase.firestore();
-      db.collection('settings').doc('announcement').onSnapshot((doc) => {
+      db.collection('appData').doc('announcement').onSnapshot((doc) => {
         const el = document.getElementById('announcementRibbon');
         const textEl = document.getElementById('announcementText');
         if (!el || !textEl) return;
@@ -163,7 +163,7 @@ initPublicFirestoreListeners();
         console.log("Ribbon Loaded");
         console.log("Announcement Text:", text);
         console.log("Document ID: announcement");
-        console.log("Firestore Path: settings/announcement");
+        console.log("Firestore Path: appData/announcement");
         console.log("Last Updated:", updatedAt);
 
         if (enabled) {
@@ -173,7 +173,7 @@ initPublicFirestoreListeners();
           el.style.display = 'none';
         }
       }, (error) => {
-        console.error("Error listening to settings/announcement:", error);
+        console.error("Error listening to appData/announcement:", error);
       });
     } else {
       setTimeout(tryInit, 200);
