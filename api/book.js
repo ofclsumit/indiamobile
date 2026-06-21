@@ -150,12 +150,10 @@ module.exports = async (req, res) => {
   const email = (body.email || '').trim().toLowerCase();
   const aadhaarRaw = body.aadhaarLast4 || body.aadhaar || '';
   const aadhaarLast4 = aadhaarRaw.replace(/\D/g, '').slice(-4);
-  const deviceId = (body.deviceId || '').trim();
   const date = (body.date || '').trim();
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, message: 'Invalid email' });
   if (aadhaarLast4.length !== 4) return res.status(400).json({ success: false, message: 'Invalid Aadhaar' });
-  if (!deviceId) return res.status(400).json({ success: false, message: 'Missing device ID' });
   if (!date) return res.status(400).json({ success: false, message: 'Missing date' });
 
   const db = getAdminDB();
@@ -227,7 +225,6 @@ module.exports = async (req, res) => {
     aadhaarLast4,
     service: body.service || 'Aadhaar Update',
     date,
-    deviceId,
     status: 'approved',
     createdAt: new Date().toISOString()
   };

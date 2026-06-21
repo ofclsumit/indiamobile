@@ -135,6 +135,40 @@ function initPublicFirestoreListeners() {
 }
 initPublicFirestoreListeners();
 
+// ============================================
+// ANNOUNCEMENT RIBBON
+// ============================================
+(function initAnnouncementRibbon() {
+  function updateRibbon(settings) {
+    var el = document.getElementById('announcementRibbon');
+    var textEl = document.getElementById('announcementText');
+    if (!el || !textEl) return;
+    var text = settings && settings.announcementText ? settings.announcementText.trim() : '📢 आपका स्वागत है — India Mobile Center में सभी सेवाएँ उपलब्ध | Welcome — all services available at India Mobile Center';
+    var enabled = settings && settings.announcementEnabled !== false;
+    if (enabled) {
+      textEl.textContent = text;
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  function tryInit() {
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      firebase.firestore().doc('appData/sync').onSnapshot(function(snap) {
+        if (snap.exists) {
+          updateRibbon(snap.data().settings);
+        } else {
+          updateRibbon(null);
+        }
+      });
+    } else {
+      setTimeout(tryInit, 500);
+    }
+  }
+  tryInit();
+})();
+
 // Flash dot to show live connection
 let liveDot = null;
 function updateLiveIndicator() {
@@ -751,7 +785,6 @@ async function submitBookingStep2() {
         email: sessionBookingData.email,
         name: sessionBookingData.name,
         aadhaarLast4: sessionBookingData.aadhaarLast4,
-        deviceId: getDeviceId(),
         date: sessionBookingData.date,
         service: sessionBookingData.service
       })

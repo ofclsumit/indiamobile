@@ -3113,4 +3113,38 @@ a.live-item-link:hover {
   .existing-booking-card { padding: 28px 20px; }
   .existing-booking-card .existing-token { font-size: 56px; }
 }
+/* Announcement Ribbon Wrap */
+.announcement-ribbon-wrap {
+  margin: 16px 0;
+}
+.announcement-ribbon {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(245,158,11,0.15), rgba(239,68,68,0.1), rgba(245,158,11,0.15));
+  border-top: 1px solid rgba(245,158,11,0.2);
+  border-bottom: 1px solid rgba(245,158,11,0.2);
+  position: relative;
+}
+.announcement-ribbon-track {
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+}
+.announcement-ribbon-text {
+  display: inline-block;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fbbf24;
+  animation: marquee-gap 25s linear infinite;
+}
+@keyframes marquee-gap {
+  0% { transform: translateX(100vw); }
+  92% { transform: translateX(calc(-100vw - 100%)); }
+  100% { transform: translateX(calc(-100vw - 100%)); }
+}
+@media (max-width: 600px) {
+  .announcement-ribbon-text { font-size: 12px; padding: 8px 0; }
+}
 

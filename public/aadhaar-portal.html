@@ -614,14 +614,7 @@ function startEligibilityListener(booking) {
   });
 }
 
-function getDeviceId() {
-  let id = localStorage.getItem('ds_device_id');
-  if (!id) {
-    id = 'dev_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    localStorage.setItem('ds_device_id', id);
-  }
-  return id;
-}
+
 
 function notify(msg, type) {
   const n = document.getElementById('notif');
@@ -1054,7 +1047,6 @@ async function portalConfirmBooking() {
         email: portalData.email,
         name: portalData.name,
         aadhaar: portalData.aadhaarFull,
-        deviceId: getDeviceId(),
         date: portalSelectedDate,
         service: 'Aadhaar Update'
       })
